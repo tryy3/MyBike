@@ -31,8 +31,8 @@ export const bikes = sqliteTable(
   (t) => [index("idx_bikes_name").on(t.name)],
 );
 
-export const componentSlots = sqliteTable(
-  "component_slots",
+export const components = sqliteTable(
+  "components",
   {
     id: text("id")
       .primaryKey()
@@ -40,27 +40,8 @@ export const componentSlots = sqliteTable(
     bikeId: text("bike_id")
       .notNull()
       .references(() => bikes.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    createdAt: integer("created_at")
-      .notNull()
-      .$defaultFn(nowMs),
-    updatedAt: integer("updated_at")
-      .notNull()
-      .$defaultFn(nowMs)
-      .$onUpdateFn(nowMs),
-  },
-  (t) => [index("idx_slots_bike").on(t.bikeId)],
-);
-
-export const componentOptions = sqliteTable(
-  "component_options",
-  {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => uuid()),
-    slotId: text("slot_id")
-      .notNull()
-      .references(() => componentSlots.id, { onDelete: "cascade" }),
+    // category is a stable id from the hardcoded CATEGORIES list in shared/.
+    category: text("category").notNull(),
     name: text("name").notNull(),
     brand: text("brand"),
     model: text("model"),
@@ -75,15 +56,14 @@ export const componentOptions = sqliteTable(
       .$onUpdateFn(nowMs),
   },
   (t) => [
-    index("idx_options_slot").on(t.slotId),
-    // Enforce "exactly one active option per slot": a unique partial index on
-    // (slot_id) where is_active = 1 guarantees at most one active per slot.
-    index("idx_options_active_per_slot")
-      .on(t.slotId)
+    index("idx_components_bike").on(t.bikeId),
+    // Enforce "at most one active component per (bike, category)": a unique
+    // partial index guarantees a category never has more than one active part.
+    index("idx_components_active_per_category")
+      .on(t.bikeId, t.category)
       .where(sql`${t.isActive} = 1`),
   ],
 );
 
 export type BikeRow = typeof bikes.$inferSelect;
-export type ComponentSlotRow = typeof componentSlots.$inferSelect;
-export type ComponentOptionRow = typeof componentOptions.$inferSelect;
+export type ComponentRow = typeof components.$inferSelect;

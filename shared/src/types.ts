@@ -1,14 +1,9 @@
-import type { Bike, ComponentOption, ComponentSlot } from "./index";
+import type { Bike, Component } from "./index";
 
 export interface BikeListItem extends Bike {
-  slotCount: number;
-  optionCount: number;
-}
-
-export interface SlotWithOptions extends ComponentSlot {
-  options: ComponentOption[];
+  componentCount: number;
 }
 
 export interface BikeDetail extends Bike {
-  slots: SlotWithOptions[];
+  components: Component[];
 }

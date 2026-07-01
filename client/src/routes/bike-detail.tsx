@@ -1,12 +1,13 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
   ArrowLeftIcon,
   PencilIcon,
-  PlusIcon,
   Trash2Icon,
 } from "lucide-react";
+import { CATEGORIES } from "shared";
+import type { Component } from "shared";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,14 +25,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Empty } from "@/components/ui/empty";
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import {
   Tabs,
@@ -42,11 +35,20 @@ import {
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { BikeForm } from "@/features/bikes/BikeForm";
 import { useBike, useDeleteBike } from "@/features/bikes/api";
-import { SlotCard } from "@/features/components/SlotCard";
-import { useCreateSlot } from "@/features/components/api";
+import { CategorySection } from "@/features/components/CategorySection";
 
 interface BikeDetailPageProps {
   bikeId: string;
+}
+
+function groupByCategory(components: Component[]): Map<string, Component[]> {
+  const map = new Map<string, Component[]>();
+  for (const c of components) {
+    const list = map.get(c.category);
+    if (list) list.push(c);
+    else map.set(c.category, [c]);
+  }
+  return map;
 }
 
 export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
@@ -79,6 +81,10 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
       </Card>
     );
   }
+
+  const grouped = groupByCategory(data.components);
+  const categoriesUsed = grouped.size;
+  const activeCount = data.components.filter((c) => c.isActive).length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -137,39 +143,39 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
           <TabsTrigger value="components">
             Components
             <Badge variant="secondary" className="ml-2">
-              {data.slots.length}
+              {data.components.length}
             </Badge>
           </TabsTrigger>
           <TabsTrigger value="overview">Overview</TabsTrigger>
         </TabsList>
 
         <TabsContent value="components" className="flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium text-muted-foreground">
-              {data.slots.length} slot{data.slots.length === 1 ? "" : "s"}
-            </h2>
-            <AddSlotDialog bikeId={bikeId} />
-          </div>
-          {data.slots.length === 0 ? (
-            <Empty className="min-h-48 border">
-              <div className="flex flex-col items-center gap-3">
-                <div className="flex flex-col gap-1 text-center">
-                  <p className="font-medium">No components yet</p>
-                  <p className="text-sm text-muted-foreground">
-                    Add component slots like “Wheelset”, “Drivetrain”, or
-                    “Brakes”, then track what is mounted.
-                  </p>
-                </div>
-                <AddSlotDialog bikeId={bikeId} />
-              </div>
-            </Empty>
-          ) : (
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              {data.slots.map((slot) => (
-                <SlotCard key={slot.id} bikeId={bikeId} slot={slot} />
-              ))}
+          {data.components.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+              No components yet. Add parts to any of the categories below —
+              they are always available.
             </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {data.components.length} component
+              {data.components.length === 1 ? "" : "s"} across{" "}
+              {categoriesUsed} categor
+              {categoriesUsed === 1 ? "y" : "ies"}.
+            </p>
           )}
+          {/* Always render every predefined category so the user can add
+              components into whichever one they like. */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {CATEGORIES.map((cat) => (
+              <CategorySection
+                key={cat.id}
+                bikeId={bikeId}
+                categoryId={cat.id}
+                label={cat.label}
+                components={grouped.get(cat.id) ?? []}
+              />
+            ))}
+          </div>
         </TabsContent>
 
         <TabsContent value="overview">
@@ -181,14 +187,14 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-3 text-sm">
-              <OverviewRow label="Slots">
-                {data.slots.length}
+              <OverviewRow label="Total components">
+                {data.components.length}
               </OverviewRow>
-              <OverviewRow label="Total options">
-                {data.slots.reduce((n, s) => n + s.options.length, 0)}
+              <OverviewRow label="Categories used">
+                {categoriesUsed}
               </OverviewRow>
               <OverviewRow label="Active components">
-                {data.slots.reduce((n, s) => n + (s.options.some((o) => o.isActive) ? 1 : 0), 0)}
+                {activeCount}
               </OverviewRow>
             </CardContent>
           </Card>
@@ -240,91 +246,5 @@ function OverviewRow({
       <span className="text-muted-foreground">{label}</span>
       <span className="font-medium tabular-nums">{children}</span>
     </div>
-  );
-}
-
-function AddSlotDialog({ bikeId }: { bikeId: string }) {
-  const createSlot = useCreateSlot(bikeId);
-  const [open, setOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const submit = () => {
-    const trimmed = (inputRef.current?.value ?? "").trim();
-    if (trimmed.length === 0) {
-      setError("Name is required");
-      return;
-    }
-    setError(null);
-    createSlot
-      .mutateAsync({ name: trimmed })
-      .then(() => {
-        toast.success("Slot added");
-        setOpen(false);
-      })
-      .catch((e: unknown) => {
-        const msg = e instanceof Error ? e.message : "Could not add slot";
-        setError(msg);
-      });
-  };
-
-  return (
-    <>
-      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-        <PlusIcon /> Add component slot
-      </Button>
-      <Dialog
-        open={open}
-        onOpenChange={(o) => {
-          setOpen(o);
-          if (o) setError(null);
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add component slot</DialogTitle>
-            <DialogDescription>
-              Group interchangeable parts, e.g. “Wheelset”, “Drivetrain”.
-            </DialogDescription>
-          </DialogHeader>
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="slot-name">Name</FieldLabel>
-              <Input
-                id="slot-name"
-                ref={inputRef}
-                // defaultValue="" starts fresh since Dialog remounts content.
-                defaultValue=""
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    submit();
-                  }
-                }}
-                placeholder="e.g. Wheelset"
-                aria-invalid={!!error}
-              />
-              {error && <FieldError>{error}</FieldError>}
-            </Field>
-          </FieldGroup>
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              disabled={createSlot.isPending}
-              onClick={submit}
-            >
-              {createSlot.isPending ? "Adding…" : "Add slot"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
   );
 }

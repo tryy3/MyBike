@@ -97,8 +97,7 @@ export function BikesListPage() {
               <TableRow>
                 <TableHead>Bike</TableHead>
                 <TableHead className="hidden sm:table-cell">Brand / Model</TableHead>
-                <TableHead className="hidden md:table-cell text-right">Slots</TableHead>
-                <TableHead className="hidden md:table-cell text-right">Options</TableHead>
+                <TableHead className="hidden md:table-cell text-right">Components</TableHead>
                 <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
@@ -126,10 +125,7 @@ export function BikesListPage() {
                       .join(" · ") || "—"}
                   </TableCell>
                   <TableCell className="hidden md:table-cell text-right tabular-nums">
-                    {bike.slotCount}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell text-right tabular-nums">
-                    {bike.optionCount}
+                    {bike.componentCount}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">

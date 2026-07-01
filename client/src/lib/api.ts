@@ -4,12 +4,9 @@ import type {
   BikeInsert,
   BikeListItem,
   BikeUpdate,
-  ComponentOption,
-  ComponentOptionInsert,
-  ComponentOptionUpdate,
-  ComponentSlot,
-  ComponentSlotInsert,
-  ComponentSlotUpdate,
+  Component,
+  ComponentInsert,
+  ComponentUpdate,
 } from "shared";
 
 export class ApiError extends Error {
@@ -76,32 +73,20 @@ export const api = {
   deleteBike: (id: string) =>
     apiFetch<void>(`/api/bikes/${id}`, { method: "DELETE" }),
 
-  // --- Component slots ---------------------------------------------------
+  // --- Components --------------------------------------------------------
 
-  createSlot: (bikeId: string, data: ComponentSlotInsert) =>
-    apiFetch<ComponentSlot>(
-      `/api/bikes/${bikeId}/slots`,
+  createComponent: (bikeId: string, data: ComponentInsert) =>
+    apiFetch<Component>(
+      `/api/bikes/${bikeId}/components`,
       json("POST", data),
     ),
-  updateSlot: (id: string, data: ComponentSlotUpdate) =>
-    apiFetch<ComponentSlot>(`/api/slots/${id}`, json("PUT", data)),
-  deleteSlot: (id: string) =>
-    apiFetch<void>(`/api/slots/${id}`, { method: "DELETE" }),
-
-  // --- Component options -------------------------------------------------
-
-  createOption: (slotId: string, data: ComponentOptionInsert) =>
-    apiFetch<ComponentOption>(
-      `/api/slots/${slotId}/options`,
-      json("POST", data),
-    ),
-  updateOption: (id: string, data: ComponentOptionUpdate) =>
-    apiFetch<ComponentOption>(`/api/options/${id}`, json("PUT", data)),
-  deleteOption: (id: string) =>
-    apiFetch<void>(`/api/options/${id}`, { method: "DELETE" }),
-  activateOption: (id: string) =>
-    apiFetch<ComponentOption>(
-      `/api/options/${id}/activate`,
+  updateComponent: (id: string, data: ComponentUpdate) =>
+    apiFetch<Component>(`/api/components/${id}`, json("PUT", data)),
+  deleteComponent: (id: string) =>
+    apiFetch<void>(`/api/components/${id}`, { method: "DELETE" }),
+  activateComponent: (id: string) =>
+    apiFetch<Component>(
+      `/api/components/${id}/activate`,
       { method: "PATCH" },
     ),
 };

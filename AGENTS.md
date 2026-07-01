@@ -10,7 +10,7 @@ MyBike/
 │   ├── src/
 │   │   ├── db/      # Drizzle schema + SQLite client
 │   │   ├── lib/     # errors, validation helpers
-│   │   ├── routes/  # bikes, component-slots, component-options
+│   │   ├── routes/  # bikes, components
 │   │   └── index.ts # Express app entry point
 │   ├── drizzle/     # Generated SQL migrations
 │   ├── scripts/     # migrate.ts runner
@@ -51,7 +51,8 @@ MyBike/
 - SQLite database file at `DB_PATH` env var (default `server/data/mybike.db`)
 - Client dev server proxies `/api` to `http://localhost:3001`
 - Validation schemas live in `shared/` and are reused by both server and client (zod); client forms use react-hook-form + `@hookform/resolvers/zod`
-- One active component option per slot is enforced server-side (transaction + unique partial index); clients set it via `PATCH /api/options/:id/activate`
+- Component categories are a fixed, hardcoded set in `shared/src/categories.ts` (`CATEGORIES` — frame, fork, crankset, … plus an `other` catchall). They are always visible and cannot be created/deleted/edited.
+- Components live under a bike + category (`components` table). One active component per (bike, category) is enforced server-side (transaction + unique partial index); clients set it via `PATCH /api/components/:id/activate`.
 - After mutations the client invalidates the affected TanStack Query keys and refetches from the server
 
 **After making changes, always run both `lint` and `typecheck` for the affected package(s) — including `shared` when you touch schemas.**

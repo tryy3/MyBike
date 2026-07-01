@@ -3,7 +3,7 @@ import { Controller, useForm } from "react-hook-form";
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
-import { type ComponentOption } from "shared";
+import { type Component } from "shared";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,35 +14,35 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useCreateOption, useUpdateOption } from "./api";
+import { useCreateComponent, useUpdateComponent } from "./api";
 
 // The form never lets users toggle is_active (that's done via a dedicated
-// "Use this" action), so it validates against just the editable fields.
-// The field constraints mirror `componentOptionInsertSchema` from `shared`,
-// which is what the server uses to validate.
+// "Use this" action) nor change category once set, so it validates against
+// just the editable fields. The field constraints mirror
+// `componentInsertSchema` from `shared`, which is what the server uses.
 const formSchema = z.object({
   name: z.string().min(1).max(200),
   brand: z.string().max(200).nullish(),
   model: z.string().max(200).nullish(),
   notes: z.string().max(5000).nullish(),
 });
-type OptionFormValues = z.infer<typeof formSchema>;
+type ComponentFormValues = z.infer<typeof formSchema>;
 
-interface OptionFormProps {
+interface ComponentFormProps {
   bikeId: string;
-  slotId: string;
-  option?: ComponentOption;
+  category: string;
+  component?: Component;
   onDone: () => void;
 }
 
-const EMPTY: OptionFormValues = {
+const EMPTY: ComponentFormValues = {
   name: "",
   brand: "",
   model: "",
   notes: "",
 };
 
-function normalize(raw: OptionFormValues): OptionFormValues {
+function normalize(raw: ComponentFormValues): ComponentFormValues {
   const trim = (v: string | null | undefined) =>
     !v || v.trim() === "" ? null : v;
   return {
@@ -53,56 +53,62 @@ function normalize(raw: OptionFormValues): OptionFormValues {
   };
 }
 
-export function OptionForm({ bikeId, slotId, option, onDone }: OptionFormProps) {
-  const isEdit = !!option;
-  const createOption = useCreateOption(bikeId);
-  const updateOption = useUpdateOption(bikeId);
+export function ComponentForm({
+  bikeId,
+  category,
+  component,
+  onDone,
+}: ComponentFormProps) {
+  const isEdit = !!component;
+  const createComponent = useCreateComponent(bikeId);
+  const updateComponent = useUpdateComponent(bikeId);
 
-  const form = useForm<OptionFormValues>({
+  const form = useForm<ComponentFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: option
+    defaultValues: component
       ? {
-          name: option.name,
-          brand: option.brand ?? "",
-          model: option.model ?? "",
-          notes: option.notes ?? "",
+          name: component.name,
+          brand: component.brand ?? "",
+          model: component.model ?? "",
+          notes: component.notes ?? "",
         }
       : EMPTY,
   });
 
   useEffect(() => {
     form.reset(
-      option
+      component
         ? {
-            name: option.name,
-            brand: option.brand ?? "",
-            model: option.model ?? "",
-            notes: option.notes ?? "",
+            name: component.name,
+            brand: component.brand ?? "",
+            model: component.model ?? "",
+            notes: component.notes ?? "",
           }
         : EMPTY,
     );
-  }, [option, form]);
+  }, [component, form]);
 
   const onSubmit = form.handleSubmit((data) => {
     const normalized = normalize(data);
     const result = isEdit
-      ? updateOption.mutateAsync({ id: option!.id, data: normalized })
-      : createOption.mutateAsync({
-          slotId,
-          data: { ...normalized, isActive: false },
+      ? updateComponent.mutateAsync({ id: component!.id, data: normalized })
+      : createComponent.mutateAsync({
+          category,
+          ...normalized,
+          isActive: false,
         });
     result
       .then(() => {
-        toast.success(isEdit ? "Option updated" : "Option added");
+        toast.success(isEdit ? "Component updated" : "Component added");
         onDone();
       })
       .catch((e: unknown) => {
         const msg = e instanceof Error ? e.message : "Something went wrong";
-        toast.error("Could not save option", { description: msg });
+        toast.error("Could not save component", { description: msg });
       });
   });
 
-  const pending = createOption.isPending || updateOption.isPending;
+  const pending = createComponent.isPending || updateComponent.isPending;
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
@@ -198,7 +204,7 @@ export function OptionForm({ bikeId, slotId, option, onDone }: OptionFormProps) 
           Cancel
         </Button>
         <Button type="submit" disabled={pending}>
-          {pending ? "Saving…" : isEdit ? "Save option" : "Add option"}
+          {pending ? "Saving…" : isEdit ? "Save component" : "Add component"}
         </Button>
       </div>
     </form>

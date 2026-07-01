@@ -1,13 +1,12 @@
 import { Router } from "express";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { db } from "../db/index";
-import { componentOptions, componentSlots, bikes } from "../db/schema";
+import { components, bikes } from "../db/schema";
 import {
   bikeInsertSchema,
   bikeUpdateSchema,
   type BikeDetail,
   type BikeListItem,
-  type SlotWithOptions,
 } from "shared";
 import { HttpError, notFound } from "../lib/errors";
 import { parseBody, parseParams } from "../lib/validation";
@@ -22,54 +21,28 @@ function requireBike(bikeId: string) {
 
 function buildBikeDetail(bikeId: string): BikeDetail {
   const bike = requireBike(bikeId);
-  const slots = db
+  // Active first, then oldest first — gives a stable, useful ordering that
+  // the client groups/sorts within each category by.
+  const rows = db
     .select()
-    .from(componentSlots)
-    .where(eq(componentSlots.bikeId, bikeId))
-    .orderBy(asc(componentSlots.createdAt))
+    .from(components)
+    .where(eq(components.bikeId, bikeId))
+    .orderBy(desc(components.isActive), asc(components.createdAt))
     .all();
-
-  const slotsWith: SlotWithOptions[] = slots.map((slot) => {
-    const options = db
-      .select()
-      .from(componentOptions)
-      .where(eq(componentOptions.slotId, slot.id))
-      .orderBy(desc(componentOptions.isActive), asc(componentOptions.createdAt))
-      .all();
-    return { ...slot, options };
-  });
-
-  return { ...bike, slots: slotsWith };
+  return { ...bike, components: rows };
 }
 
 // GET /api/bikes
 bikesRouter.get("/", (_req, res) => {
   const all = db.select().from(bikes).orderBy(desc(bikes.createdAt)).all();
 
-  const slotCounts = db
+  const componentCounts = db
     .select({
-      bikeId: componentSlots.bikeId,
+      bikeId: components.bikeId,
       count: sql<number>`count(*)`.as("count"),
     })
-    .from(componentSlots)
-    .groupBy(componentSlots.bikeId)
-    .all()
-    .reduce<Record<string, number>>((acc, row) => {
-      acc[row.bikeId] = Number(row.count);
-      return acc;
-    }, {});
-
-  const optionCounts = db
-    .select({
-      bikeId: componentSlots.bikeId,
-      count: sql<number>`count(*)`.as("count"),
-    })
-    .from(componentOptions)
-    .innerJoin(
-      componentSlots,
-      eq(componentOptions.slotId, componentSlots.id),
-    )
-    .groupBy(componentSlots.bikeId)
+    .from(components)
+    .groupBy(components.bikeId)
     .all()
     .reduce<Record<string, number>>((acc, row) => {
       acc[row.bikeId] = Number(row.count);
@@ -78,8 +51,7 @@ bikesRouter.get("/", (_req, res) => {
 
   const items: BikeListItem[] = all.map((b) => ({
     ...b,
-    slotCount: slotCounts[b.id] ?? 0,
-    optionCount: optionCounts[b.id] ?? 0,
+    componentCount: componentCounts[b.id] ?? 0,
   }));
 
   res.json(items);

@@ -1,7 +1,6 @@
 import express from "express";
 import bikesRouter from "./routes/bikes";
-import slotsRouter from "./routes/component-slots";
-import optionsRouter from "./routes/component-options";
+import componentsRouter from "./routes/components";
 import { errorHandler } from "./lib/errors";
 
 const app = express();
@@ -14,12 +13,10 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/bikes", bikesRouter);
-// Slot creation is nested under a bike; slot updates/deletes are flat.
-app.use("/api/bikes/:bikeId/slots", slotsRouter);
-app.use("/api/slots", slotsRouter);
-// Option creation is nested under a slot; option updates/activate/delete flat.
-app.use("/api/slots/:slotId/options", optionsRouter);
-app.use("/api/options", optionsRouter);
+// Component creation is nested under a bike; component updates/activate/delete
+// are flat.
+app.use("/api/bikes/:bikeId/components", componentsRouter);
+app.use("/api/components", componentsRouter);
 
 // 404 handler for unknown routes.
 app.use((_req, res) => {

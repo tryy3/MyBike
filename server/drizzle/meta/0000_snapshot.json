@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "9466fc2f-131d-4612-80aa-8b78cbc7576c",
+  "id": "80dc38b2-d8e8-4619-b4d6-b638205f52e0",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "bikes": {
@@ -78,8 +78,8 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "component_options": {
-      "name": "component_options",
+    "components": {
+      "name": "components",
       "columns": {
         "id": {
           "name": "id",
@@ -88,8 +88,15 @@
           "notNull": true,
           "autoincrement": false
         },
-        "slot_id": {
-          "name": "slot_id",
+        "bike_id": {
+          "name": "bike_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "category": {
+          "name": "category",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -147,93 +154,27 @@
         }
       },
       "indexes": {
-        "idx_options_slot": {
-          "name": "idx_options_slot",
-          "columns": [
-            "slot_id"
-          ],
-          "isUnique": false
-        },
-        "idx_options_active_per_slot": {
-          "name": "idx_options_active_per_slot",
-          "columns": [
-            "slot_id"
-          ],
-          "isUnique": false,
-          "where": "\"component_options\".\"is_active\" = 1"
-        }
-      },
-      "foreignKeys": {
-        "component_options_slot_id_component_slots_id_fk": {
-          "name": "component_options_slot_id_component_slots_id_fk",
-          "tableFrom": "component_options",
-          "tableTo": "component_slots",
-          "columnsFrom": [
-            "slot_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "component_slots": {
-      "name": "component_slots",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "bike_id": {
-          "name": "bike_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "idx_slots_bike": {
-          "name": "idx_slots_bike",
+        "idx_components_bike": {
+          "name": "idx_components_bike",
           "columns": [
             "bike_id"
           ],
           "isUnique": false
+        },
+        "idx_components_active_per_category": {
+          "name": "idx_components_active_per_category",
+          "columns": [
+            "bike_id",
+            "category"
+          ],
+          "isUnique": false,
+          "where": "\"components\".\"is_active\" = 1"
         }
       },
       "foreignKeys": {
-        "component_slots_bike_id_bikes_id_fk": {
-          "name": "component_slots_bike_id_bikes_id_fk",
-          "tableFrom": "component_slots",
+        "components_bike_id_bikes_id_fk": {
+          "name": "components_bike_id_bikes_id_fk",
+          "tableFrom": "components",
           "tableTo": "bikes",
           "columnsFrom": [
             "bike_id"
