@@ -1,0 +1,12 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "skills": {
+    "paths": [".agents/skills"]
+  },
+  "permission": {
+    "bash": {
+      "agent-browser *": "allow",
+      "agent-browser": "allow"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "mybike",
+  "private": true,
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "dependencies": {
+    "agent-browser": "^0.31.1"
+  }
+}
