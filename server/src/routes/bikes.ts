@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../db/index";
 import { components, bikes } from "../db/schema";
 import {
@@ -9,21 +9,25 @@ import {
   type BikeListItem,
 } from "shared";
 import { HttpError, notFound } from "../lib/errors";
+import { requireAuth, getAuthContext } from "../lib/require-auth";
 import { parseBody, parseParams } from "../lib/validation";
 
 export const bikesRouter = Router();
 
-function requireBike(bikeId: string) {
-  const bike = db.select().from(bikes).where(eq(bikes.id, bikeId)).get();
+bikesRouter.use(requireAuth);
+
+function requireBike(bikeId: string, userId: string) {
+  const bike = db
+    .select()
+    .from(bikes)
+    .where(and(eq(bikes.id, bikeId), eq(bikes.userId, userId)))
+    .get();
   if (!bike) throw notFound("Bike");
   return bike;
 }
 
-function buildBikeDetail(bikeId: string): BikeDetail {
-  const bike = requireBike(bikeId);
-  // Stable manual order (sort_order, set via drag-and-drop), tie-broken by
-  // creation time. Activating a component no longer reorders the list — the
-  // Active badge is the only indicator of which is in use.
+function buildBikeDetail(bikeId: string, userId: string): BikeDetail {
+  const bike = requireBike(bikeId, userId);
   const rows = db
     .select()
     .from(components)
@@ -34,21 +38,32 @@ function buildBikeDetail(bikeId: string): BikeDetail {
 }
 
 // GET /api/bikes
-bikesRouter.get("/", (_req, res) => {
-  const all = db.select().from(bikes).orderBy(desc(bikes.createdAt)).all();
+bikesRouter.get("/", (req, res) => {
+  const { userId } = getAuthContext(req);
+  const all = db
+    .select()
+    .from(bikes)
+    .where(eq(bikes.userId, userId))
+    .orderBy(desc(bikes.createdAt))
+    .all();
 
-  const componentCounts = db
-    .select({
-      bikeId: components.bikeId,
-      count: sql<number>`count(*)`.as("count"),
-    })
-    .from(components)
-    .groupBy(components.bikeId)
-    .all()
-    .reduce<Record<string, number>>((acc, row) => {
-      acc[row.bikeId] = Number(row.count);
-      return acc;
-    }, {});
+  const bikeIds = all.map((b) => b.id);
+  const componentCounts =
+    bikeIds.length === 0
+      ? {}
+      : db
+          .select({
+            bikeId: components.bikeId,
+            count: sql<number>`count(*)`.as("count"),
+          })
+          .from(components)
+          .where(inArray(components.bikeId, bikeIds))
+          .groupBy(components.bikeId)
+          .all()
+          .reduce<Record<string, number>>((acc, row) => {
+            acc[row.bikeId] = Number(row.count);
+            return acc;
+          }, {});
 
   const items: BikeListItem[] = all.map((b) => ({
     ...b,
@@ -60,10 +75,12 @@ bikesRouter.get("/", (_req, res) => {
 
 // POST /api/bikes
 bikesRouter.post("/", (req, res) => {
+  const { userId } = getAuthContext(req);
   const data = parseBody(req, bikeInsertSchema);
   const created = db
     .insert(bikes)
     .values({
+      userId,
       name: data.name,
       brand: data.brand ?? null,
       model: data.model ?? null,
@@ -77,14 +94,16 @@ bikesRouter.post("/", (req, res) => {
 
 // GET /api/bikes/:id
 bikesRouter.get("/:id", (req, res) => {
+  const { userId } = getAuthContext(req);
   const { id } = parseParams(req, ["id"]);
-  res.json(buildBikeDetail(id));
+  res.json(buildBikeDetail(id, userId));
 });
 
 // PUT /api/bikes/:id
 bikesRouter.put("/:id", (req, res) => {
+  const { userId } = getAuthContext(req);
   const { id } = parseParams(req, ["id"]);
-  requireBike(id);
+  requireBike(id, userId);
   const data = parseBody(req, bikeUpdateSchema);
   const updates = {
     ...(data.name !== undefined ? { name: data.name } : {}),
@@ -99,7 +118,7 @@ bikesRouter.put("/:id", (req, res) => {
   const updated = db
     .update(bikes)
     .set(updates)
-    .where(eq(bikes.id, id))
+    .where(and(eq(bikes.id, id), eq(bikes.userId, userId)))
     .returning()
     .get();
   res.json(updated);
@@ -107,10 +126,11 @@ bikesRouter.put("/:id", (req, res) => {
 
 // DELETE /api/bikes/:id
 bikesRouter.delete("/:id", (req, res) => {
+  const { userId } = getAuthContext(req);
   const { id } = parseParams(req, ["id"]);
   const result = db
     .delete(bikes)
-    .where(and(eq(bikes.id, id)))
+    .where(and(eq(bikes.id, id), eq(bikes.userId, userId)))
     .run();
   if (result.changes === 0) throw notFound("Bike");
   res.status(204).end();

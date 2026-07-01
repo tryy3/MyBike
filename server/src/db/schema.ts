@@ -6,6 +6,7 @@ import {
   text,
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
+import { user } from "./auth-schema";
 
 function uuid() {
   return crypto.randomUUID();
@@ -21,6 +22,9 @@ export const bikes = sqliteTable(
     id: text("id")
       .primaryKey()
       .$defaultFn(() => uuid()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     brand: text("brand"),
     model: text("model"),
@@ -32,7 +36,10 @@ export const bikes = sqliteTable(
       .$defaultFn(nowMs)
       .$onUpdateFn(nowMs),
   },
-  (t) => [index("idx_bikes_name").on(t.name)],
+  (t) => [
+    index("idx_bikes_name").on(t.name),
+    index("idx_bikes_user").on(t.userId),
+  ],
 );
 
 export const components = sqliteTable(

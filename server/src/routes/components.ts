@@ -15,9 +15,12 @@ import {
   componentUpdateSchema,
 } from "shared";
 import { HttpError, badRequest, notFound } from "../lib/errors";
+import { requireAuth, getAuthContext } from "../lib/require-auth";
 import { parseBody, parseParams } from "../lib/validation";
 
 export const componentsRouter = Router({ mergeParams: true });
+
+componentsRouter.use(requireAuth);
 
 // Order categories by their predefined `order` for CSV export. Any unknown id
 // (shouldn't happen since the enum is enforced) sorts last.
@@ -28,20 +31,25 @@ const IMPORT_MAX_ROWS = 1000;
 // Max raw CSV byte length accepted by the import endpoint.
 const IMPORT_MAX_BYTES = 256 * 1024;
 
-function requireBikeExists(bikeId: string) {
-  const bike = db.select().from(bikes).where(eq(bikes.id, bikeId)).get();
+function requireBikeExists(bikeId: string, userId: string) {
+  const bike = db
+    .select()
+    .from(bikes)
+    .where(and(eq(bikes.id, bikeId), eq(bikes.userId, userId)))
+    .get();
   if (!bike) throw notFound("Bike");
   return bike;
 }
 
-function requireComponentExists(componentId: string) {
-  const component = db
-    .select()
+function requireComponentExists(componentId: string, userId: string) {
+  const row = db
+    .select({ component: components })
     .from(components)
-    .where(eq(components.id, componentId))
+    .innerJoin(bikes, eq(components.bikeId, bikes.id))
+    .where(and(eq(components.id, componentId), eq(bikes.userId, userId)))
     .get();
-  if (!component) throw notFound("Component");
-  return component;
+  if (!row) throw notFound("Component");
+  return row.component;
 }
 
 function escapeCsvCell(value: string): string {
@@ -53,8 +61,9 @@ function escapeCsvCell(value: string): string {
 
 // GET /api/bikes/:bikeId/components/export.csv
 componentsRouter.get("/export.csv", (req, res) => {
+  const { userId } = getAuthContext(req);
   const { bikeId } = parseParams(req, ["bikeId"]);
-  const bike = requireBikeExists(bikeId);
+  const bike = requireBikeExists(bikeId, userId);
   const rows = db
     .select()
     .from(components)
@@ -100,8 +109,9 @@ componentsRouter.get("/export.csv", (req, res) => {
 // entire import runs in one transaction: if any row fails validation the whole
 // import is rejected and nothing is saved.
 componentsRouter.post("/import", (req, res) => {
+  const { userId } = getAuthContext(req);
   const { bikeId } = parseParams(req, ["bikeId"]);
-  requireBikeExists(bikeId);
+  requireBikeExists(bikeId, userId);
 
   const { csv: csvText, dryRun = false } = parseBody(req, componentImportSchema);
   if (csvText.length > IMPORT_MAX_BYTES) {
@@ -402,8 +412,9 @@ componentsRouter.post("/import", (req, res) => {
 
 // POST /api/bikes/:bikeId/components
 componentsRouter.post("/", (req, res) => {
+  const { userId } = getAuthContext(req);
   const { bikeId } = parseParams(req, ["bikeId"]);
-  requireBikeExists(bikeId);
+  requireBikeExists(bikeId, userId);
   const data = parseBody(req, componentInsertSchema);
   const existingCount = db
     .select({ c: components.id })
@@ -463,8 +474,9 @@ componentsRouter.post("/", (req, res) => {
 
 // PUT /api/components/:id  (mounted at /api/components)
 componentsRouter.put("/:id", (req, res) => {
+  const { userId } = getAuthContext(req);
   const { id } = parseParams(req, ["id"]);
-  requireComponentExists(id);
+  requireComponentExists(id, userId);
   const data = parseBody(req, componentUpdateSchema);
   const updates: Record<string, unknown> = {};
   if (data.name !== undefined) updates.name = data.name;
@@ -488,8 +500,9 @@ componentsRouter.put("/:id", (req, res) => {
 
 // DELETE /api/components/:id
 componentsRouter.delete("/:id", (req, res) => {
+  const { userId } = getAuthContext(req);
   const { id } = parseParams(req, ["id"]);
-  const existing = requireComponentExists(id);
+  const existing = requireComponentExists(id, userId);
   // Delete within a transaction so we can reassign the active flag atomically.
   db.transaction((tx) => {
     const result = tx.delete(components).where(eq(components.id, id)).run();
@@ -522,8 +535,9 @@ componentsRouter.delete("/:id", (req, res) => {
 // PATCH /api/components/:id/activate — set this component active, others in the
 // same (bike, category) inactive.
 componentsRouter.patch("/:id/activate", (req, res) => {
+  const { userId } = getAuthContext(req);
   const { id } = parseParams(req, ["id"]);
-  const component = requireComponentExists(id);
+  const component = requireComponentExists(id, userId);
   db.transaction((tx) => {
     // Deactivate all other components in the same (bike, category).
     tx.update(components)
@@ -554,8 +568,9 @@ componentsRouter.patch("/:id/activate", (req, res) => {
 // (bike, category). `orderedIds` must be the complete set of component ids for
 // that (bike, category) in the desired order.
 componentsRouter.patch("/reorder", (req, res) => {
+  const { userId } = getAuthContext(req);
   const { bikeId } = parseParams(req, ["bikeId"]);
-  requireBikeExists(bikeId);
+  requireBikeExists(bikeId, userId);
   const data = parseBody(req, componentReorderSchema);
   const rows = db
     .select({ id: components.id })

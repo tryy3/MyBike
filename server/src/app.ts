@@ -1,13 +1,18 @@
 import express from "express";
+import { toNodeHandler } from "better-auth/node";
 import bikesRouter from "./routes/bikes";
 import componentsRouter from "./routes/components";
 import { errorHandler } from "./lib/errors";
+import { auth } from "./lib/auth";
 import { sqlite } from "./db/index";
 
 const IMPORT_MAX_BYTES = 256 * 1024;
 
 export function createApp() {
   const app = express();
+
+  // Better Auth must be mounted before express.json() (it parses its own body).
+  app.all("/api/auth/{*any}", toNodeHandler(auth));
 
   app.use(express.json({ limit: `${IMPORT_MAX_BYTES + 64 * 1024}b` }));
 

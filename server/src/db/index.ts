@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import * as schema from "./schema";
+import * as authSchema from "./auth-schema";
 
 const dbPath = process.env.DB_PATH ?? "./data/mybike.db";
 
@@ -16,5 +17,5 @@ const sqlite = new Database(dbPath);
 sqlite.pragma("journal_mode = WAL");
 sqlite.pragma("foreign_keys = ON");
 
-export const db = drizzle(sqlite, { schema });
+export const db = drizzle(sqlite, { schema: { ...schema, ...authSchema } });
 export { sqlite };

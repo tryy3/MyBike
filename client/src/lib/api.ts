@@ -27,6 +27,7 @@ async function apiFetch<T>(
 ): Promise<T> {
   const res = await fetch(path, {
     ...options,
+    credentials: "include",
     headers: {
       "content-type": "application/json",
       ...(options.headers ?? {}),

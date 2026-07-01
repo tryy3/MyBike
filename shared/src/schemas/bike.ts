@@ -25,6 +25,7 @@ export const bikeUpdateSchema = bikeBaseSchema.partial();
 
 export const bikeSchema = bikeBaseSchema.extend({
   id: z.string().uuid(),
+  userId: z.string(),
   createdAt: z.number().int(),
   updatedAt: z.number().int(),
 });

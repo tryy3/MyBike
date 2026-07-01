@@ -7,18 +7,27 @@ import {
 } from "@tanstack/react-router";
 
 import { rootRoute } from "./routes/root";
+import { appLayoutRoute } from "./routes/app-layout";
 import { BikesListPage } from "./routes/bikes-list";
 import { BikeDetailPage } from "./routes/bike-detail";
+import { LoginPage } from "./routes/login";
+import { RegisterPage } from "./routes/register";
+import {
+  redirectIfAuthenticated,
+  requireSession,
+} from "./lib/auth-guard";
 
 const indexRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appLayoutRoute,
   path: "/",
+  beforeLoad: () => requireSession(),
   component: BikesListPage,
 });
 
 const bikeRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appLayoutRoute,
   path: "/bikes/$bikeId",
+  beforeLoad: () => requireSession(),
   component: BikeDetailWrapper,
 });
 
@@ -26,6 +35,23 @@ function BikeDetailWrapper() {
   const { bikeId } = bikeRoute.useParams();
   return <BikeDetailPage bikeId={bikeId} />;
 }
+
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/login",
+  beforeLoad: () => redirectIfAuthenticated(),
+  component: LoginPage,
+  validateSearch: (search: Record<string, unknown>) => ({
+    redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+  }),
+});
+
+const registerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/register",
+  beforeLoad: () => redirectIfAuthenticated(),
+  component: RegisterPage,
+});
 
 const notFoundRoute = new NotFoundRoute({
   getParentRoute: () => rootRoute,
@@ -53,7 +79,11 @@ function NotFound() {
   );
 }
 
-const routeTree = rootRoute.addChildren([indexRoute, bikeRoute]);
+const routeTree = rootRoute.addChildren([
+  appLayoutRoute.addChildren([indexRoute, bikeRoute]),
+  loginRoute,
+  registerRoute,
+]);
 
 export const router = createRouter({
   routeTree,
