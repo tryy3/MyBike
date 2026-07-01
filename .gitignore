@@ -5,3 +5,10 @@ result/
 .env
 *.log
 *.tsbuildinfo
+
+# SQLite local database (created at runtime)
+server/data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm

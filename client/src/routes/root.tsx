@@ -1,0 +1,28 @@
+import { Outlet, Link, createRootRoute } from "@tanstack/react-router";
+import { BikeIcon } from "lucide-react";
+import { Toaster } from "@/components/ui/sonner";
+
+function RootLayout() {
+  return (
+    <div className="min-h-svh bg-background">
+      <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
+        <div className="mx-auto flex h-14 max-w-5xl items-center gap-2 px-4">
+          <Link to="/" className="flex items-center gap-2 font-semibold">
+            <span className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
+              <BikeIcon className="size-4" />
+            </span>
+            MyBike
+          </Link>
+        </div>
+      </header>
+      <main className="mx-auto max-w-5xl px-4 py-8">
+        <Outlet />
+      </main>
+      <Toaster position="bottom-right" />
+    </div>
+  );
+}
+
+export const rootRoute = createRootRoute({
+  component: RootLayout,
+});

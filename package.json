@@ -3,9 +3,16 @@
   "private": true,
   "workspaces": [
     "server",
-    "client"
+    "client",
+    "shared"
   ],
   "dependencies": {
     "agent-browser": "^0.31.1"
+  },
+  "allowScripts": {
+    "better-sqlite3@12.11.1": true,
+    "esbuild@0.18.20": true,
+    "esbuild@0.25.12": true,
+    "esbuild@0.28.1": true
   }
 }
