@@ -20,6 +20,44 @@
           })
         ];
       };
+
+      chromeLibs = with pkgs; [
+        glib
+        nspr
+        nss
+        atk
+        at-spi2-atk
+        at-spi2-core
+        dbus
+        cups
+        expat
+        libxcb
+        libxkbcommon
+        alsa-lib
+        libgbm
+        cairo
+        pango
+        libdrm
+        libx11
+        libxext
+        libxcomposite
+        libxdamage
+        libxfixes
+        libxrandr
+        libxrender
+        libxscrnsaver
+        libxi
+        libxcursor
+        libxtst
+        libpulseaudio
+        udev
+        libGL
+        fontconfig
+        freetype
+        pipewire
+      ];
+
+      chromeLdPath = pkgs.lib.makeLibraryPath chromeLibs;
     in {
       packages.agent-browser = pkgs.agent-browser;
 
@@ -31,6 +69,8 @@
 
         shellHook = ''
           echo "🚲 MyBike dev environment"
+          export NIX_LD_LIBRARY_PATH="${chromeLdPath}''${NIX_LD_LIBRARY_PATH:+:$NIX_LD_LIBRARY_PATH}"
+          export LD_LIBRARY_PATH="${chromeLdPath}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
         '';
       };
     });
