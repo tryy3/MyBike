@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useSignIn } from "./api";
+import { getSafeRedirectPath } from "./redirect";
 
 interface LoginFormProps {
   redirectTo?: string;
@@ -29,7 +30,7 @@ export function LoginForm({ redirectTo = "/" }: LoginFormProps) {
     signIn.mutate(data, {
       onSuccess: () => {
         toast.success("Signed in");
-        window.location.href = redirectTo;
+        window.location.href = getSafeRedirectPath(redirectTo);
       },
       onError: (err) => {
         toast.error(err.message);
@@ -43,40 +44,48 @@ export function LoginForm({ redirectTo = "/" }: LoginFormProps) {
         <Controller
           name="email"
           control={form.control}
-          render={({ field, fieldState }) => (
-            <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="login-email">Email</FieldLabel>
-              <Input
-                {...field}
-                id="login-email"
-                type="email"
-                autoComplete="email"
-                aria-invalid={fieldState.invalid}
-              />
-              {fieldState.error ? (
-                <FieldError errors={[fieldState.error]} />
-              ) : null}
-            </Field>
-          )}
+          render={({ field, fieldState }) => {
+            const errorId = "login-email-error";
+            return (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="login-email">Email</FieldLabel>
+                <Input
+                  {...field}
+                  id="login-email"
+                  type="email"
+                  autoComplete="email"
+                  aria-invalid={fieldState.invalid}
+                  aria-describedby={fieldState.invalid ? errorId : undefined}
+                />
+                {fieldState.error ? (
+                  <FieldError id={errorId} errors={[fieldState.error]} />
+                ) : null}
+              </Field>
+            );
+          }}
         />
         <Controller
           name="password"
           control={form.control}
-          render={({ field, fieldState }) => (
-            <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="login-password">Password</FieldLabel>
-              <Input
-                {...field}
-                id="login-password"
-                type="password"
-                autoComplete="current-password"
-                aria-invalid={fieldState.invalid}
-              />
-              {fieldState.error ? (
-                <FieldError errors={[fieldState.error]} />
-              ) : null}
-            </Field>
-          )}
+          render={({ field, fieldState }) => {
+            const errorId = "login-password-error";
+            return (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="login-password">Password</FieldLabel>
+                <Input
+                  {...field}
+                  id="login-password"
+                  type="password"
+                  autoComplete="current-password"
+                  aria-invalid={fieldState.invalid}
+                  aria-describedby={fieldState.invalid ? errorId : undefined}
+                />
+                {fieldState.error ? (
+                  <FieldError id={errorId} errors={[fieldState.error]} />
+                ) : null}
+              </Field>
+            );
+          }}
         />
       </FieldGroup>
       <Button type="submit" className="w-full" disabled={signIn.isPending}>
@@ -84,7 +93,11 @@ export function LoginForm({ redirectTo = "/" }: LoginFormProps) {
       </Button>
       <p className="text-center text-sm text-muted-foreground">
         No account?{" "}
-        <Link to="/register" className="underline">
+        <Link
+          to="/register"
+          search={{ redirect: redirectTo }}
+          className="underline"
+        >
           Create one
         </Link>
       </p>

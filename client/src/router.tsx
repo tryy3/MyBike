@@ -12,10 +12,7 @@ import { BikesListPage } from "./routes/bikes-list";
 import { BikeDetailPage } from "./routes/bike-detail";
 import { LoginPage } from "./routes/login";
 import { RegisterPage } from "./routes/register";
-import {
-  redirectIfAuthenticated,
-  requireSession,
-} from "./lib/auth-guard";
+import { redirectIfAuthenticated, requireSession } from "./lib/auth-guard";
 
 const indexRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
@@ -51,6 +48,9 @@ const registerRoute = createRoute({
   path: "/register",
   beforeLoad: () => redirectIfAuthenticated(),
   component: RegisterPage,
+  validateSearch: (search: Record<string, unknown>) => ({
+    redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+  }),
 });
 
 const notFoundRoute = new NotFoundRoute({
