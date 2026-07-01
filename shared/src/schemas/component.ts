@@ -23,7 +23,7 @@ export const componentUpdateSchema = z.object({
 export const componentSchema = componentBaseSchema.extend({
   id: z.string().uuid(),
   bikeId: z.string().uuid(),
-  category: z.string(),
+  category: z.enum(CATEGORY_IDS),
   sortOrder: z.number().int(),
   createdAt: z.number().int(),
   updatedAt: z.number().int(),
@@ -52,6 +52,13 @@ export const COMPONENT_CSV_COLUMNS = [
 ] as const;
 
 export type ComponentCsvColumn = (typeof COMPONENT_CSV_COLUMNS)[number];
+
+export const componentImportSchema = z.object({
+  csv: z.string().min(1),
+  dryRun: z.boolean().optional(),
+});
+
+export type ComponentImportBody = z.infer<typeof componentImportSchema>;
 
 export type ComponentBase = z.infer<typeof componentBaseSchema>;
 export type ComponentInsert = z.infer<typeof componentInsertSchema>;

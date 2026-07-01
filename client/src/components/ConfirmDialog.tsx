@@ -1,6 +1,5 @@
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -18,7 +17,8 @@ interface ConfirmDialogProps {
   confirmLabel?: string;
   cancelLabel?: string;
   loading?: boolean;
-  onConfirm: () => void;
+  loadingLabel?: string;
+  onConfirm: () => void | Promise<void>;
 }
 
 export function ConfirmDialog({
@@ -29,8 +29,19 @@ export function ConfirmDialog({
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
   loading = false,
+  loadingLabel = "Working…",
   onConfirm,
 }: ConfirmDialogProps) {
+  async function handleConfirm(event: React.MouseEvent) {
+    event.preventDefault();
+    try {
+      await onConfirm();
+      onOpenChange(false);
+    } catch {
+      // Caller shows error feedback; keep dialog open for retry.
+    }
+  }
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -42,15 +53,13 @@ export function ConfirmDialog({
           <AlertDialogCancel disabled={loading}>
             {cancelLabel}
           </AlertDialogCancel>
-          <AlertDialogAction asChild>
-            <Button
-              variant="destructive"
-              disabled={loading}
-              onClick={onConfirm}
-            >
-              {loading ? "Deleting…" : confirmLabel}
-            </Button>
-          </AlertDialogAction>
+          <Button
+            variant="destructive"
+            disabled={loading}
+            onClick={handleConfirm}
+          >
+            {loading ? loadingLabel : confirmLabel}
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
