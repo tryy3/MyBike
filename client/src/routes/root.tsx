@@ -1,5 +1,6 @@
 import { Outlet, Link, createRootRoute } from "@tanstack/react-router";
 import { BikeIcon } from "lucide-react";
+import { ModeToggle } from "@/components/mode-toggle";
 import { Toaster } from "@/components/ui/sonner";
 
 function RootLayout() {
@@ -13,6 +14,9 @@ function RootLayout() {
             </span>
             MyBike
           </Link>
+          <div className="ml-auto">
+            <ModeToggle />
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-4 py-8">
