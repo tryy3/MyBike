@@ -6,6 +6,9 @@
     "client",
     "shared"
   ],
+  "scripts": {
+    "test": "npm run -w shared test && npm run -w server test"
+  },
   "dependencies": {
     "agent-browser": "^0.31.1"
   },

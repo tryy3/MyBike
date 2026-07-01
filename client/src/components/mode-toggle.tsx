@@ -38,18 +38,30 @@ export function ModeToggle() {
           <TriggerIcon />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme("light")}>
+      <DropdownMenuContent align="end" role="menu" aria-label="Theme">
+        <DropdownMenuItem
+          role="menuitemradio"
+          aria-checked={theme === "light"}
+          onClick={() => setTheme("light")}
+        >
           <SunIcon />
           Light
           {theme === "light" ? <span className="ml-auto">✓</span> : null}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>
+        <DropdownMenuItem
+          role="menuitemradio"
+          aria-checked={theme === "dark"}
+          onClick={() => setTheme("dark")}
+        >
           <MoonIcon />
           Dark
           {theme === "dark" ? <span className="ml-auto">✓</span> : null}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")}>
+        <DropdownMenuItem
+          role="menuitemradio"
+          aria-checked={theme === "system"}
+          onClick={() => setTheme("system")}
+        >
           <MonitorIcon />
           System
           {theme === "system" ? <span className="ml-auto">✓</span> : null}

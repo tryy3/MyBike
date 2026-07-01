@@ -1,5 +1,11 @@
 import { sql } from "drizzle-orm";
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+  index,
+  integer,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 function uuid() {
   return crypto.randomUUID();
@@ -67,7 +73,7 @@ export const components = sqliteTable(
     ),
     // Enforce "at most one active component per (bike, category)": a unique
     // partial index guarantees a category never has more than one active part.
-    index("idx_components_active_per_category")
+    uniqueIndex("idx_components_active_per_category")
       .on(t.bikeId, t.category)
       .where(sql`${t.isActive} = 1`),
   ],

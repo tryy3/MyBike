@@ -15,6 +15,13 @@
       "when": 1782928448322,
       "tag": "0001_large_risque",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1782930000000,
+      "tag": "0002_unique_active_index",
+      "breakpoints": true
     }
   ]
 }

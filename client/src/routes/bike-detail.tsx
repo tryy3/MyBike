@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
   ArrowLeftIcon,
@@ -53,11 +53,22 @@ function groupByCategory(components: Component[]): Map<string, Component[]> {
 }
 
 export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
-  const { data, isPending, isError, error } = useBike(bikeId);
+  const navigate = useNavigate();
+  const { data, isPending, isError, error, refetch } = useBike(bikeId);
   const deleteBike = useDeleteBike();
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [showEmptyCategories, setShowEmptyCategories] = useState(false);
+
+  useEffect(() => {
+    if (data?.name) {
+      document.title = `${data.name} | MyBike`;
+    }
+    return () => {
+      document.title = "MyBike";
+    };
+  }, [data?.name]);
 
   function handleDownloadTemplate(): void {
     downloadCsv("mybike-components-template.csv", buildTemplateCsv());
@@ -70,7 +81,11 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
   if (isPending) {
     return (
       <Card>
-        <CardContent className="p-6 text-sm text-muted-foreground">
+        <CardContent
+          className="p-6 text-sm text-muted-foreground"
+          role="status"
+          aria-live="polite"
+        >
           Loading bike…
         </CardContent>
       </Card>
@@ -84,9 +99,14 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
           <p className="text-sm text-destructive">
             Could not load this bike: {error?.message ?? "Not found"}
           </p>
-          <Button asChild variant="outline" size="sm">
-            <Link to="/">Back to bikes</Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link to="/">Back to bikes</Link>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              Retry
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );
@@ -95,6 +115,13 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
   const grouped = groupByCategory(data.components);
   const categoriesUsed = grouped.size;
   const activeCount = data.components.filter((c) => c.isActive).length;
+  const emptyCategoryCount = CATEGORIES.length - categoriesUsed;
+  const visibleCategories = CATEGORIES.filter(
+    (cat) =>
+      showEmptyCategories ||
+      categoriesUsed === 0 ||
+      (grouped.get(cat.id)?.length ?? 0) > 0,
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -113,7 +140,7 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
         <CardHeader>
           <div className="flex items-start justify-between gap-3">
             <div className="flex flex-col gap-1">
-              <CardTitle className="text-2xl">{data.name}</CardTitle>
+              <h1 className="text-2xl font-semibold text-balance">{data.name}</h1>
               <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
                 {[data.brand, data.model, data.year]
                   .filter(Boolean)
@@ -194,11 +221,20 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
               <SheetIcon />
               Template
             </Button>
+            {emptyCategoryCount > 0 && categoriesUsed > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowEmptyCategories((v) => !v)}
+              >
+                {showEmptyCategories
+                  ? "Hide empty categories"
+                  : `Show empty categories (${emptyCategoryCount})`}
+              </Button>
+            )}
           </div>
-          {/* Always render every predefined category so the user can add
-              components into whichever one they like. */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {CATEGORIES.map((cat) => (
+            {visibleCategories.map((cat) => (
               <CategorySection
                 key={cat.id}
                 bikeId={bikeId}
@@ -254,11 +290,18 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
         description={`"${data.name}" and all of its components will be permanently deleted.`}
         confirmLabel="Delete bike"
         loading={deleteBike.isPending}
-        onConfirm={() =>
-          deleteBike.mutateAsync(data.id).then(() => {
+        loadingLabel="Deleting…"
+        onConfirm={async () => {
+          try {
+            await deleteBike.mutateAsync(data.id);
             toast.success("Bike deleted");
-          })
-        }
+            await navigate({ to: "/" });
+          } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : "Something went wrong";
+            toast.error("Could not delete bike", { description: msg });
+            throw e;
+          }
+        }}
       />
 
       {/* Import components from CSV (upload + confirmation gate). */}

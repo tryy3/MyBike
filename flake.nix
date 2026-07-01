@@ -65,12 +65,19 @@
         buildInputs = with pkgs; [
           nodejs_26
           agent-browser
+          python3
+          node-gyp
         ];
 
         shellHook = ''
           echo "🚲 MyBike dev environment"
           export NIX_LD_LIBRARY_PATH="${chromeLdPath}''${NIX_LD_LIBRARY_PATH:+:$NIX_LD_LIBRARY_PATH}"
           export LD_LIBRARY_PATH="${chromeLdPath}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+
+          # Native addons (better-sqlite3) must match the shell Node ABI.
+          if [ -d node_modules/better-sqlite3 ]; then
+            npm rebuild better-sqlite3 --silent 2>/dev/null || true
+          fi
         '';
       };
     });

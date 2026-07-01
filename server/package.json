@@ -4,10 +4,11 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "npm run -w shared build && tsc",
     "start": "node dist/index.js",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "format": "prettier --write src/",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
@@ -34,6 +35,9 @@
     "prettier": "^3.9.4",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.62.1"
+    "typescript-eslint": "^8.62.1",
+    "supertest": "^7.1.4",
+    "@types/supertest": "^6.0.3",
+    "vitest": "^3.2.4"
   }
 }

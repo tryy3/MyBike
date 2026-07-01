@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -47,12 +48,23 @@ export function BikesListPage() {
   const [editing, setEditing] = useState<Bike | null>(null);
   const [deleting, setDeleting] = useState<Bike | null>(null);
 
-  const onDelete = () => {
+  useEffect(() => {
+    document.title = "Bikes | MyBike";
+    return () => {
+      document.title = "MyBike";
+    };
+  }, []);
+
+  const onDelete = async () => {
     if (!deleting) return;
-    deleteBike.mutateAsync(deleting.id).then(() => {
+    try {
+      await deleteBike.mutateAsync(deleting.id);
       toast.success("Bike deleted");
-      setDeleting(null);
-    });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Something went wrong";
+      toast.error("Could not delete bike", { description: msg });
+      throw e;
+    }
   };
 
   return (
@@ -72,7 +84,11 @@ export function BikesListPage() {
 
       {isPending ? (
         <Card>
-          <CardContent className="p-6 text-sm text-muted-foreground">
+          <CardContent
+            className="p-6 text-sm text-muted-foreground"
+            role="status"
+            aria-live="polite"
+          >
             Loading bikes…
           </CardContent>
         </Card>
@@ -133,7 +149,7 @@ export function BikesListPage() {
                         size="icon-sm"
                         variant="ghost"
                         asChild
-                        aria-label="Open bike"
+                        aria-label={`Open ${bike.name}`}
                       >
                         <Link to="/bikes/$bikeId" params={{ bikeId: bike.id }}>
                           <ChevronRightIcon />
@@ -144,7 +160,7 @@ export function BikesListPage() {
                           <Button
                             size="icon-sm"
                             variant="ghost"
-                            aria-label="Actions"
+                            aria-label={`Actions for ${bike.name}`}
                           >
                             <EllipsisVerticalIcon />
                           </Button>
@@ -226,6 +242,7 @@ export function BikesListPage() {
         }
         confirmLabel="Delete bike"
         loading={deleteBike.isPending}
+        loadingLabel="Deleting…"
         onConfirm={onDelete}
       />
     </div>
@@ -235,7 +252,9 @@ export function BikesListPage() {
 function NoBikesIcon() {
   return (
     <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
-      <span className="text-2xl">🚲</span>
+      <span className="text-2xl" aria-hidden="true">
+        🚲
+      </span>
     </div>
   );
 }

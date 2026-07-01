@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import {
   DndContext,
+  KeyboardSensor,
   PointerSensor,
   closestCenter,
   useSensor,
@@ -18,6 +19,7 @@ import {
 import {
   SortableContext,
   arrayMove,
+  sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
@@ -40,7 +42,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ComponentForm } from "./ComponentForm";
 import {
@@ -63,8 +64,15 @@ export function CategorySection({
   components,
 }: CategorySectionProps) {
   const reorder = useReorderComponents(bikeId);
+  const activate = useActivateComponent(bikeId);
+  const deleteComponent = useDeleteComponent(bikeId);
+  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<Component | null>(null);
+  const [deleting, setDeleting] = useState<Component | null>(null);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
   const sortable = components.length > 1;
 
@@ -75,10 +83,44 @@ export function CategorySection({
     const newIndex = components.findIndex((c) => c.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
     const reordered = arrayMove(components, oldIndex, newIndex);
-    reorder.mutate({
-      category: categoryId,
-      orderedIds: reordered.map((c) => c.id),
+    reorder.mutate(
+      {
+        category: categoryId,
+        orderedIds: reordered.map((c) => c.id),
+      },
+      {
+        onError: (e) => {
+          toast.error("Could not reorder components", {
+            description: e instanceof Error ? e.message : "Something went wrong",
+          });
+        },
+      },
+    );
+  }
+
+  function handleActivate(component: Component) {
+    activate.mutate(component.id, {
+      onSuccess: () => {
+        toast.success(`Now using ${component.name}`);
+      },
+      onError: (e) => {
+        toast.error("Could not switch component", {
+          description: e instanceof Error ? e.message : "Something went wrong",
+        });
+      },
     });
+  }
+
+  async function handleDelete() {
+    if (!deleting) return;
+    try {
+      await deleteComponent.mutateAsync(deleting.id);
+      toast.success("Component deleted");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Something went wrong";
+      toast.error("Could not delete component", { description: msg });
+      throw e;
+    }
   }
 
   return (
@@ -106,18 +148,18 @@ export function CategorySection({
               items={components.map((c) => c.id)}
               strategy={verticalListSortingStrategy}
             >
-              <ul className="flex flex-col">
-                {components.map((c, i) => (
-                  <div key={c.id}>
-                    {i > 0 && <Separator />}
-                    <ComponentRow
-                      bikeId={bikeId}
-                      categoryId={categoryId}
-                      component={c}
-                      canActivate={components.length > 1}
-                      draggable={sortable}
-                    />
-                  </div>
+              <ul className="flex flex-col divide-y">
+                {components.map((c) => (
+                  <ComponentRow
+                    key={c.id}
+                    component={c}
+                    canActivate={components.length > 1}
+                    draggable={sortable}
+                    activating={activate.isPending}
+                    onActivate={() => handleActivate(c)}
+                    onEdit={() => setEditing(c)}
+                    onDelete={() => setDeleting(c)}
+                  />
                 ))}
               </ul>
             </SortableContext>
@@ -125,34 +167,89 @@ export function CategorySection({
         )}
       </CardContent>
       <CardFooter>
-        <AddComponentButton
-          bikeId={bikeId}
-          categoryId={categoryId}
-          label={label}
-        />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setAdding(true)}
+          className="w-full"
+        >
+          <PlusIcon /> Add component
+        </Button>
       </CardFooter>
+
+      <Dialog open={adding} onOpenChange={setAdding}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add {label.toLowerCase()} component</DialogTitle>
+            <DialogDescription>
+              Add a component you can swap into this category.
+            </DialogDescription>
+          </DialogHeader>
+          <ComponentForm
+            bikeId={bikeId}
+            category={categoryId}
+            onDone={() => setAdding(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!editing}
+        onOpenChange={(open) => !open && setEditing(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit component</DialogTitle>
+            <DialogDescription>
+              Keep names short so they are easy to pick between.
+            </DialogDescription>
+          </DialogHeader>
+          {editing && (
+            <ComponentForm
+              bikeId={bikeId}
+              category={categoryId}
+              component={editing}
+              onDone={() => setEditing(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={!!deleting}
+        onOpenChange={(open) => !open && setDeleting(null)}
+        title="Delete component?"
+        description={
+          deleting
+            ? `"${deleting.name}" will be removed from this category.`
+            : ""
+        }
+        confirmLabel="Delete"
+        loading={deleteComponent.isPending}
+        loadingLabel="Deleting…"
+        onConfirm={handleDelete}
+      />
     </Card>
   );
 }
 
 function ComponentRow({
-  bikeId,
-  categoryId,
   component,
   canActivate,
   draggable,
+  activating,
+  onActivate,
+  onEdit,
+  onDelete,
 }: {
-  bikeId: string;
-  categoryId: string;
   component: Component;
   canActivate: boolean;
   draggable: boolean;
+  activating: boolean;
+  onActivate: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
 }) {
-  const activate = useActivateComponent(bikeId);
-  const deleteComponent = useDeleteComponent(bikeId);
-  const [editing, setEditing] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-
   const {
     setNodeRef,
     attributes,
@@ -179,11 +276,11 @@ function ComponentRow({
           <button
             type="button"
             className="cursor-grab touch-none text-muted-foreground/60 transition-colors hover:text-muted-foreground active:cursor-grabbing"
-            aria-label="Drag to reorder"
+            aria-label={`Drag to reorder ${component.name}`}
             {...attributes}
             {...listeners}
           >
-            <GripVerticalIcon className="size-4" />
+            <GripVerticalIcon className="size-4" aria-hidden="true" />
           </button>
         )}
         <div className="flex min-w-0 flex-col gap-1">
@@ -191,7 +288,7 @@ function ComponentRow({
             <span className="truncate font-medium">{component.name}</span>
             {component.isActive && (
               <Badge variant="secondary" className="gap-1">
-                <CheckIcon className="size-3" /> Active
+                <CheckIcon className="size-3" aria-hidden="true" /> Active
               </Badge>
             )}
           </div>
@@ -207,7 +304,8 @@ function ComponentRow({
           <Button
             size="sm"
             variant="outline"
-            onClick={() => activate.mutate(component.id)}
+            disabled={activating}
+            onClick={onActivate}
             aria-label={`Switch to ${component.name}`}
           >
             Use this
@@ -216,91 +314,20 @@ function ComponentRow({
         <Button
           size="icon-sm"
           variant="ghost"
-          aria-label="Edit component"
-          onClick={() => setEditing(true)}
+          aria-label={`Edit ${component.name}`}
+          onClick={onEdit}
         >
           <PencilIcon />
         </Button>
         <Button
           size="icon-sm"
           variant="ghost"
-          aria-label="Delete component"
-          onClick={() => setDeleting(true)}
+          aria-label={`Delete ${component.name}`}
+          onClick={onDelete}
         >
           <Trash2Icon />
         </Button>
       </div>
-
-      <Dialog open={editing} onOpenChange={setEditing}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit component</DialogTitle>
-            <DialogDescription>
-              Keep names short so they are easy to pick between.
-            </DialogDescription>
-          </DialogHeader>
-          <ComponentForm
-            bikeId={bikeId}
-            category={categoryId}
-            component={component}
-            onDone={() => setEditing(false)}
-          />
-        </DialogContent>
-      </Dialog>
-
-      <ConfirmDialog
-        open={deleting}
-        onOpenChange={setDeleting}
-        title="Delete component?"
-        description={`"${component.name}" will be removed from this category.`}
-        confirmLabel="Delete"
-        loading={deleteComponent.isPending}
-        onConfirm={() =>
-          deleteComponent.mutateAsync(component.id).then(() => {
-            toast.success("Component deleted");
-            setDeleting(false);
-          })
-        }
-      />
     </li>
-  );
-}
-
-function AddComponentButton({
-  bikeId,
-  categoryId,
-  label,
-}: {
-  bikeId: string;
-  categoryId: string;
-  label: string;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setOpen(true)}
-        className="w-full"
-      >
-        <PlusIcon /> Add component
-      </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add {label.toLowerCase()} component</DialogTitle>
-            <DialogDescription>
-              Add a component you can swap into this category.
-            </DialogDescription>
-          </DialogHeader>
-          <ComponentForm
-            bikeId={bikeId}
-            category={categoryId}
-            onDone={() => setOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
-    </>
   );
 }

@@ -158,7 +158,11 @@ export function ImportComponentsDialog({
             </label>
 
             {previewing && (
-              <p className="text-sm text-muted-foreground">
+              <p
+                className="text-sm text-muted-foreground"
+                role="status"
+                aria-live="polite"
+              >
                 {csv ? "Validating…" : "Loading…"}
               </p>
             )}
@@ -193,7 +197,11 @@ export function ImportComponentsDialog({
           </div>
 
           {rowErrors.length > 0 && (
-            <div className="max-h-48 overflow-y-auto rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+            <div
+              className="max-h-48 overflow-y-auto rounded-lg border border-destructive/30 bg-destructive/5 p-3"
+              role="alert"
+              aria-live="polite"
+            >
               <p className="mb-2 text-sm font-medium text-destructive">
                 {rowErrors.length} issue
                 {rowErrors.length === 1 ? "" : "s"} found:

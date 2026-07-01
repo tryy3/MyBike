@@ -10,6 +10,7 @@ import {
   COMPONENT_CSV_COLUMNS,
   categoryLabel,
   componentInsertSchema,
+  componentImportSchema,
   componentReorderSchema,
   componentUpdateSchema,
 } from "shared";
@@ -43,9 +44,14 @@ function requireComponentExists(componentId: string) {
   return component;
 }
 
-// GET /api/bikes/:bikeId/components/export.csv — download all of a bike's
-// components as CSV with ids filled in so the file is round-trippable: edit it
-// and re-import to update existing rows + add new ones.
+function escapeCsvCell(value: string): string {
+  if (/^[=+\-@\t\r]/.test(value)) {
+    return `'${value}`;
+  }
+  return value;
+}
+
+// GET /api/bikes/:bikeId/components/export.csv
 componentsRouter.get("/export.csv", (req, res) => {
   const { bikeId } = parseParams(req, ["bikeId"]);
   const bike = requireBikeExists(bikeId);
@@ -65,10 +71,10 @@ componentsRouter.get("/export.csv", (req, res) => {
   const data = rows.map((r) => ({
     id: r.id,
     category: r.category,
-    name: r.name,
-    brand: r.brand ?? "",
-    model: r.model ?? "",
-    notes: r.notes ?? "",
+    name: escapeCsvCell(r.name),
+    brand: escapeCsvCell(r.brand ?? ""),
+    model: escapeCsvCell(r.model ?? ""),
+    notes: escapeCsvCell(r.notes ?? ""),
     isActive: r.isActive ? "true" : "false",
   }));
   const csv = stringify(data, {
@@ -97,15 +103,7 @@ componentsRouter.post("/import", (req, res) => {
   const { bikeId } = parseParams(req, ["bikeId"]);
   requireBikeExists(bikeId);
 
-  const body = (req.body ?? {}) as { csv?: unknown; dryRun?: unknown };
-  if (typeof body.csv !== "string") {
-    throw badRequest(
-      "Request body must be an object with a string `csv` field",
-    );
-  }
-  const dryRun = body.dryRun === true;
-  const csvText = body.csv;
-  if (csvText.length === 0) throw badRequest("CSV is empty");
+  const { csv: csvText, dryRun = false } = parseBody(req, componentImportSchema);
   if (csvText.length > IMPORT_MAX_BYTES) {
     throw badRequest(`CSV is too large (max ${IMPORT_MAX_BYTES} bytes)`);
   }
@@ -420,35 +418,46 @@ componentsRouter.post("/", (req, res) => {
   // First component in a (bike, category) is auto-activated so a category
   // always has exactly one active component once it has any at all.
   const isActive = existingCount === 0 ? true : data.isActive;
-  // New components are appended to the end of their (bike, category) so the
-  // default order matches creation order.
-  const maxOrder = db
-    .select({
-      max: sql<number | null>`max(${components.sortOrder})`.as("max"),
-    })
-    .from(components)
-    .where(
-      and(
-        eq(components.bikeId, bikeId),
-        eq(components.category, data.category),
-      ),
-    )
-    .get();
-  const sortOrder = (maxOrder?.max ?? -1) + 1;
-  const created = db
-    .insert(components)
-    .values({
-      bikeId,
-      category: data.category,
-      name: data.name,
-      brand: data.brand ?? null,
-      model: data.model ?? null,
-      notes: data.notes ?? null,
-      isActive,
-      sortOrder,
-    })
-    .returning()
-    .get();
+  const created = db.transaction((tx) => {
+    if (isActive && existingCount > 0) {
+      tx.update(components)
+        .set({ isActive: false })
+        .where(
+          and(
+            eq(components.bikeId, bikeId),
+            eq(components.category, data.category),
+          ),
+        )
+        .run();
+    }
+    const maxOrder = tx
+      .select({
+        max: sql<number | null>`max(${components.sortOrder})`.as("max"),
+      })
+      .from(components)
+      .where(
+        and(
+          eq(components.bikeId, bikeId),
+          eq(components.category, data.category),
+        ),
+      )
+      .get();
+    const sortOrder = (maxOrder?.max ?? -1) + 1;
+    return tx
+      .insert(components)
+      .values({
+        bikeId,
+        category: data.category,
+        name: data.name,
+        brand: data.brand ?? null,
+        model: data.model ?? null,
+        notes: data.notes ?? null,
+        isActive,
+        sortOrder,
+      })
+      .returning()
+      .get();
+  });
   res.status(201).json(created);
 });
 

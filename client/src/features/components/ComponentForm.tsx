@@ -16,10 +16,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateComponent, useUpdateComponent } from "./api";
 
-// The form never lets users toggle is_active (that's done via a dedicated
-// "Use this" action) nor change category once set, so it validates against
-// just the editable fields. The field constraints mirror
-// `componentInsertSchema` from `shared`, which is what the server uses.
 const formSchema = z.object({
   name: z.string().min(1).max(200),
   brand: z.string().max(200).nullish(),
@@ -116,82 +112,106 @@ export function ComponentForm({
         <Controller
           name="name"
           control={form.control}
-          render={({ field, fieldState }) => (
-            <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor={field.name}>Name</FieldLabel>
-              <Input
-                id={field.name}
-                {...field}
-                placeholder="e.g. Carbon wheelset"
-                autoComplete="off"
-                aria-invalid={fieldState.invalid}
-              />
-              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-            </Field>
-          )}
-        />
-
-        <div className="flex gap-4">
-          <Controller
-            name="brand"
-            control={form.control}
-            render={({ field, fieldState }) => (
-              <Field className="flex-1" data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor={field.name}>Brand</FieldLabel>
+          render={({ field, fieldState }) => {
+            const errorId = `${field.name}-error`;
+            return (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor={field.name}>Name</FieldLabel>
                 <Input
                   id={field.name}
                   {...field}
-                  value={field.value ?? ""}
-                  placeholder="e.g. Zipp"
+                  placeholder="e.g. Carbon wheelset"
                   autoComplete="off"
                   aria-invalid={fieldState.invalid}
+                  aria-describedby={fieldState.invalid ? errorId : undefined}
                 />
                 {fieldState.invalid && (
-                  <FieldError errors={[fieldState.error]} />
+                  <FieldError id={errorId} errors={[fieldState.error]} />
                 )}
               </Field>
-            )}
+            );
+          }}
+        />
+
+        <div className="flex flex-col gap-4 sm:flex-row">
+          <Controller
+            name="brand"
+            control={form.control}
+            render={({ field, fieldState }) => {
+              const errorId = `${field.name}-error`;
+              return (
+                <Field className="flex-1" data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor={field.name}>Brand</FieldLabel>
+                  <Input
+                    id={field.name}
+                    {...field}
+                    value={field.value ?? ""}
+                    placeholder="e.g. Zipp"
+                    autoComplete="off"
+                    aria-invalid={fieldState.invalid}
+                    aria-describedby={
+                      fieldState.invalid ? errorId : undefined
+                    }
+                  />
+                  {fieldState.invalid && (
+                    <FieldError id={errorId} errors={[fieldState.error]} />
+                  )}
+                </Field>
+              );
+            }}
           />
 
           <Controller
             name="model"
             control={form.control}
-            render={({ field, fieldState }) => (
-              <Field className="flex-1" data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor={field.name}>Model</FieldLabel>
-                <Input
-                  id={field.name}
-                  {...field}
-                  value={field.value ?? ""}
-                  placeholder="e.g. 303 Firecrest"
-                  autoComplete="off"
-                  aria-invalid={fieldState.invalid}
-                />
-                {fieldState.invalid && (
-                  <FieldError errors={[fieldState.error]} />
-                )}
-              </Field>
-            )}
+            render={({ field, fieldState }) => {
+              const errorId = `${field.name}-error`;
+              return (
+                <Field className="flex-1" data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor={field.name}>Model</FieldLabel>
+                  <Input
+                    id={field.name}
+                    {...field}
+                    value={field.value ?? ""}
+                    placeholder="e.g. 303 Firecrest"
+                    autoComplete="off"
+                    aria-invalid={fieldState.invalid}
+                    aria-describedby={
+                      fieldState.invalid ? errorId : undefined
+                    }
+                  />
+                  {fieldState.invalid && (
+                    <FieldError id={errorId} errors={[fieldState.error]} />
+                  )}
+                </Field>
+              );
+            }}
           />
         </div>
 
         <Controller
           name="notes"
           control={form.control}
-          render={({ field, fieldState }) => (
-            <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor={field.name}>Notes</FieldLabel>
-              <Textarea
-                id={field.name}
-                {...field}
-                value={field.value ?? ""}
-                placeholder="Specs, condition, usage notes…"
-                className="min-h-20"
-                aria-invalid={fieldState.invalid}
-              />
-              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-            </Field>
-          )}
+          render={({ field, fieldState }) => {
+            const errorId = `${field.name}-error`;
+            return (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor={field.name}>Notes</FieldLabel>
+                <Textarea
+                  id={field.name}
+                  {...field}
+                  value={field.value ?? ""}
+                  placeholder="Specs, condition, usage notes…"
+                  className="min-h-20"
+                  aria-invalid={fieldState.invalid}
+                  aria-describedby={fieldState.invalid ? errorId : undefined}
+                />
+                {fieldState.invalid && (
+                  <FieldError id={errorId} errors={[fieldState.error]} />
+                )}
+              </Field>
+            );
+          }}
         />
       </FieldGroup>
 

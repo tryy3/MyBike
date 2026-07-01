@@ -100,7 +100,9 @@ export function BikeForm({ bike, bikeId, onDone }: BikeFormProps) {
         <Controller
           name="name"
           control={form.control}
-          render={({ field, fieldState }) => (
+          render={({ field, fieldState }) => {
+            const errorId = `${field.name}-error`;
+            return (
             <Field data-invalid={fieldState.invalid}>
               <FieldLabel htmlFor={field.name}>Name</FieldLabel>
               <Input
@@ -109,17 +111,23 @@ export function BikeForm({ bike, bikeId, onDone }: BikeFormProps) {
                 placeholder="e.g. Road Bike"
                 autoComplete="off"
                 aria-invalid={fieldState.invalid}
+                aria-describedby={fieldState.invalid ? errorId : undefined}
               />
-              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+              {fieldState.invalid && (
+                <FieldError id={errorId} errors={[fieldState.error]} />
+              )}
             </Field>
-          )}
+            );
+          }}
         />
 
-        <div className="flex gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row">
           <Controller
             name="brand"
             control={form.control}
-            render={({ field, fieldState }) => (
+            render={({ field, fieldState }) => {
+              const errorId = `${field.name}-error`;
+              return (
               <Field className="flex-1" data-invalid={fieldState.invalid}>
                 <FieldLabel htmlFor={field.name}>Brand</FieldLabel>
                 <Input
@@ -129,18 +137,22 @@ export function BikeForm({ bike, bikeId, onDone }: BikeFormProps) {
                   placeholder="e.g. Trek"
                   autoComplete="off"
                   aria-invalid={fieldState.invalid}
+                  aria-describedby={fieldState.invalid ? errorId : undefined}
                 />
                 {fieldState.invalid && (
-                  <FieldError errors={[fieldState.error]} />
+                  <FieldError id={errorId} errors={[fieldState.error]} />
                 )}
               </Field>
-            )}
+              );
+            }}
           />
 
           <Controller
             name="model"
             control={form.control}
-            render={({ field, fieldState }) => (
+            render={({ field, fieldState }) => {
+              const errorId = `${field.name}-error`;
+              return (
               <Field className="flex-1" data-invalid={fieldState.invalid}>
                 <FieldLabel htmlFor={field.name}>Model</FieldLabel>
                 <Input
@@ -150,19 +162,23 @@ export function BikeForm({ bike, bikeId, onDone }: BikeFormProps) {
                   placeholder="e.g. Domane SLR"
                   autoComplete="off"
                   aria-invalid={fieldState.invalid}
+                  aria-describedby={fieldState.invalid ? errorId : undefined}
                 />
                 {fieldState.invalid && (
-                  <FieldError errors={[fieldState.error]} />
+                  <FieldError id={errorId} errors={[fieldState.error]} />
                 )}
               </Field>
-            )}
+              );
+            }}
           />
         </div>
 
         <Controller
           name="year"
           control={form.control}
-          render={({ field, fieldState }) => (
+          render={({ field, fieldState }) => {
+            const errorId = `${field.name}-error`;
+            return (
             <Field data-invalid={fieldState.invalid}>
               <FieldLabel htmlFor={field.name}>Year</FieldLabel>
               <Input
@@ -178,17 +194,23 @@ export function BikeForm({ bike, bikeId, onDone }: BikeFormProps) {
                 placeholder="e.g. 2023"
                 autoComplete="off"
                 aria-invalid={fieldState.invalid}
+                aria-describedby={fieldState.invalid ? errorId : undefined}
               />
               <FieldDescription>Model year, if known.</FieldDescription>
-              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+              {fieldState.invalid && (
+                <FieldError id={errorId} errors={[fieldState.error]} />
+              )}
             </Field>
-          )}
+            );
+          }}
         />
 
         <Controller
           name="notes"
           control={form.control}
-          render={({ field, fieldState }) => (
+          render={({ field, fieldState }) => {
+            const errorId = `${field.name}-error`;
+            return (
             <Field data-invalid={fieldState.invalid}>
               <FieldLabel htmlFor={field.name}>Notes</FieldLabel>
               <Textarea
@@ -198,10 +220,14 @@ export function BikeForm({ bike, bikeId, onDone }: BikeFormProps) {
                 placeholder="Anything worth remembering about this bike…"
                 className="min-h-24"
                 aria-invalid={fieldState.invalid}
+                aria-describedby={fieldState.invalid ? errorId : undefined}
               />
-              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+              {fieldState.invalid && (
+                <FieldError id={errorId} errors={[fieldState.error]} />
+              )}
             </Field>
-          )}
+            );
+          }}
         />
       </FieldGroup>
 

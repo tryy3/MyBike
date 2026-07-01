@@ -37,6 +37,9 @@ export function useDeleteBike() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api.deleteBike(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.bikes }),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: queryKeys.bikes });
+      qc.removeQueries({ queryKey: queryKeys.bike(id) });
+    },
   });
 }
