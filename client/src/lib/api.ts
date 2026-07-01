@@ -6,6 +6,7 @@ import type {
   BikeUpdate,
   Component,
   ComponentInsert,
+  ComponentReorder,
   ComponentUpdate,
 } from "shared";
 
@@ -44,7 +45,9 @@ async function apiFetch<T>(
 
   if (!res.ok) {
     const msg =
-      body && typeof body === "object" && "error" in (body as Record<string, unknown>)
+      body &&
+      typeof body === "object" &&
+      "error" in (body as Record<string, unknown>)
         ? String((body as Record<string, unknown>).error)
         : res.statusText;
     throw new ApiError(
@@ -76,20 +79,45 @@ export const api = {
   // --- Components --------------------------------------------------------
 
   createComponent: (bikeId: string, data: ComponentInsert) =>
-    apiFetch<Component>(
-      `/api/bikes/${bikeId}/components`,
-      json("POST", data),
-    ),
+    apiFetch<Component>(`/api/bikes/${bikeId}/components`, json("POST", data)),
   updateComponent: (id: string, data: ComponentUpdate) =>
     apiFetch<Component>(`/api/components/${id}`, json("PUT", data)),
   deleteComponent: (id: string) =>
     apiFetch<void>(`/api/components/${id}`, { method: "DELETE" }),
   activateComponent: (id: string) =>
-    apiFetch<Component>(
-      `/api/components/${id}/activate`,
-      { method: "PATCH" },
+    apiFetch<Component>(`/api/components/${id}/activate`, { method: "PATCH" }),
+
+  reorderComponents: (bikeId: string, data: ComponentReorder) =>
+    apiFetch<void>(`/api/bikes/${bikeId}/components/reorder`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  // --- CSV import / export --------------------------------------------------
+
+  importComponents: (bikeId: string, csv: string, dryRun = false) =>
+    apiFetch<ImportResult>(
+      `/api/bikes/${bikeId}/components/import`,
+      json("POST", { csv, dryRun }),
     ),
+
+  // Direct browser download link for export — used as an `<a href download>`
+  // so the file streams without going through the JSON apiFetch wrapper.
+  exportComponentsUrl: (bikeId: string) =>
+    `/api/bikes/${bikeId}/components/export.csv`,
 };
+
+export interface ImportResult {
+  bikeId?: string;
+  dryRun?: boolean;
+  inserted: number;
+  updated: number;
+}
+
+export interface ImportRowError {
+  row: number;
+  message: string;
+}
 
 export const queryKeys = {
   bikes: ["bikes"] as const,

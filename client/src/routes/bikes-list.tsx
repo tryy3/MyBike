@@ -11,10 +11,7 @@ import {
 import type { Bike } from "shared";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -86,7 +83,7 @@ export function BikesListPage() {
               Could not load bikes: {error?.message}
             </p>
             <Button onClick={() => refetch()} variant="outline" size="sm">
-            Refresh
+              Refresh
             </Button>
           </CardContent>
         </Card>
@@ -96,8 +93,12 @@ export function BikesListPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Bike</TableHead>
-                <TableHead className="hidden sm:table-cell">Brand / Model</TableHead>
-                <TableHead className="hidden md:table-cell text-right">Components</TableHead>
+                <TableHead className="hidden sm:table-cell">
+                  Brand / Model
+                </TableHead>
+                <TableHead className="hidden md:table-cell text-right">
+                  Components
+                </TableHead>
                 <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
@@ -120,9 +121,8 @@ export function BikesListPage() {
                     </Link>
                   </TableCell>
                   <TableCell className="hidden sm:table-cell text-muted-foreground">
-                    {[bike.brand, bike.model]
-                      .filter(Boolean)
-                      .join(" · ") || "—"}
+                    {[bike.brand, bike.model].filter(Boolean).join(" · ") ||
+                      "—"}
                   </TableCell>
                   <TableCell className="hidden md:table-cell text-right tabular-nums">
                     {bike.componentCount}
@@ -135,10 +135,7 @@ export function BikesListPage() {
                         asChild
                         aria-label="Open bike"
                       >
-                        <Link
-                          to="/bikes/$bikeId"
-                          params={{ bikeId: bike.id }}
-                        >
+                        <Link to="/bikes/$bikeId" params={{ bikeId: bike.id }}>
                           <ChevronRightIcon />
                         </Link>
                       </Button>
@@ -194,9 +191,7 @@ export function BikesListPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>New bike</DialogTitle>
-            <DialogDescription>
-              Add a bike to your garage.
-            </DialogDescription>
+            <DialogDescription>Add a bike to your garage.</DialogDescription>
           </DialogHeader>
           <BikeForm onDone={() => setCreating(false)} />
         </DialogContent>

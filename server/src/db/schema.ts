@@ -20,9 +20,7 @@ export const bikes = sqliteTable(
     model: text("model"),
     year: integer("year"),
     notes: text("notes"),
-    createdAt: integer("created_at")
-      .notNull()
-      .$defaultFn(nowMs),
+    createdAt: integer("created_at").notNull().$defaultFn(nowMs),
     updatedAt: integer("updated_at")
       .notNull()
       .$defaultFn(nowMs)
@@ -46,10 +44,14 @@ export const components = sqliteTable(
     brand: text("brand"),
     model: text("model"),
     notes: text("notes"),
-    isActive: integer("is_active", { mode: "boolean" }).notNull().default(false),
-    createdAt: integer("created_at")
+    isActive: integer("is_active", { mode: "boolean" })
       .notNull()
-      .$defaultFn(nowMs),
+      .default(false),
+    // Manual ordering within a (bike, category). New components are appended at
+    // max+1 so the default order matches creation order; the user can reorder
+    // via drag-and-drop, which rewrites these values.
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: integer("created_at").notNull().$defaultFn(nowMs),
     updatedAt: integer("updated_at")
       .notNull()
       .$defaultFn(nowMs)
@@ -57,6 +59,12 @@ export const components = sqliteTable(
   },
   (t) => [
     index("idx_components_bike").on(t.bikeId),
+    // Ordered reads within a (bike, category).
+    index("idx_components_category_order").on(
+      t.bikeId,
+      t.category,
+      t.sortOrder,
+    ),
     // Enforce "at most one active component per (bike, category)": a unique
     // partial index guarantees a category never has more than one active part.
     index("idx_components_active_per_category")

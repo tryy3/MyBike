@@ -16,6 +16,8 @@
   },
   "dependencies": {
     "better-sqlite3": "^12.11.1",
+    "csv-parse": "^7.0.0",
+    "csv-stringify": "^6.8.0",
     "drizzle-orm": "^0.45.2",
     "express": "^5.2.1",
     "shared": "^0.0.1",

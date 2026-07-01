@@ -21,13 +21,14 @@ function requireBike(bikeId: string) {
 
 function buildBikeDetail(bikeId: string): BikeDetail {
   const bike = requireBike(bikeId);
-  // Active first, then oldest first — gives a stable, useful ordering that
-  // the client groups/sorts within each category by.
+  // Stable manual order (sort_order, set via drag-and-drop), tie-broken by
+  // creation time. Activating a component no longer reorders the list — the
+  // Active badge is the only indicator of which is in use.
   const rows = db
     .select()
     .from(components)
     .where(eq(components.bikeId, bikeId))
-    .orderBy(desc(components.isActive), asc(components.createdAt))
+    .orderBy(asc(components.sortOrder), asc(components.createdAt))
     .all();
   return { ...bike, components: rows };
 }
@@ -107,7 +108,10 @@ bikesRouter.put("/:id", (req, res) => {
 // DELETE /api/bikes/:id
 bikesRouter.delete("/:id", (req, res) => {
   const { id } = parseParams(req, ["id"]);
-  const result = db.delete(bikes).where(and(eq(bikes.id, id))).run();
+  const result = db
+    .delete(bikes)
+    .where(and(eq(bikes.id, id)))
+    .run();
   if (result.changes === 0) throw notFound("Bike");
   res.status(204).end();
 });

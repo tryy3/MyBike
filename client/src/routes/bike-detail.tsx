@@ -3,8 +3,11 @@ import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
   ArrowLeftIcon,
+  DownloadIcon,
   PencilIcon,
+  SheetIcon,
   Trash2Icon,
+  UploadIcon,
 } from "lucide-react";
 import { CATEGORIES } from "shared";
 import type { Component } from "shared";
@@ -26,16 +29,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { BikeForm } from "@/features/bikes/BikeForm";
 import { useBike, useDeleteBike } from "@/features/bikes/api";
 import { CategorySection } from "@/features/components/CategorySection";
+import { ImportComponentsDialog } from "@/features/components/ImportComponentsDialog";
+import { buildTemplateCsv, downloadCsv } from "@/features/components/csv";
+import { api } from "@/lib/api";
 
 interface BikeDetailPageProps {
   bikeId: string;
@@ -56,6 +57,15 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
   const deleteBike = useDeleteBike();
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [importing, setImporting] = useState(false);
+
+  function handleDownloadTemplate(): void {
+    downloadCsv("mybike-components-template.csv", buildTemplateCsv());
+    toast.message("Template downloaded", {
+      description:
+        "Fill in rows and import here. Leave id empty for new parts.",
+    });
+  }
 
   if (isPending) {
     return (
@@ -105,7 +115,9 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
             <div className="flex flex-col gap-1">
               <CardTitle className="text-2xl">{data.name}</CardTitle>
               <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-                {[data.brand, data.model, data.year].filter(Boolean).join(" · ")}
+                {[data.brand, data.model, data.year]
+                  .filter(Boolean)
+                  .join(" · ")}
               </div>
             </div>
             <div className="flex gap-1">
@@ -152,17 +164,37 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
         <TabsContent value="components" className="flex flex-col gap-4">
           {data.components.length === 0 ? (
             <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-              No components yet. Add parts to any of the categories below —
-              they are always available.
+              No components yet. Add parts to any of the categories below — they
+              are always available.
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
               {data.components.length} component
-              {data.components.length === 1 ? "" : "s"} across{" "}
-              {categoriesUsed} categor
+              {data.components.length === 1 ? "" : "s"} across {categoriesUsed}{" "}
+              categor
               {categoriesUsed === 1 ? "y" : "ies"}.
             </p>
           )}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setImporting(true)}
+            >
+              <UploadIcon />
+              Import CSV
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <a href={api.exportComponentsUrl(bikeId)} download>
+                <DownloadIcon />
+                Export CSV
+              </a>
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleDownloadTemplate}>
+              <SheetIcon />
+              Template
+            </Button>
+          </div>
           {/* Always render every predefined category so the user can add
               components into whichever one they like. */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -193,9 +225,7 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
               <OverviewRow label="Categories used">
                 {categoriesUsed}
               </OverviewRow>
-              <OverviewRow label="Active components">
-                {activeCount}
-              </OverviewRow>
+              <OverviewRow label="Active components">{activeCount}</OverviewRow>
             </CardContent>
           </Card>
         </TabsContent>
@@ -229,6 +259,13 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
             toast.success("Bike deleted");
           })
         }
+      />
+
+      {/* Import components from CSV (upload + confirmation gate). */}
+      <ImportComponentsDialog
+        bikeId={bikeId}
+        open={importing}
+        onOpenChange={setImporting}
       />
     </div>
   );

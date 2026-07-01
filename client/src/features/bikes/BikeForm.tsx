@@ -110,9 +110,7 @@ export function BikeForm({ bike, bikeId, onDone }: BikeFormProps) {
                 autoComplete="off"
                 aria-invalid={fieldState.invalid}
               />
-              {fieldState.invalid && (
-                <FieldError errors={[fieldState.error]} />
-              )}
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )}
         />
@@ -182,9 +180,7 @@ export function BikeForm({ bike, bikeId, onDone }: BikeFormProps) {
                 aria-invalid={fieldState.invalid}
               />
               <FieldDescription>Model year, if known.</FieldDescription>
-              {fieldState.invalid && (
-                <FieldError errors={[fieldState.error]} />
-              )}
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )}
         />
@@ -203,9 +199,7 @@ export function BikeForm({ bike, bikeId, onDone }: BikeFormProps) {
                 className="min-h-24"
                 aria-invalid={fieldState.invalid}
               />
-              {fieldState.invalid && (
-                <FieldError errors={[fieldState.error]} />
-              )}
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )}
         />
