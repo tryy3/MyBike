@@ -101,12 +101,12 @@ describe("active component invariant", () => {
     const wheels = detail.body.components.filter(
       (c: { category: string }) => c.category === "front-wheel",
     );
-    expect(wheels.find((c: { id: string }) => c.id === b.body.id)?.isActive).toBe(
-      true,
-    );
-    expect(wheels.find((c: { id: string }) => c.id === a.body.id)?.isActive).toBe(
-      false,
-    );
+    expect(
+      wheels.find((c: { id: string }) => c.id === b.body.id)?.isActive,
+    ).toBe(true);
+    expect(
+      wheels.find((c: { id: string }) => c.id === a.body.id)?.isActive,
+    ).toBe(false);
   });
 });
 
@@ -119,10 +119,7 @@ describe("CSV import", () => {
       .expect(201);
     const bikeId = bike.body.id;
 
-    const csv = [
-      csvHeader(),
-      ",frame,Imported Frame,,,,false",
-    ].join("\n");
+    const csv = [csvHeader(), ",frame,Imported Frame,,,,false"].join("\n");
 
     const dry = await agent
       .post(`/api/bikes/${bikeId}/components/import`)
@@ -146,6 +143,53 @@ describe("CSV import", () => {
       .post(`/api/bikes/${bike.body.id}/components/import`)
       .send({ csv: "wrong,header\n,,,,,," })
       .expect(400);
+  });
+
+  it("does not reveal whether another user's component id exists", async () => {
+    const { agent: agentA } = await createAuthenticatedAgent(app);
+    const { agent: agentB } = await createAuthenticatedAgent(app);
+
+    const bikeA = await agentA
+      .post("/api/bikes")
+      .send({ name: "Private Bike" })
+      .expect(201);
+    const foreignComponent = await agentA
+      .post(`/api/bikes/${bikeA.body.id}/components`)
+      .send({ category: "frame", name: "Private Frame" })
+      .expect(201);
+
+    const bikeB = await agentB
+      .post("/api/bikes")
+      .send({ name: "Import Target" })
+      .expect(201);
+
+    const invalidId = "00000000-0000-4000-8000-000000000000";
+    const foreignCsv = [
+      csvHeader(),
+      `${foreignComponent.body.id},frame,Foreign Frame,,,,false`,
+    ].join("\n");
+    const unknownCsv = [
+      csvHeader(),
+      `${invalidId},frame,Unknown Frame,,,,false`,
+    ].join("\n");
+
+    const foreign = await agentB
+      .post(`/api/bikes/${bikeB.body.id}/components/import`)
+      .send({ csv: foreignCsv, dryRun: true })
+      .expect(400);
+    const unknown = await agentB
+      .post(`/api/bikes/${bikeB.body.id}/components/import`)
+      .send({ csv: unknownCsv, dryRun: true })
+      .expect(400);
+
+    expect(foreign.body.details).toEqual(unknown.body.details);
+    expect(JSON.stringify(foreign.body.details)).not.toContain(
+      foreignComponent.body.id,
+    );
+    expect(JSON.stringify(foreign.body.details)).not.toContain(
+      "does not belong",
+    );
+    expect(JSON.stringify(foreign.body.details)).not.toContain("exists");
   });
 });
 

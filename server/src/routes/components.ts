@@ -8,6 +8,7 @@ import type { ComponentRow } from "../db/schema";
 import {
   CATEGORIES,
   COMPONENT_CSV_COLUMNS,
+  COMPONENT_IMPORT_MAX_BYTES,
   categoryLabel,
   componentInsertSchema,
   componentImportSchema,
@@ -28,8 +29,6 @@ const CATEGORY_ORDER = new Map(CATEGORIES.map((c, i) => [c.id, i]));
 
 // Max rows (data rows, excluding the header) accepted by the import endpoint.
 const IMPORT_MAX_ROWS = 1000;
-// Max raw CSV byte length accepted by the import endpoint.
-const IMPORT_MAX_BYTES = 256 * 1024;
 
 function requireBikeExists(bikeId: string, userId: string) {
   const bike = db
@@ -113,9 +112,14 @@ componentsRouter.post("/import", (req, res) => {
   const { bikeId } = parseParams(req, ["bikeId"]);
   requireBikeExists(bikeId, userId);
 
-  const { csv: csvText, dryRun = false } = parseBody(req, componentImportSchema);
-  if (csvText.length > IMPORT_MAX_BYTES) {
-    throw badRequest(`CSV is too large (max ${IMPORT_MAX_BYTES} bytes)`);
+  const { csv: csvText, dryRun = false } = parseBody(
+    req,
+    componentImportSchema,
+  );
+  if (csvText.length > COMPONENT_IMPORT_MAX_BYTES) {
+    throw badRequest(
+      `CSV is too large (max ${COMPONENT_IMPORT_MAX_BYTES} bytes)`,
+    );
   }
 
   let records: string[][];
@@ -244,20 +248,24 @@ componentsRouter.post("/import", (req, res) => {
       });
     } else {
       // Update.
-      const existing = db
-        .select()
+      const rowForBike = db
+        .select({ component: components })
         .from(components)
-        .where(eq(components.id, id))
+        .innerJoin(bikes, eq(components.bikeId, bikes.id))
+        .where(
+          and(
+            eq(components.id, id),
+            eq(components.bikeId, bikeId),
+            eq(bikes.userId, userId),
+          ),
+        )
         .get();
+      const existing = rowForBike?.component;
       if (!existing) {
         addError(
           row,
-          `No component with id "${id}" exists. Leave the id column empty to import as a new component.`,
+          "The id column can only update an existing component on this bike. Leave it empty to import as a new component.",
         );
-        continue;
-      }
-      if (existing.bikeId !== bikeId) {
-        addError(row, `Component "${id}" does not belong to this bike.`);
         continue;
       }
       if (category !== existing.category) {

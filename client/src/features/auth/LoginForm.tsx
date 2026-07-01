@@ -12,6 +12,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { safeRedirectPath } from "@/lib/safe-redirect";
 import { useSignIn } from "./api";
 
 interface LoginFormProps {
@@ -20,6 +21,7 @@ interface LoginFormProps {
 
 export function LoginForm({ redirectTo = "/" }: LoginFormProps) {
   const signIn = useSignIn();
+  const redirectPath = safeRedirectPath(redirectTo) ?? "/";
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
@@ -29,7 +31,7 @@ export function LoginForm({ redirectTo = "/" }: LoginFormProps) {
     signIn.mutate(data, {
       onSuccess: () => {
         toast.success("Signed in");
-        window.location.href = redirectTo;
+        window.location.assign(redirectPath);
       },
       onError: (err) => {
         toast.error(err.message);

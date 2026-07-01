@@ -1,8 +1,36 @@
-import { QueryClient } from "@tanstack/react-query";
+import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { ApiError } from "./api";
 
+function redirectToLogin(): void {
+  if (window.location.pathname === "/login") return;
+  const redirect = encodeURIComponent(window.location.pathname);
+  window.location.assign(`/login?redirect=${redirect}`);
+}
+
+function handleAuthError(queryClient: QueryClient, error: unknown): void {
+  if (error instanceof ApiError && error.status === 401) {
+    queryClient.clear();
+    redirectToLogin();
+  }
+}
+
 export function createQueryClient() {
-  return new QueryClient({
+  const queryClientRef: { current?: QueryClient } = {};
+  const queryClient = new QueryClient({
+    queryCache: new QueryCache({
+      onError: (error) => {
+        if (queryClientRef.current) {
+          handleAuthError(queryClientRef.current, error);
+        }
+      },
+    }),
+    mutationCache: new MutationCache({
+      onError: (error) => {
+        if (queryClientRef.current) {
+          handleAuthError(queryClientRef.current, error);
+        }
+      },
+    }),
     defaultOptions: {
       queries: {
         staleTime: 30_000,
@@ -24,4 +52,6 @@ export function createQueryClient() {
       },
     },
   });
+  queryClientRef.current = queryClient;
+  return queryClient;
 }

@@ -12,22 +12,18 @@ import { BikesListPage } from "./routes/bikes-list";
 import { BikeDetailPage } from "./routes/bike-detail";
 import { LoginPage } from "./routes/login";
 import { RegisterPage } from "./routes/register";
-import {
-  redirectIfAuthenticated,
-  requireSession,
-} from "./lib/auth-guard";
+import { redirectIfAuthenticated } from "./lib/auth-guard";
+import { safeRedirectPath } from "./lib/safe-redirect";
 
 const indexRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: "/",
-  beforeLoad: () => requireSession(),
   component: BikesListPage,
 });
 
 const bikeRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: "/bikes/$bikeId",
-  beforeLoad: () => requireSession(),
   component: BikeDetailWrapper,
 });
 
@@ -42,7 +38,7 @@ const loginRoute = createRoute({
   beforeLoad: () => redirectIfAuthenticated(),
   component: LoginPage,
   validateSearch: (search: Record<string, unknown>) => ({
-    redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+    redirect: safeRedirectPath(search.redirect),
   }),
 });
 
