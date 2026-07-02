@@ -1,5 +1,5 @@
-import { createApp } from "./app";
-import { applyMigrations } from "./db/migrate";
+import { createApp } from "./app.js";
+import { applyMigrations } from "./db/migrate.js";
 
 if (process.env.RUN_MIGRATIONS === "true") {
   applyMigrations();

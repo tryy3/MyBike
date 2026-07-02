@@ -3,11 +3,11 @@ import { toNodeHandler } from "better-auth/node";
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import bikesRouter from "./routes/bikes";
-import componentsRouter from "./routes/components";
-import { errorHandler } from "./lib/errors";
-import { auth } from "./lib/auth";
-import { sqlite } from "./db/index";
+import bikesRouter from "./routes/bikes.js";
+import componentsRouter from "./routes/components.js";
+import { errorHandler } from "./lib/errors.js";
+import { auth } from "./lib/auth.js";
+import { sqlite } from "./db/index.js";
 
 const IMPORT_MAX_BYTES = 256 * 1024;
 const __dirname = dirname(fileURLToPath(import.meta.url));

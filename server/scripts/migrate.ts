@@ -1,4 +1,4 @@
-import { applyMigrations } from "../src/db/migrate";
+import { applyMigrations } from "../src/db/migrate.js";
 
 applyMigrations();
 

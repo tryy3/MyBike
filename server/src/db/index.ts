@@ -2,8 +2,8 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import * as schema from "./schema";
-import * as authSchema from "./auth-schema";
+import * as schema from "./schema.js";
+import * as authSchema from "./auth-schema.js";
 
 const dbPath = process.env.DB_PATH ?? "./data/mybike.db";
 
