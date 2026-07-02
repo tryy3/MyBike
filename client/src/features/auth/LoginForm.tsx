@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { loginSchema, type LoginInput } from "shared";
@@ -12,13 +12,11 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { consumeAuthReturnTo } from "@/lib/auth-return-to";
 import { useSignIn } from "./api";
 
-interface LoginFormProps {
-  redirectTo?: string;
-}
-
-export function LoginForm({ redirectTo = "/" }: LoginFormProps) {
+export function LoginForm() {
+  const navigate = useNavigate();
   const signIn = useSignIn();
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -29,7 +27,7 @@ export function LoginForm({ redirectTo = "/" }: LoginFormProps) {
     signIn.mutate(data, {
       onSuccess: () => {
         toast.success("Signed in");
-        window.location.href = redirectTo;
+        void navigate({ href: consumeAuthReturnTo(), replace: true });
       },
       onError: (err) => {
         toast.error(err.message);

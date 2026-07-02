@@ -1,13 +1,12 @@
 import { redirect } from "@tanstack/react-router";
 import { getSession } from "@/lib/auth-client";
+import { saveAuthReturnTo } from "@/lib/auth-return-to";
 
 export async function requireSession() {
   const { data: session } = await getSession();
   if (!session) {
-    throw redirect({
-      to: "/login",
-      search: { redirect: window.location.pathname },
-    });
+    saveAuthReturnTo();
+    throw redirect({ to: "/login" });
   }
   return session;
 }

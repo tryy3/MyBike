@@ -31,7 +31,7 @@ export function RegisterPage() {
         <RegisterForm />
       </div>
       <p className="mt-8 text-center text-sm text-muted-foreground">
-        <Link to="/login" search={{ redirect: undefined }} className="underline">
+        <Link to="/login" className="underline">
           Sign in instead
         </Link>
       </p>

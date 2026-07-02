@@ -41,9 +41,6 @@ const loginRoute = createRoute({
   path: "/login",
   beforeLoad: () => redirectIfAuthenticated(),
   component: LoginPage,
-  validateSearch: (search: Record<string, unknown>) => ({
-    redirect: typeof search.redirect === "string" ? search.redirect : undefined,
-  }),
 });
 
 const registerRoute = createRoute({
