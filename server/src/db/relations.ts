@@ -1,6 +1,6 @@
 import { defineRelations } from "drizzle-orm";
-import { bikes, components } from "./schema";
-import { account, session, user, verification } from "./auth-schema";
+import { bikes, components } from "./schema.js";
+import { account, session, user, verification } from "./auth-schema.js";
 
 const schema = { bikes, components, user, session, account, verification };
 

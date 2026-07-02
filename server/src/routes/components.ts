@@ -2,9 +2,9 @@ import { Router } from "express";
 import { and, asc, eq, ne, sql } from "drizzle-orm";
 import { parse } from "csv-parse/sync";
 import { stringify } from "csv-stringify/sync";
-import { db } from "../db/index";
-import { bikes, components } from "../db/schema";
-import type { ComponentRow } from "../db/schema";
+import { db } from "../db/index.js";
+import { bikes, components } from "../db/schema.js";
+import type { ComponentRow } from "../db/schema.js";
 import {
   CATEGORIES,
   COMPONENT_CSV_COLUMNS,
@@ -15,9 +15,9 @@ import {
   componentReorderSchema,
   componentUpdateSchema,
 } from "shared";
-import { HttpError, badRequest, notFound } from "../lib/errors";
-import { requireAuth, getAuthContext } from "../lib/require-auth";
-import { parseBody, parseParams } from "../lib/validation";
+import { HttpError, badRequest, notFound } from "../lib/errors.js";
+import { requireAuth, getAuthContext } from "../lib/require-auth.js";
+import { parseBody, parseParams } from "../lib/validation.js";
 
 export const componentsRouter = Router({ mergeParams: true });
 

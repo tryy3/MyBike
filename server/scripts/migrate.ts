@@ -1,6 +1,5 @@
-import { migrate } from "drizzle-orm/node-sqlite/migrator";
-import { db } from "../src/db/index";
+import { applyMigrations } from "../src/db/migrate.js";
 
-migrate(db, { migrationsFolder: "./drizzle" });
+applyMigrations();
 
 console.log("Migrations applied successfully.");

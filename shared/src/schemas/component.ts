@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CATEGORY_IDS } from "../categories";
+import { CATEGORY_IDS } from "../categories.js";
 
 export const componentBaseSchema = z.object({
   name: z.string().min(1).max(200),

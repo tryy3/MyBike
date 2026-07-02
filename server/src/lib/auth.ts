@@ -1,8 +1,8 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2";
-import { db } from "../db/index";
-import { account, session, user, verification } from "../db/auth-schema";
-import { resolveAuthConfig } from "./auth-config";
+import { db } from "../db/index.js";
+import { account, session, user, verification } from "../db/auth-schema.js";
+import { resolveAuthConfig } from "./auth-config.js";
 
 const { secret, baseURL, clientURL } = resolveAuthConfig();
 
