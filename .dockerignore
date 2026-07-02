@@ -11,3 +11,5 @@ server/data
 shared/dist
 coverage
 .DS_Store
+.agents
+tmp

@@ -16,8 +16,10 @@
     "test": "npm run -w shared test && npm run -w server test"
   },
   "dependencies": {
-    "agent-browser": "^0.31.1",
     "drizzle-orm": "1.0.0-rc.4"
+  },
+  "devDependencies": {
+    "agent-browser": "^0.31.1"
   },
   "allowScripts": {
     "esbuild@0.18.20": true,

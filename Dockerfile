@@ -4,10 +4,6 @@ WORKDIR /app
 
 ENV npm_config_update_notifier=false
 
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates g++ make python3 \
-  && rm -rf /var/lib/apt/lists/*
-
 COPY package.json package-lock.json ./
 COPY shared/package.json ./shared/package.json
 COPY server/package.json ./server/package.json
@@ -19,7 +15,7 @@ COPY . .
 
 RUN npm run -w shared build \
   && npm run -w client build \
-  && npm run -w server build \
+  && npm exec -w server -- tsc \
   && npm prune --omit=dev
 
 FROM node:26-bookworm-slim AS runtime
