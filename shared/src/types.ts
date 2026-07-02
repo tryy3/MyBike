@@ -1,4 +1,4 @@
-import type { Bike, Component } from "./index";
+import type { Bike, Component } from "./index.js";
 
 export interface BikeListItem extends Bike {
   componentCount: number;
