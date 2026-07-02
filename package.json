@@ -6,17 +6,24 @@
     "client",
     "shared"
   ],
-  "engines": {
-    "node": ">=26.0.0"
-  },
-  "overrides": {
-    "drizzle-orm": "1.0.0-rc.4"
-  },
   "scripts": {
-    "test": "npm run -w shared test && npm run -w server test"
+    "test": "vp run -r test",
+    "verify": "vp check && npm test",
+    "prepare": "vp config"
   },
   "dependencies": {
     "drizzle-orm": "1.0.0-rc.4"
+  },
+  "devDependencies": {
+    "vite-plus": "0.2.2"
+  },
+  "overrides": {
+    "drizzle-orm": "1.0.0-rc.4",
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.2.2",
+    "vitest": "4.1.9"
+  },
+  "engines": {
+    "node": ">=26.0.0"
   },
   "allowScripts": {
     "esbuild@0.18.20": true,

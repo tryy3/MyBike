@@ -27,21 +27,37 @@ MyBike/
 
 ## Commands
 
-| What | Command |
-|------|---------|
-| Server dev | `npm run -w server dev` |
-| Client dev | `npm run -w client dev` |
-| Shared typecheck | `npm run -w shared typecheck` |
-| Server typecheck | `npm run -w server typecheck` |
-| Client typecheck | `npm run -w client typecheck` |
-| Shared lint | `npm run -w shared lint` |
-| Server lint | `npm run -w server lint` |
-| Client lint | `npm run -w client lint` |
-| Format all | `npm run -w server format && npm run -w shared format && npm run -w client format` |
-| Generate migration | `npm run -w server db:generate` |
-| Apply migrations | `npm run -w server db:migrate` |
-| Push schema (interactive) | `npm run -w server db:push` |
-| Drizzle Studio | `npm run -w server db:studio` |
+Install the Vite+ CLI once: `curl -fsSL https://vite.plus | bash`. Run `vp env off` if vp's Node manager conflicts with nvm/Nix.
+
+| What                        | Command                                                |
+| --------------------------- | ------------------------------------------------------ |
+| Install deps                | `vp install` (or `npm install`)                        |
+| Server dev                  | `npm run -w server dev`                                |
+| Client dev                  | `npm run -w client dev`                                |
+| Format + lint + typecheck   | `vp check`                                             |
+| Auto-fix format/lint        | `vp check --fix`                                       |
+| Run tests                   | `npm test` (runs shared + server via `vp run -r test`) |
+| Full verify (CI equivalent) | `npm run verify`                                       |
+| Generate migration          | `npm run -w server db:generate`                        |
+| Apply migrations            | `npm run -w server db:migrate`                         |
+| Push schema (interactive)   | `npm run -w server db:push`                            |
+| Drizzle Studio              | `npm run -w server db:studio`                          |
+
+## Quality gates
+
+- **Pre-commit** (`.vite-hooks/pre-commit`): `vp staged` — formats and lints staged files
+- **Pre-push** (`.vite-hooks/pre-push`): `npm run verify` — full check + tests before push
+- **CI** (`.github/workflows/ci.yml`): `vp check` + `vp run -r test` on every PR and push to `master`
+
+Wire hooks after clone if not already active:
+
+```bash
+git config core.hooksPath .vite-hooks
+```
+
+Set `VITE_GIT_HOOKS=0` in CI/Docker to skip hook installation. Emergency bypass: `git commit --no-verify` / `git push --no-verify`.
+
+In GitHub **Settings → Branches** for `master`, require the **CI / Check and test** status check before merging.
 
 ## Conventions
 
@@ -55,15 +71,16 @@ MyBike/
 - Components live under a bike + category (`components` table). One active component per (bike, category) is enforced server-side (transaction + unique partial index); clients set it via `PATCH /api/components/:id/activate`.
 - After mutations the client invalidates the affected TanStack Query keys and refetches from the server
 
-**After making changes, always run both `lint` and `typecheck` for the affected package(s) — including `shared` when you touch schemas.**
+**After making changes, run `vp check` for the affected area (or `npm run verify` before pushing). Include `shared` when you touch schemas.**
 
 ## First run / fresh checkout
 
 ```bash
-npm install
+vp install   # or npm install
 npm run -w server db:migrate   # create the SQLite DB + tables
 npm run -w server dev          # API on :3001
 npm run -w client dev          # UI on :5173
+git config core.hooksPath .vite-hooks   # enable pre-commit/pre-push hooks
 ```
 
 ## Cursor Cloud specific instructions
@@ -75,9 +92,10 @@ If you edit anything under `shared/src`, rebuild with `npm run -w shared build` 
 Other notes:
 
 - `.env` is optional in dev (the server has built-in auth fallbacks), but recommended: `cp .env.example .env` and set `BETTER_AUTH_SECRET`. `.env` is gitignored.
-- Node: requires **Node 26+** (`engines` in root `package.json`, `.nvmrc`, `flake.nix`). The server uses the built-in `node:sqlite` driver (no native addon rebuild).
+- Node: requires **Node 26+** (`engines` in root `package.json`, `.node-version`, `flake.nix`). The server uses the built-in `node:sqlite` driver (no native addon rebuild).
 - **Node version / nvm override (important):** the Cursor exec-daemon injects `/exec-daemon` into `PATH` ahead of nvm's bin, and `/exec-daemon/node` is **v22** — so without an override, `node` resolves to v22. We force **nvm's v26** by (a) `nvm alias default 26` and (b) symlink shims in `~/.local/bin` (`node`/`npm`/`npx` → the nvm v26 binaries). `~/.local/bin` is always earlier in `PATH` than `/exec-daemon` (via `~/.profile`, plus a guard in `~/.bashrc`), so the shims win in every shell/tool/update-script context. Both `~/.local/bin` and `~/.nvm` live in the home dir, so this persists in the snapshot. If a fresh agent ever shows `node -v` = v22, re-create the shims: `NVM_DIR=$HOME/.nvm; . $NVM_DIR/nvm.sh; nvm alias default 26; d=$(dirname "$(nvm which default)"); for b in node npm npx; do ln -sfn "$d/$b" "$HOME/.local/bin/$b"; done`. Do **not** edit `/exec-daemon` (root-owned daemon infra).
 - Run both dev servers together: API `npm run -w server dev` (:3001) and UI `npm run -w client dev` (:5173). The client proxies `/api` → `:3001`.
 - Auth is cookie-based (better-auth). Unauthenticated `/api/*` requests return `401` — this is expected, not a failure. Register at `/register`, then use the app.
 - The "Add component" form requires a non-empty **Name** field (min 1 char) in addition to brand/model; component categories are the fixed granular set from `shared/src/categories.ts` (e.g. separate "Front wheel"/"Rear wheel", no combined "Wheels").
-- Standard lint/typecheck/test/build commands live in the **Commands** table above and `package.json` scripts; the aggregate `npm test` runs `shared` + `server` vitest suites.
+- Lint/format/typecheck/test use **Vite+** (`vite.config.ts` at repo root; Oxlint + Oxfmt via `vp check`). Docker production builds still use `npm ci --ignore-scripts` — no `vp` required in the container.
+- Standard verify commands are in the **Commands** and **Quality gates** sections; `npm test` runs shared + server test suites via `vp run -r test`.

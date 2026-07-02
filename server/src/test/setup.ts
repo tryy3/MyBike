@@ -6,14 +6,10 @@ import { migrate } from "drizzle-orm/node-sqlite/migrator";
 
 const testDir = mkdtempSync(join(tmpdir(), "mybike-test-"));
 process.env.DB_PATH = join(testDir, "test.db");
-process.env.BETTER_AUTH_SECRET =
-  "test-better-auth-secret-long-enough-for-dev-32";
+process.env.BETTER_AUTH_SECRET = "test-better-auth-secret-long-enough-for-dev-32";
 process.env.BETTER_AUTH_URL = "http://localhost:3001";
 process.env.CLIENT_URL = "http://localhost:5173";
 
 const { db } = await import("../db/index.js");
-const migrationsFolder = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "../../drizzle",
-);
+const migrationsFolder = join(dirname(fileURLToPath(import.meta.url)), "../../drizzle");
 migrate(db, { migrationsFolder });

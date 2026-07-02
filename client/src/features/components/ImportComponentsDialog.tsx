@@ -68,9 +68,7 @@ export function ImportComponentsDialog({
     onOpenChange(nextOpen);
   }
 
-  async function handleFileChange(
-    e: React.ChangeEvent<HTMLInputElement>,
-  ): Promise<void> {
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>): Promise<void> {
     const file = e.target.files?.[0];
     if (!file) {
       setCsv(null);
@@ -148,22 +146,17 @@ export function ImportComponentsDialog({
             <DialogTitle>Import components from CSV</DialogTitle>
             <DialogDescription>
               Upload a CSV with columns{" "}
-              <code className="text-xs">
-                {`id,category,name,brand,model,notes,isActive`}
-              </code>
-              . Leave the <code className="text-xs">id</code> column empty to
-              add a new component; fill it in to update an existing one. The
-              first row must be the header. Max 1000 rows and{" "}
-              {formatMaxImportSize()}.
+              <code className="text-xs">{`id,category,name,brand,model,notes,isActive`}</code>.
+              Leave the <code className="text-xs">id</code> column empty to add a new component;
+              fill it in to update an existing one. The first row must be the header. Max 1000 rows
+              and {formatMaxImportSize()}.
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex flex-col gap-4 py-2">
             <label className="flex h-32 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed text-sm text-muted-foreground hover:bg-muted">
               <FileUpIcon className="size-6" />
-              <span className="font-medium text-foreground">
-                {fileName ?? "Choose a CSV file"}
-              </span>
+              <span className="font-medium text-foreground">{fileName ?? "Choose a CSV file"}</span>
               <span className="text-xs">Click to browse</span>
               <input
                 ref={fileInputRef}
@@ -175,11 +168,7 @@ export function ImportComponentsDialog({
             </label>
 
             {previewing && (
-              <p
-                className="text-sm text-muted-foreground"
-                role="status"
-                aria-live="polite"
-              >
+              <p className="text-sm text-muted-foreground" role="status" aria-live="polite">
                 {csv ? "Validating…" : "Loading…"}
               </p>
             )}
@@ -195,13 +184,13 @@ export function ImportComponentsDialog({
                     </span>
                     <span className="text-muted-foreground">
                       {preview.inserted} new component
-                      {preview.inserted === 1 ? "" : "s"} · {preview.updated}{" "}
-                      update{preview.updated === 1 ? "" : "s"}.
+                      {preview.inserted === 1 ? "" : "s"} · {preview.updated} update
+                      {preview.updated === 1 ? "" : "s"}.
                     </span>
                     {preview.inserted > 0 && (
                       <span className="text-xs text-muted-foreground">
-                        New components imported as the first in their category
-                        become active automatically.
+                        New components imported as the first in their category become active
+                        automatically.
                       </span>
                     )}
                   </div>
@@ -228,9 +217,7 @@ export function ImportComponentsDialog({
                   <li key={idx} className="text-muted-foreground">
                     {e.row > 0 ? (
                       <span>
-                        <span className="font-medium text-foreground">
-                          Row {e.row}:
-                        </span>{" "}
+                        <span className="font-medium text-foreground">Row {e.row}:</span>{" "}
                       </span>
                     ) : null}
                     {e.message}
@@ -241,25 +228,18 @@ export function ImportComponentsDialog({
           )}
 
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={previewing}
-            >
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={previewing}>
               Cancel
             </Button>
-            <Button
-              onClick={() => setConfirming(true)}
-              disabled={!canConfirm || previewing}
-            >
+            <Button onClick={() => setConfirming(true)} disabled={!canConfirm || previewing}>
               <UploadIcon />
               Review import
             </Button>
           </DialogFooter>
 
           <p className="text-xs text-muted-foreground">
-            Don't have a file yet? Export this bike's components first to get a
-            CSV in the right format, then edit it.
+            Don't have a file yet? Export this bike's components first to get a CSV in the right
+            format, then edit it.
           </p>
         </DialogContent>
       </Dialog>
@@ -281,9 +261,7 @@ export function ImportComponentsDialog({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={importMut.isPending}>
-              Cancel
-            </AlertDialogCancel>
+            <AlertDialogCancel disabled={importMut.isPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction asChild>
               <Button
                 disabled={importMut.isPending}

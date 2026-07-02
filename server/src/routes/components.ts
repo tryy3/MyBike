@@ -63,11 +63,7 @@ componentsRouter.get("/export.csv", (req, res) => {
   const { userId } = getAuthContext(req);
   const { bikeId } = parseParams(req, ["bikeId"]);
   const bike = requireBikeExists(bikeId, userId);
-  const rows = db
-    .select()
-    .from(components)
-    .where(eq(components.bikeId, bikeId))
-    .all();
+  const rows = db.select().from(components).where(eq(components.bikeId, bikeId)).all();
   rows.sort((a, b) => {
     const oa = CATEGORY_ORDER.get(a.category) ?? Number.MAX_SAFE_INTEGER;
     const ob = CATEGORY_ORDER.get(b.category) ?? Number.MAX_SAFE_INTEGER;
@@ -95,10 +91,7 @@ componentsRouter.get("/export.csv", (req, res) => {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "") || "bike";
   res.setHeader("Content-Type", "text/csv; charset=utf-8");
-  res.setHeader(
-    "Content-Disposition",
-    `attachment; filename="${slug}-components.csv"`,
-  );
+  res.setHeader("Content-Disposition", `attachment; filename="${slug}-components.csv"`);
   res.send(csv);
 });
 
@@ -112,14 +105,9 @@ componentsRouter.post("/import", (req, res) => {
   const { bikeId } = parseParams(req, ["bikeId"]);
   requireBikeExists(bikeId, userId);
 
-  const { csv: csvText, dryRun = false } = parseBody(
-    req,
-    componentImportSchema,
-  );
+  const { csv: csvText, dryRun = false } = parseBody(req, componentImportSchema);
   if (csvText.length > COMPONENT_IMPORT_MAX_BYTES) {
-    throw badRequest(
-      `CSV is too large (max ${COMPONENT_IMPORT_MAX_BYTES} bytes)`,
-    );
+    throw badRequest(`CSV is too large (max ${COMPONENT_IMPORT_MAX_BYTES} bytes)`);
   }
 
   let records: string[][];
@@ -141,9 +129,7 @@ componentsRouter.post("/import", (req, res) => {
     header.length !== COMPONENT_CSV_COLUMNS.length ||
     !header.every((h, i) => h === COMPONENT_CSV_COLUMNS[i])
   ) {
-    throw badRequest(
-      `Header row must be exactly: ${COMPONENT_CSV_COLUMNS.join(",")}`,
-    );
+    throw badRequest(`Header row must be exactly: ${COMPONENT_CSV_COLUMNS.join(",")}`);
   }
   const dataRows = records.slice(1);
   if (dataRows.length === 0) throw badRequest("No data rows to import");
@@ -176,29 +162,17 @@ componentsRouter.post("/import", (req, res) => {
 
   const errors: { row: number; message: string }[] = [];
   const ops: (InsertOp | UpdateOp)[] = [];
-  const addError = (row: number, message: string) =>
-    errors.push({ row, message });
+  const addError = (row: number, message: string) => errors.push({ row, message });
 
   for (let i = 0; i < dataRows.length; i++) {
     const raw = dataRows[i];
     // +2: 1-indexed, and the header is row 1.
     const row = i + 2;
     if (raw.length !== COMPONENT_CSV_COLUMNS.length) {
-      addError(
-        row,
-        `Expected ${COMPONENT_CSV_COLUMNS.length} columns, got ${raw.length}`,
-      );
+      addError(row, `Expected ${COMPONENT_CSV_COLUMNS.length} columns, got ${raw.length}`);
       continue;
     }
-    const [
-      idRaw,
-      categoryRaw,
-      nameRaw,
-      brandRaw,
-      modelRaw,
-      notesRaw,
-      isActiveRaw,
-    ] = raw;
+    const [idRaw, categoryRaw, nameRaw, brandRaw, modelRaw, notesRaw, isActiveRaw] = raw;
     const id = idRaw;
     const category = categoryRaw;
     const name = nameRaw;
@@ -252,13 +226,7 @@ componentsRouter.post("/import", (req, res) => {
         .select({ component: components })
         .from(components)
         .innerJoin(bikes, eq(components.bikeId, bikes.id))
-        .where(
-          and(
-            eq(components.id, id),
-            eq(components.bikeId, bikeId),
-            eq(bikes.userId, userId),
-          ),
-        )
+        .where(and(eq(components.id, id), eq(components.bikeId, bikeId), eq(bikes.userId, userId)))
         .get();
       const existing = rowForBike?.component;
       if (!existing) {
@@ -339,12 +307,7 @@ componentsRouter.post("/import", (req, res) => {
         const existingCount = tx
           .select({ c: components.id })
           .from(components)
-          .where(
-            and(
-              eq(components.bikeId, bikeId),
-              eq(components.category, op.category),
-            ),
-          )
+          .where(and(eq(components.bikeId, bikeId), eq(components.category, op.category)))
           .all().length;
         // Mirror POST: the first component in a (bike, category) is
         // auto-activated so a category always has exactly one active part.
@@ -352,12 +315,7 @@ componentsRouter.post("/import", (req, res) => {
         if (isActive) {
           tx.update(components)
             .set({ isActive: false })
-            .where(
-              and(
-                eq(components.bikeId, bikeId),
-                eq(components.category, op.category),
-              ),
-            )
+            .where(and(eq(components.bikeId, bikeId), eq(components.category, op.category)))
             .run();
         }
         const maxOrder = tx
@@ -365,12 +323,7 @@ componentsRouter.post("/import", (req, res) => {
             max: sql<number | null>`max(${components.sortOrder})`.as("max"),
           })
           .from(components)
-          .where(
-            and(
-              eq(components.bikeId, bikeId),
-              eq(components.category, op.category),
-            ),
-          )
+          .where(and(eq(components.bikeId, bikeId), eq(components.category, op.category)))
           .get();
         const sortOrder = (maxOrder?.max ?? -1) + 1;
         tx.insert(components)
@@ -407,10 +360,7 @@ componentsRouter.post("/import", (req, res) => {
               .run();
           }
         }
-        tx.update(components)
-          .set(updates)
-          .where(eq(components.id, op.id))
-          .run();
+        tx.update(components).set(updates).where(eq(components.id, op.id)).run();
       }
     }
   });
@@ -427,12 +377,7 @@ componentsRouter.post("/", (req, res) => {
   const existingCount = db
     .select({ c: components.id })
     .from(components)
-    .where(
-      and(
-        eq(components.bikeId, bikeId),
-        eq(components.category, data.category),
-      ),
-    )
+    .where(and(eq(components.bikeId, bikeId), eq(components.category, data.category)))
     .all().length;
   // First component in a (bike, category) is auto-activated so a category
   // always has exactly one active component once it has any at all.
@@ -441,12 +386,7 @@ componentsRouter.post("/", (req, res) => {
     if (isActive && existingCount > 0) {
       tx.update(components)
         .set({ isActive: false })
-        .where(
-          and(
-            eq(components.bikeId, bikeId),
-            eq(components.category, data.category),
-          ),
-        )
+        .where(and(eq(components.bikeId, bikeId), eq(components.category, data.category)))
         .run();
     }
     const maxOrder = tx
@@ -454,12 +394,7 @@ componentsRouter.post("/", (req, res) => {
         max: sql<number | null>`max(${components.sortOrder})`.as("max"),
       })
       .from(components)
-      .where(
-        and(
-          eq(components.bikeId, bikeId),
-          eq(components.category, data.category),
-        ),
-      )
+      .where(and(eq(components.bikeId, bikeId), eq(components.category, data.category)))
       .get();
     const sortOrder = (maxOrder?.max ?? -1) + 1;
     return tx
@@ -497,12 +432,7 @@ componentsRouter.put("/:id", (req, res) => {
     res.json(row);
     return;
   }
-  const updated = db
-    .update(components)
-    .set(updates)
-    .where(eq(components.id, id))
-    .returning()
-    .get();
+  const updated = db.update(components).set(updates).where(eq(components.id, id)).returning().get();
   res.json(updated);
 });
 
@@ -522,18 +452,12 @@ componentsRouter.delete("/:id", (req, res) => {
         .select()
         .from(components)
         .where(
-          and(
-            eq(components.bikeId, existing.bikeId),
-            eq(components.category, existing.category),
-          ),
+          and(eq(components.bikeId, existing.bikeId), eq(components.category, existing.category)),
         )
         .orderBy(asc(components.createdAt))
         .get();
       if (oldest) {
-        tx.update(components)
-          .set({ isActive: true })
-          .where(eq(components.id, oldest.id))
-          .run();
+        tx.update(components).set({ isActive: true }).where(eq(components.id, oldest.id)).run();
       }
     }
   });
@@ -559,16 +483,9 @@ componentsRouter.patch("/:id/activate", (req, res) => {
       )
       .run();
     // Activate the chosen one.
-    tx.update(components)
-      .set({ isActive: true })
-      .where(eq(components.id, id))
-      .run();
+    tx.update(components).set({ isActive: true }).where(eq(components.id, id)).run();
   });
-  const updated = db
-    .select()
-    .from(components)
-    .where(eq(components.id, id))
-    .get();
+  const updated = db.select().from(components).where(eq(components.id, id)).get();
   res.json(updated);
 });
 
@@ -583,19 +500,11 @@ componentsRouter.patch("/reorder", (req, res) => {
   const rows = db
     .select({ id: components.id })
     .from(components)
-    .where(
-      and(
-        eq(components.bikeId, bikeId),
-        eq(components.category, data.category),
-      ),
-    )
+    .where(and(eq(components.bikeId, bikeId), eq(components.category, data.category)))
     .all();
   const existingIds = new Set(rows.map((r) => r.id));
   const orderedSet = new Set(data.orderedIds);
-  if (
-    existingIds.size !== orderedSet.size ||
-    rows.length !== data.orderedIds.length
-  ) {
+  if (existingIds.size !== orderedSet.size || rows.length !== data.orderedIds.length) {
     throw new HttpError(
       400,
       "orderedIds must contain each component of this (bike, category) exactly once",
@@ -603,18 +512,12 @@ componentsRouter.patch("/reorder", (req, res) => {
   }
   for (const id of data.orderedIds) {
     if (!existingIds.has(id)) {
-      throw new HttpError(
-        400,
-        `Component ${id} does not belong to this (bike, category)`,
-      );
+      throw new HttpError(400, `Component ${id} does not belong to this (bike, category)`);
     }
   }
   db.transaction((tx) => {
     data.orderedIds.forEach((id, index) => {
-      tx.update(components)
-        .set({ sortOrder: index })
-        .where(eq(components.id, id))
-        .run();
+      tx.update(components).set({ sortOrder: index }).where(eq(components.id, id)).run();
     });
   });
   res.status(204).end();

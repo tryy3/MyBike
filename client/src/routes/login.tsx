@@ -31,11 +31,7 @@ export function LoginPage() {
         <LoginForm redirectTo={redirectTo ?? "/"} />
       </div>
       <p className="mt-8 text-center text-sm text-muted-foreground">
-        <Link
-          to="/register"
-          search={{ redirect: redirectTo }}
-          className="underline"
-        >
+        <Link to="/register" search={{ redirect: redirectTo }} className="underline">
           Create an account
         </Link>
       </p>

@@ -23,9 +23,7 @@ export function RegisterPage() {
       </div>
       <div className="w-full max-w-sm space-y-6">
         <div className="space-y-1 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Create account
-          </h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Create account</h1>
           <p className="text-sm text-muted-foreground">
             Start tracking your bikes and interchangeable components.
           </p>
@@ -33,11 +31,7 @@ export function RegisterPage() {
         <RegisterForm redirectTo={redirectTo ?? "/"} />
       </div>
       <p className="mt-8 text-center text-sm text-muted-foreground">
-        <Link
-          to="/login"
-          search={{ redirect: redirectTo }}
-          className="underline"
-        >
+        <Link to="/login" search={{ redirect: redirectTo }} className="underline">
           Sign in instead
         </Link>
       </p>

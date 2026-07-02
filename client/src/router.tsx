@@ -1,10 +1,5 @@
 import { useEffect } from "react";
-import {
-  createRoute,
-  createRouter,
-  Link,
-  NotFoundRoute,
-} from "@tanstack/react-router";
+import { createRoute, createRouter, Link, NotFoundRoute } from "@tanstack/react-router";
 
 import { rootRoute } from "./routes/root";
 import { appLayoutRoute } from "./routes/app-layout";
@@ -67,9 +62,7 @@ function NotFound() {
   return (
     <div className="flex flex-col items-center gap-3 py-24 text-center">
       <h1 className="text-3xl font-semibold">404</h1>
-      <p className="text-sm text-muted-foreground">
-        That page rolled away. Let's get you back.
-      </p>
+      <p className="text-sm text-muted-foreground">That page rolled away. Let's get you back.</p>
       <Link to="/" className="text-sm underline">
         Back to bikes
       </Link>

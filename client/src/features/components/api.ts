@@ -1,11 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, queryKeys } from "@/lib/api";
-import type {
-  BikeDetail,
-  ComponentInsert,
-  ComponentReorder,
-  ComponentUpdate,
-} from "shared";
+import type { BikeDetail, ComponentInsert, ComponentReorder, ComponentUpdate } from "shared";
 
 // All component mutations invalidate the parent bike detail.
 export function useCreateComponent(bikeId: string) {

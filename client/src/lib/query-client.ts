@@ -36,11 +36,7 @@ export function createQueryClient() {
         staleTime: 30_000,
         gcTime: 5 * 60_000,
         retry: (failureCount, error) => {
-          if (
-            error instanceof ApiError &&
-            error.status >= 400 &&
-            error.status < 500
-          ) {
+          if (error instanceof ApiError && error.status >= 400 && error.status < 500) {
             return false;
           }
           return failureCount < 3;

@@ -21,11 +21,11 @@ MyBike uses [better-auth](https://www.better-auth.com) with email/password and H
 
 Set these environment variables for the server (see `.env.example`):
 
-| Variable | Purpose |
-|----------|---------|
-| `BETTER_AUTH_SECRET` | Secret for signing sessions (32+ chars; `openssl rand -base64 32`) |
-| `BETTER_AUTH_URL` | Public URL of the API (`http://localhost:3001` in dev) |
-| `CLIENT_URL` | Frontend origin for CORS/trusted origins (`http://localhost:5173` in dev) |
+| Variable             | Purpose                                                                   |
+| -------------------- | ------------------------------------------------------------------------- |
+| `BETTER_AUTH_SECRET` | Secret for signing sessions (32+ chars; `openssl rand -base64 32`)        |
+| `BETTER_AUTH_URL`    | Public URL of the API (`http://localhost:3001` in dev)                    |
+| `CLIENT_URL`         | Frontend origin for CORS/trusted origins (`http://localhost:5173` in dev) |
 
 If unset in development, the server falls back to built-in defaults (not suitable for production).
 
@@ -44,9 +44,9 @@ npm run -w client build
 
 SQLite via Drizzle ORM. The DB lives at `DB_PATH` (default `server/data/mybike.db`).
 
-| What | Command |
-|------|---------|
+| What                                     | Command                         |
+| ---------------------------------------- | ------------------------------- |
 | Generate a migration from schema changes | `npm run -w server db:generate` |
-| Apply pending migrations | `npm run -w server db:migrate` |
-| Push schema directly (interactive) | `npm run -w server db:push` |
-| Inspect data | `npm run -w server db:studio` |
+| Apply pending migrations                 | `npm run -w server db:migrate`  |
+| Push schema directly (interactive)       | `npm run -w server db:push`     |
+| Inspect data                             | `npm run -w server db:studio`   |

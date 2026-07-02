@@ -2,12 +2,7 @@ import { Router } from "express";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { components, bikes } from "../db/schema.js";
-import {
-  bikeInsertSchema,
-  bikeUpdateSchema,
-  type BikeDetail,
-  type BikeListItem,
-} from "shared";
+import { bikeInsertSchema, bikeUpdateSchema, type BikeDetail, type BikeListItem } from "shared";
 import { HttpError, notFound } from "../lib/errors.js";
 import { requireAuth, getAuthContext } from "../lib/require-auth.js";
 import { parseBody, parseParams } from "../lib/validation.js";

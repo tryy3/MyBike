@@ -21,10 +21,7 @@ export class ApiError extends Error {
   }
 }
 
-async function apiFetch<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> {
+async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(path, {
     ...options,
     credentials: "include",
@@ -46,16 +43,10 @@ async function apiFetch<T>(
 
   if (!res.ok) {
     const msg =
-      body &&
-      typeof body === "object" &&
-      "error" in (body as Record<string, unknown>)
+      body && typeof body === "object" && "error" in (body as Record<string, unknown>)
         ? String((body as Record<string, unknown>).error)
         : res.statusText;
-    throw new ApiError(
-      res.status,
-      msg,
-      (body as Record<string, unknown>)?.details,
-    );
+    throw new ApiError(res.status, msg, (body as Record<string, unknown>)?.details);
   }
 
   return body as T;
@@ -70,12 +61,10 @@ function json(method: string, data: unknown): RequestInit {
 export const api = {
   listBikes: () => apiFetch<BikeListItem[]>("/api/bikes"),
   getBike: (id: string) => apiFetch<BikeDetail>(`/api/bikes/${id}`),
-  createBike: (data: BikeInsert) =>
-    apiFetch<Bike>("/api/bikes", json("POST", data)),
+  createBike: (data: BikeInsert) => apiFetch<Bike>("/api/bikes", json("POST", data)),
   updateBike: (id: string, data: BikeUpdate) =>
     apiFetch<Bike>(`/api/bikes/${id}`, json("PUT", data)),
-  deleteBike: (id: string) =>
-    apiFetch<void>(`/api/bikes/${id}`, { method: "DELETE" }),
+  deleteBike: (id: string) => apiFetch<void>(`/api/bikes/${id}`, { method: "DELETE" }),
 
   // --- Components --------------------------------------------------------
 
@@ -83,8 +72,7 @@ export const api = {
     apiFetch<Component>(`/api/bikes/${bikeId}/components`, json("POST", data)),
   updateComponent: (id: string, data: ComponentUpdate) =>
     apiFetch<Component>(`/api/components/${id}`, json("PUT", data)),
-  deleteComponent: (id: string) =>
-    apiFetch<void>(`/api/components/${id}`, { method: "DELETE" }),
+  deleteComponent: (id: string) => apiFetch<void>(`/api/components/${id}`, { method: "DELETE" }),
   activateComponent: (id: string) =>
     apiFetch<Component>(`/api/components/${id}/activate`, { method: "PATCH" }),
 
@@ -97,15 +85,11 @@ export const api = {
   // --- CSV import / export --------------------------------------------------
 
   importComponents: (bikeId: string, csv: string, dryRun = false) =>
-    apiFetch<ImportResult>(
-      `/api/bikes/${bikeId}/components/import`,
-      json("POST", { csv, dryRun }),
-    ),
+    apiFetch<ImportResult>(`/api/bikes/${bikeId}/components/import`, json("POST", { csv, dryRun })),
 
   // Direct browser download link for export — used as an `<a href download>`
   // so the file streams without going through the JSON apiFetch wrapper.
-  exportComponentsUrl: (bikeId: string) =>
-    `/api/bikes/${bikeId}/components/export.csv`,
+  exportComponentsUrl: (bikeId: string) => `/api/bikes/${bikeId}/components/export.csv`,
 };
 
 export interface ImportResult {
