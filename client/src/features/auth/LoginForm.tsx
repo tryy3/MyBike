@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useSignIn } from "./api";
-import { getSafeRedirectPath } from "./redirect";
 
 interface LoginFormProps {
   redirectTo?: string;
@@ -30,7 +29,7 @@ export function LoginForm({ redirectTo = "/" }: LoginFormProps) {
     signIn.mutate(data, {
       onSuccess: () => {
         toast.success("Signed in");
-        window.location.href = getSafeRedirectPath(redirectTo);
+        window.location.href = redirectTo;
       },
       onError: (err) => {
         toast.error(err.message);
@@ -97,11 +96,7 @@ export function LoginForm({ redirectTo = "/" }: LoginFormProps) {
       </Button>
       <p className="text-center text-sm text-muted-foreground">
         No account?{" "}
-        <Link
-          to="/register"
-          search={{ redirect: redirectTo }}
-          className="underline"
-        >
+        <Link to="/register" className="underline">
           Create one
         </Link>
       </p>

@@ -48,9 +48,6 @@ const registerRoute = createRoute({
   path: "/register",
   beforeLoad: () => redirectIfAuthenticated(),
   component: RegisterPage,
-  validateSearch: (search: Record<string, unknown>) => ({
-    redirect: typeof search.redirect === "string" ? search.redirect : undefined,
-  }),
 });
 
 const notFoundRoute = new NotFoundRoute({

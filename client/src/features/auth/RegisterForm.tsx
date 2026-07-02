@@ -14,13 +14,8 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useSignUp } from "./api";
-import { getSafeRedirectPath } from "./redirect";
 
-interface RegisterFormProps {
-  redirectTo?: string;
-}
-
-export function RegisterForm({ redirectTo = "/" }: RegisterFormProps) {
+export function RegisterForm() {
   const signUp = useSignUp();
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
@@ -31,7 +26,7 @@ export function RegisterForm({ redirectTo = "/" }: RegisterFormProps) {
     signUp.mutate(data, {
       onSuccess: () => {
         toast.success("Account created");
-        window.location.href = getSafeRedirectPath(redirectTo);
+        window.location.href = "/";
       },
       onError: (err) => {
         toast.error(err.message);
@@ -129,7 +124,7 @@ export function RegisterForm({ redirectTo = "/" }: RegisterFormProps) {
         Already have an account?{" "}
         <Link
           to="/login"
-          search={{ redirect: redirectTo }}
+          search={{ redirect: undefined }}
           className="underline"
         >
           Sign in
