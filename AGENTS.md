@@ -68,7 +68,7 @@ npm run -w client dev          # UI on :5173
 
 ## Cursor Cloud specific instructions
 
-Cloud agents use `.cursor/environment.json` with a Dockerfile that pins **Node 26** on Ubuntu 24.04 (matching `flake.nix`). The `install` script runs `npm install`, builds `shared`, and applies DB migrations so a fresh agent is ready for dev servers and typecheck.
+Cloud agents run on a snapshot-managed environment (the previous `.cursor/environment.json` + Dockerfile were removed) that already has **Node 26** available. The startup update script runs `npm install`, builds `shared`, and applies DB migrations so a fresh agent is ready for dev servers and typecheck.
 
 If you edit anything under `shared/src`, rebuild with `npm run -w shared build` before running server/client dev or typecheck — `tsx watch` does **not** recompile `shared`.
 
