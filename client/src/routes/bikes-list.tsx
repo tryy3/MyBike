@@ -95,9 +95,7 @@ export function BikesListPage() {
       ) : isError ? (
         <Card>
           <CardContent className="flex flex-col gap-3 p-6">
-            <p className="text-sm text-destructive">
-              Could not load bikes: {error?.message}
-            </p>
+            <p className="text-sm text-destructive">Could not load bikes: {error?.message}</p>
             <Button onClick={() => refetch()} variant="outline" size="sm">
               Refresh
             </Button>
@@ -109,21 +107,14 @@ export function BikesListPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Bike</TableHead>
-                <TableHead className="hidden sm:table-cell">
-                  Brand / Model
-                </TableHead>
-                <TableHead className="hidden md:table-cell text-right">
-                  Components
-                </TableHead>
+                <TableHead className="hidden sm:table-cell">Brand / Model</TableHead>
+                <TableHead className="hidden md:table-cell text-right">Components</TableHead>
                 <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {data.map((bike) => (
-                <TableRow
-                  key={bike.id}
-                  className={cn(isFetching && "opacity-60")}
-                >
+                <TableRow key={bike.id} className={cn(isFetching && "opacity-60")}>
                   <TableCell>
                     <Link
                       to="/bikes/$bikeId"
@@ -137,8 +128,7 @@ export function BikesListPage() {
                     </Link>
                   </TableCell>
                   <TableCell className="hidden sm:table-cell text-muted-foreground">
-                    {[bike.brand, bike.model].filter(Boolean).join(" · ") ||
-                      "—"}
+                    {[bike.brand, bike.model].filter(Boolean).join(" · ") || "—"}
                   </TableCell>
                   <TableCell className="hidden md:table-cell text-right tabular-nums">
                     {bike.componentCount}
@@ -221,11 +211,7 @@ export function BikesListPage() {
             <DialogDescription>Update this bike's details.</DialogDescription>
           </DialogHeader>
           {editing && (
-            <BikeForm
-              bike={editing}
-              bikeId={editing.id}
-              onDone={() => setEditing(null)}
-            />
+            <BikeForm bike={editing} bikeId={editing.id} onDone={() => setEditing(null)} />
           )}
         </DialogContent>
       </Dialog>

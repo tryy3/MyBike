@@ -6,7 +6,7 @@ import {
   componentInsertSchema,
 } from "./schemas/component.js";
 import { CATEGORY_IDS } from "./categories.js";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 describe("bikeInsertSchema", () => {
   it("accepts a valid year", () => {

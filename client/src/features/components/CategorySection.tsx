@@ -1,12 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import {
-  CheckIcon,
-  GripVerticalIcon,
-  PencilIcon,
-  PlusIcon,
-  Trash2Icon,
-} from "lucide-react";
+import { CheckIcon, GripVerticalIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import {
   DndContext,
   KeyboardSensor,
@@ -28,13 +22,7 @@ import type { Component } from "shared";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -44,11 +32,7 @@ import {
 } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ComponentForm } from "./ComponentForm";
-import {
-  useActivateComponent,
-  useDeleteComponent,
-  useReorderComponents,
-} from "./api";
+import { useActivateComponent, useDeleteComponent, useReorderComponents } from "./api";
 
 interface CategorySectionProps {
   bikeId: string;
@@ -57,12 +41,7 @@ interface CategorySectionProps {
   components: Component[];
 }
 
-export function CategorySection({
-  bikeId,
-  categoryId,
-  label,
-  components,
-}: CategorySectionProps) {
+export function CategorySection({ bikeId, categoryId, label, components }: CategorySectionProps) {
   const reorder = useReorderComponents(bikeId);
   const activate = useActivateComponent(bikeId);
   const deleteComponent = useDeleteComponent(bikeId);
@@ -139,11 +118,7 @@ export function CategorySection({
             No components in this category yet.
           </p>
         ) : (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={onDragEnd}
-          >
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
             <SortableContext
               items={components.map((c) => c.id)}
               strategy={verticalListSortingStrategy}
@@ -167,12 +142,7 @@ export function CategorySection({
         )}
       </CardContent>
       <CardFooter>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setAdding(true)}
-          className="w-full"
-        >
+        <Button variant="outline" size="sm" onClick={() => setAdding(true)} className="w-full">
           <PlusIcon /> Add component
         </Button>
       </CardFooter>
@@ -181,22 +151,13 @@ export function CategorySection({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add {label.toLowerCase()} component</DialogTitle>
-            <DialogDescription>
-              Add a component you can swap into this category.
-            </DialogDescription>
+            <DialogDescription>Add a component you can swap into this category.</DialogDescription>
           </DialogHeader>
-          <ComponentForm
-            bikeId={bikeId}
-            category={categoryId}
-            onDone={() => setAdding(false)}
-          />
+          <ComponentForm bikeId={bikeId} category={categoryId} onDone={() => setAdding(false)} />
         </DialogContent>
       </Dialog>
 
-      <Dialog
-        open={!!editing}
-        onOpenChange={(open) => !open && setEditing(null)}
-      >
+      <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit component</DialogTitle>
@@ -219,11 +180,7 @@ export function CategorySection({
         open={!!deleting}
         onOpenChange={(open) => !open && setDeleting(null)}
         title="Delete component?"
-        description={
-          deleting
-            ? `"${deleting.name}" will be removed from this category.`
-            : ""
-        }
+        description={deleting ? `"${deleting.name}" will be removed from this category.` : ""}
         confirmLabel="Delete"
         loading={deleteComponent.isPending}
         loadingLabel="Deleting…"
@@ -250,14 +207,10 @@ function ComponentRow({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const {
-    setNodeRef,
-    attributes,
-    listeners,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: component.id, disabled: !draggable });
+  const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({
+    id: component.id,
+    disabled: !draggable,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -293,8 +246,7 @@ function ComponentRow({
             )}
           </div>
           <span className="truncate text-sm text-muted-foreground">
-            {[component.brand, component.model].filter(Boolean).join(" · ") ||
-              "—"}
+            {[component.brand, component.model].filter(Boolean).join(" · ") || "—"}
           </span>
         </div>
       </div>

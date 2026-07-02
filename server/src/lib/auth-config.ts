@@ -22,11 +22,7 @@ function parseUrl(name: string, value: string): URL {
 }
 
 function isLocalDevUrl(url: URL): boolean {
-  return (
-    url.hostname === "localhost" ||
-    url.hostname === "127.0.0.1" ||
-    url.hostname === "::1"
-  );
+  return url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "::1";
 }
 
 function assertPublicHttpsUrl(name: string, url: URL): void {
@@ -42,15 +38,11 @@ export function resolveAuthConfig(env: AuthEnv = process.env): AuthConfig {
   const base = parseUrl("BETTER_AUTH_URL", baseURL);
   const client = parseUrl("CLIENT_URL", clientURL);
   const productionLike =
-    env.NODE_ENV === "production" ||
-    !isLocalDevUrl(base) ||
-    !isLocalDevUrl(client);
+    env.NODE_ENV === "production" || !isLocalDevUrl(base) || !isLocalDevUrl(client);
 
   if (productionLike) {
     if (!env.BETTER_AUTH_SECRET || secret === DEV_AUTH_SECRET) {
-      throw new Error(
-        "BETTER_AUTH_SECRET must be set to a unique production secret",
-      );
+      throw new Error("BETTER_AUTH_SECRET must be set to a unique production secret");
     }
     if (secret.length < 32) {
       throw new Error("BETTER_AUTH_SECRET must be at least 32 characters");

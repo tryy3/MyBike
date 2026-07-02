@@ -14,13 +14,7 @@ import type { Component } from "shared";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -73,19 +67,14 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
   function handleDownloadTemplate(): void {
     downloadCsv("mybike-components-template.csv", buildTemplateCsv());
     toast.message("Template downloaded", {
-      description:
-        "Fill in rows and import here. Leave id empty for new parts.",
+      description: "Fill in rows and import here. Leave id empty for new parts.",
     });
   }
 
   if (isPending) {
     return (
       <Card>
-        <CardContent
-          className="p-6 text-sm text-muted-foreground"
-          role="status"
-          aria-live="polite"
-        >
+        <CardContent className="p-6 text-sm text-muted-foreground" role="status" aria-live="polite">
           Loading bike…
         </CardContent>
       </Card>
@@ -117,20 +106,12 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
   const activeCount = data.components.filter((c) => c.isActive).length;
   const emptyCategoryCount = CATEGORIES.length - categoriesUsed;
   const visibleCategories = CATEGORIES.filter(
-    (cat) =>
-      showEmptyCategories ||
-      categoriesUsed === 0 ||
-      (grouped.get(cat.id)?.length ?? 0) > 0,
+    (cat) => showEmptyCategories || categoriesUsed === 0 || (grouped.get(cat.id)?.length ?? 0) > 0,
   );
 
   return (
     <div className="flex flex-col gap-6">
-      <Button
-        asChild
-        variant="ghost"
-        size="sm"
-        className="w-max text-muted-foreground"
-      >
+      <Button asChild variant="ghost" size="sm" className="w-max text-muted-foreground">
         <Link to="/">
           <ArrowLeftIcon /> Back to bikes
         </Link>
@@ -142,9 +123,7 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
             <div className="flex flex-col gap-1">
               <h1 className="text-2xl font-semibold text-balance">{data.name}</h1>
               <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-                {[data.brand, data.model, data.year]
-                  .filter(Boolean)
-                  .join(" · ")}
+                {[data.brand, data.model, data.year].filter(Boolean).join(" · ")}
               </div>
             </div>
             <div className="flex gap-1">
@@ -170,9 +149,7 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
         {data.notes && (
           <CardContent>
             <Separator className="mb-4" />
-            <p className="whitespace-pre-wrap text-sm text-muted-foreground">
-              {data.notes}
-            </p>
+            <p className="whitespace-pre-wrap text-sm text-muted-foreground">{data.notes}</p>
           </CardContent>
         )}
       </Card>
@@ -191,23 +168,18 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
         <TabsContent value="components" className="flex flex-col gap-4">
           {data.components.length === 0 ? (
             <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-              No components yet. Add parts to any of the categories below — they
-              are always available.
+              No components yet. Add parts to any of the categories below — they are always
+              available.
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
               {data.components.length} component
-              {data.components.length === 1 ? "" : "s"} across {categoriesUsed}{" "}
-              categor
+              {data.components.length === 1 ? "" : "s"} across {categoriesUsed} categor
               {categoriesUsed === 1 ? "y" : "ies"}.
             </p>
           )}
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setImporting(true)}
-            >
+            <Button variant="outline" size="sm" onClick={() => setImporting(true)}>
               <UploadIcon />
               Import CSV
             </Button>
@@ -222,11 +194,7 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
               Template
             </Button>
             {emptyCategoryCount > 0 && categoriesUsed > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowEmptyCategories((v) => !v)}
-              >
+              <Button variant="ghost" size="sm" onClick={() => setShowEmptyCategories((v) => !v)}>
                 {showEmptyCategories
                   ? "Hide empty categories"
                   : `Show empty categories (${emptyCategoryCount})`}
@@ -250,17 +218,11 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Bike overview</CardTitle>
-              <CardDescription>
-                Snapshot of {data.name} and its setup.
-              </CardDescription>
+              <CardDescription>Snapshot of {data.name} and its setup.</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-3 text-sm">
-              <OverviewRow label="Total components">
-                {data.components.length}
-              </OverviewRow>
-              <OverviewRow label="Categories used">
-                {categoriesUsed}
-              </OverviewRow>
+              <OverviewRow label="Total components">{data.components.length}</OverviewRow>
+              <OverviewRow label="Categories used">{categoriesUsed}</OverviewRow>
               <OverviewRow label="Active components">{activeCount}</OverviewRow>
             </CardContent>
           </Card>
@@ -274,11 +236,7 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
             <DialogTitle>Edit bike</DialogTitle>
             <DialogDescription>Update this bike's details.</DialogDescription>
           </DialogHeader>
-          <BikeForm
-            bike={data}
-            bikeId={data.id}
-            onDone={() => setEditing(false)}
-          />
+          <BikeForm bike={data} bikeId={data.id} onDone={() => setEditing(false)} />
         </DialogContent>
       </Dialog>
 
@@ -305,22 +263,12 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
       />
 
       {/* Import components from CSV (upload + confirmation gate). */}
-      <ImportComponentsDialog
-        bikeId={bikeId}
-        open={importing}
-        onOpenChange={setImporting}
-      />
+      <ImportComponentsDialog bikeId={bikeId} open={importing} onOpenChange={setImporting} />
     </div>
   );
 }
 
-function OverviewRow({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function OverviewRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between border-b pb-2 last:border-b-0 last:pb-0">
       <span className="text-muted-foreground">{label}</span>

@@ -11,21 +11,13 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "lint": "eslint src/",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "format": "prettier --write src/"
+    "test": "vp test"
   },
   "dependencies": {
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "eslint": "^10.6.0",
-    "eslint-config-prettier": "^10.1.8",
-    "prettier": "^3.9.4",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.62.1",
-    "vitest": "^3.2.4"
+    "vite-plus": "0.2.2"
   }
 }

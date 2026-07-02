@@ -20,11 +20,7 @@ function toHeaders(req: Request): Headers {
   return headers;
 }
 
-export async function requireAuth(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> {
+export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const session = await auth.api.getSession({ headers: toHeaders(req) });
     if (!session?.user) {

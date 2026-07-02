@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { DEV_AUTH_SECRET, resolveAuthConfig } from "../lib/auth-config.js";
 
 describe("resolveAuthConfig", () => {

@@ -10,8 +10,7 @@ export const bikeBaseSchema = z.object({
     .min(1900)
     .nullish()
     .refine(
-      (value) =>
-        value == null || value <= new Date().getFullYear() + 1,
+      (value) => value == null || value <= new Date().getFullYear() + 1,
       () => ({
         message: `Year must be at most ${new Date().getFullYear() + 1}`,
       }),

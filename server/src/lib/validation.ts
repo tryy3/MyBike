@@ -10,10 +10,7 @@ export function parseBody<T>(req: Request, schema: ZodType<T>): T {
   return result.data;
 }
 
-export function parseParams(
-  req: Request,
-  keys: string[],
-): Record<string, string> {
+export function parseParams(req: Request, keys: string[]): Record<string, string> {
   const out: Record<string, string> = {};
   for (const k of keys) {
     const v = req.params[k];

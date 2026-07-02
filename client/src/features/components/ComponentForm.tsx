@@ -6,12 +6,7 @@ import { z } from "zod";
 import { type Component } from "shared";
 
 import { Button } from "@/components/ui/button";
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateComponent, useUpdateComponent } from "./api";
@@ -39,8 +34,7 @@ const EMPTY: ComponentFormValues = {
 };
 
 function normalize(raw: ComponentFormValues): ComponentFormValues {
-  const trim = (v: string | null | undefined) =>
-    !v || v.trim() === "" ? null : v;
+  const trim = (v: string | null | undefined) => (!v || v.trim() === "" ? null : v);
   return {
     name: raw.name.trim(),
     brand: trim(raw.brand ?? null),
@@ -49,12 +43,7 @@ function normalize(raw: ComponentFormValues): ComponentFormValues {
   };
 }
 
-export function ComponentForm({
-  bikeId,
-  category,
-  component,
-  onDone,
-}: ComponentFormProps) {
+export function ComponentForm({ bikeId, category, component, onDone }: ComponentFormProps) {
   const isEdit = !!component;
   const createComponent = useCreateComponent(bikeId);
   const updateComponent = useUpdateComponent(bikeId);
@@ -125,9 +114,7 @@ export function ComponentForm({
                   aria-invalid={fieldState.invalid}
                   aria-describedby={fieldState.invalid ? errorId : undefined}
                 />
-                {fieldState.invalid && (
-                  <FieldError id={errorId} errors={[fieldState.error]} />
-                )}
+                {fieldState.invalid && <FieldError id={errorId} errors={[fieldState.error]} />}
               </Field>
             );
           }}
@@ -149,13 +136,9 @@ export function ComponentForm({
                     placeholder="e.g. Zipp"
                     autoComplete="off"
                     aria-invalid={fieldState.invalid}
-                    aria-describedby={
-                      fieldState.invalid ? errorId : undefined
-                    }
+                    aria-describedby={fieldState.invalid ? errorId : undefined}
                   />
-                  {fieldState.invalid && (
-                    <FieldError id={errorId} errors={[fieldState.error]} />
-                  )}
+                  {fieldState.invalid && <FieldError id={errorId} errors={[fieldState.error]} />}
                 </Field>
               );
             }}
@@ -176,13 +159,9 @@ export function ComponentForm({
                     placeholder="e.g. 303 Firecrest"
                     autoComplete="off"
                     aria-invalid={fieldState.invalid}
-                    aria-describedby={
-                      fieldState.invalid ? errorId : undefined
-                    }
+                    aria-describedby={fieldState.invalid ? errorId : undefined}
                   />
-                  {fieldState.invalid && (
-                    <FieldError id={errorId} errors={[fieldState.error]} />
-                  )}
+                  {fieldState.invalid && <FieldError id={errorId} errors={[fieldState.error]} />}
                 </Field>
               );
             }}
@@ -206,9 +185,7 @@ export function ComponentForm({
                   aria-invalid={fieldState.invalid}
                   aria-describedby={fieldState.invalid ? errorId : undefined}
                 />
-                {fieldState.invalid && (
-                  <FieldError id={errorId} errors={[fieldState.error]} />
-                )}
+                {fieldState.invalid && <FieldError id={errorId} errors={[fieldState.error]} />}
               </Field>
             );
           }}

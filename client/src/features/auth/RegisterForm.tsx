@@ -5,13 +5,7 @@ import { toast } from "sonner";
 import { registerSchema, type RegisterInput } from "shared";
 
 import { Button } from "@/components/ui/button";
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { consumeAuthReturnTo } from "@/lib/auth-return-to";
 import { useSignUp } from "./api";
@@ -50,15 +44,10 @@ export function RegisterForm() {
                 id="register-name"
                 autoComplete="name"
                 aria-invalid={fieldState.invalid}
-                aria-describedby={
-                  fieldState.invalid ? "register-name-error" : undefined
-                }
+                aria-describedby={fieldState.invalid ? "register-name-error" : undefined}
               />
               {fieldState.error ? (
-                <FieldError
-                  id="register-name-error"
-                  errors={[fieldState.error]}
-                />
+                <FieldError id="register-name-error" errors={[fieldState.error]} />
               ) : null}
             </Field>
           )}
@@ -75,15 +64,10 @@ export function RegisterForm() {
                 type="email"
                 autoComplete="email"
                 aria-invalid={fieldState.invalid}
-                aria-describedby={
-                  fieldState.invalid ? "register-email-error" : undefined
-                }
+                aria-describedby={fieldState.invalid ? "register-email-error" : undefined}
               />
               {fieldState.error ? (
-                <FieldError
-                  id="register-email-error"
-                  errors={[fieldState.error]}
-                />
+                <FieldError id="register-email-error" errors={[fieldState.error]} />
               ) : null}
             </Field>
           )}
@@ -110,10 +94,7 @@ export function RegisterForm() {
                 Use at least 8 characters.
               </FieldDescription>
               {fieldState.error ? (
-                <FieldError
-                  id="register-password-error"
-                  errors={[fieldState.error]}
-                />
+                <FieldError id="register-password-error" errors={[fieldState.error]} />
               ) : null}
             </Field>
           )}
