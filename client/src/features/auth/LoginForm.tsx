@@ -52,9 +52,15 @@ export function LoginForm({ redirectTo = "/" }: LoginFormProps) {
                 type="email"
                 autoComplete="email"
                 aria-invalid={fieldState.invalid}
+                aria-describedby={
+                  fieldState.invalid ? "login-email-error" : undefined
+                }
               />
               {fieldState.error ? (
-                <FieldError errors={[fieldState.error]} />
+                <FieldError
+                  id="login-email-error"
+                  errors={[fieldState.error]}
+                />
               ) : null}
             </Field>
           )}
@@ -71,9 +77,15 @@ export function LoginForm({ redirectTo = "/" }: LoginFormProps) {
                 type="password"
                 autoComplete="current-password"
                 aria-invalid={fieldState.invalid}
+                aria-describedby={
+                  fieldState.invalid ? "login-password-error" : undefined
+                }
               />
               {fieldState.error ? (
-                <FieldError errors={[fieldState.error]} />
+                <FieldError
+                  id="login-password-error"
+                  errors={[fieldState.error]}
+                />
               ) : null}
             </Field>
           )}
@@ -84,7 +96,7 @@ export function LoginForm({ redirectTo = "/" }: LoginFormProps) {
       </Button>
       <p className="text-center text-sm text-muted-foreground">
         No account?{" "}
-        <Link to="/register" className="underline">
+        <Link to="/register" search={{ redirect: redirectTo }} className="underline">
           Create one
         </Link>
       </p>

@@ -7,6 +7,7 @@ import { registerSchema, type RegisterInput } from "shared";
 import { Button } from "@/components/ui/button";
 import {
   Field,
+  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
@@ -14,7 +15,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { useSignUp } from "./api";
 
-export function RegisterForm() {
+interface RegisterFormProps {
+  redirectTo?: string;
+}
+
+export function RegisterForm({ redirectTo }: RegisterFormProps) {
   const signUp = useSignUp();
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
@@ -47,9 +52,15 @@ export function RegisterForm() {
                 id="register-name"
                 autoComplete="name"
                 aria-invalid={fieldState.invalid}
+                aria-describedby={
+                  fieldState.invalid ? "register-name-error" : undefined
+                }
               />
               {fieldState.error ? (
-                <FieldError errors={[fieldState.error]} />
+                <FieldError
+                  id="register-name-error"
+                  errors={[fieldState.error]}
+                />
               ) : null}
             </Field>
           )}
@@ -66,9 +77,15 @@ export function RegisterForm() {
                 type="email"
                 autoComplete="email"
                 aria-invalid={fieldState.invalid}
+                aria-describedby={
+                  fieldState.invalid ? "register-email-error" : undefined
+                }
               />
               {fieldState.error ? (
-                <FieldError errors={[fieldState.error]} />
+                <FieldError
+                  id="register-email-error"
+                  errors={[fieldState.error]}
+                />
               ) : null}
             </Field>
           )}
@@ -85,9 +102,20 @@ export function RegisterForm() {
                 type="password"
                 autoComplete="new-password"
                 aria-invalid={fieldState.invalid}
+                aria-describedby={
+                  fieldState.invalid
+                    ? "register-password-description register-password-error"
+                    : "register-password-description"
+                }
               />
+              <FieldDescription id="register-password-description">
+                Use at least 8 characters.
+              </FieldDescription>
               {fieldState.error ? (
-                <FieldError errors={[fieldState.error]} />
+                <FieldError
+                  id="register-password-error"
+                  errors={[fieldState.error]}
+                />
               ) : null}
             </Field>
           )}
@@ -98,7 +126,11 @@ export function RegisterForm() {
       </Button>
       <p className="text-center text-sm text-muted-foreground">
         Already have an account?{" "}
-        <Link to="/login" search={{ redirect: undefined }} className="underline">
+        <Link
+          to="/login"
+          search={{ redirect: redirectTo }}
+          className="underline"
+        >
           Sign in
         </Link>
       </p>

@@ -1,9 +1,11 @@
 import { useEffect } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useSearch } from "@tanstack/react-router";
 import { BikeIcon } from "lucide-react";
 import { RegisterForm } from "@/features/auth/RegisterForm";
 
 export function RegisterPage() {
+  const { redirect: redirectTo } = useSearch({ from: "/register" });
+
   useEffect(() => {
     document.title = "Create account | MyBike";
     return () => {
@@ -28,10 +30,14 @@ export function RegisterPage() {
             Start tracking your bikes and interchangeable components.
           </p>
         </div>
-        <RegisterForm />
+        <RegisterForm redirectTo={redirectTo ?? "/"} />
       </div>
       <p className="mt-8 text-center text-sm text-muted-foreground">
-        <Link to="/login" search={{ redirect: undefined }} className="underline">
+        <Link
+          to="/login"
+          search={{ redirect: redirectTo }}
+          className="underline"
+        >
           Sign in instead
         </Link>
       </p>
