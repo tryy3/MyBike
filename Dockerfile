@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1.7
-
 FROM node:26-bookworm-slim AS build
 
 WORKDIR /app
