@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
-import { auth, type SessionUser } from "./auth";
-import { HttpError } from "./errors";
+import { auth, type SessionUser } from "./auth.js";
+import { HttpError } from "./errors.js";
 
 export interface AuthenticatedRequest extends Request {
   user: SessionUser;

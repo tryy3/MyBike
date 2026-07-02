@@ -50,9 +50,15 @@ export function LoginForm() {
                 type="email"
                 autoComplete="email"
                 aria-invalid={fieldState.invalid}
+                aria-describedby={
+                  fieldState.invalid ? "login-email-error" : undefined
+                }
               />
               {fieldState.error ? (
-                <FieldError errors={[fieldState.error]} />
+                <FieldError
+                  id="login-email-error"
+                  errors={[fieldState.error]}
+                />
               ) : null}
             </Field>
           )}
@@ -69,9 +75,15 @@ export function LoginForm() {
                 type="password"
                 autoComplete="current-password"
                 aria-invalid={fieldState.invalid}
+                aria-describedby={
+                  fieldState.invalid ? "login-password-error" : undefined
+                }
               />
               {fieldState.error ? (
-                <FieldError errors={[fieldState.error]} />
+                <FieldError
+                  id="login-password-error"
+                  errors={[fieldState.error]}
+                />
               ) : null}
             </Field>
           )}

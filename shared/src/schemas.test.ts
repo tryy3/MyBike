@@ -1,6 +1,8 @@
 import { bikeInsertSchema } from "./schemas/bike.js";
 import {
   COMPONENT_CSV_COLUMNS,
+  COMPONENT_IMPORT_MAX_BYTES,
+  componentImportSchema,
   componentInsertSchema,
 } from "./schemas/component.js";
 import { CATEGORY_IDS } from "./categories.js";
@@ -55,5 +57,16 @@ describe("COMPONENT_CSV_COLUMNS", () => {
       "notes",
       "isActive",
     ]);
+  });
+});
+
+describe("componentImportSchema", () => {
+  it("rejects CSV payloads over the shared import byte limit", () => {
+    const result = componentImportSchema.safeParse({
+      csv: "a".repeat(COMPONENT_IMPORT_MAX_BYTES + 1),
+      dryRun: true,
+    });
+
+    expect(result.success).toBe(false);
   });
 });
