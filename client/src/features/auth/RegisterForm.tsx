@@ -45,78 +45,81 @@ export function RegisterForm({ redirectTo = "/" }: RegisterFormProps) {
         <Controller
           name="name"
           control={form.control}
-          render={({ field, fieldState }) => {
-            const errorId = "register-name-error";
-            return (
-              <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="register-name">Name</FieldLabel>
-                <Input
-                  {...field}
-                  id="register-name"
-                  autoComplete="name"
-                  aria-invalid={fieldState.invalid}
-                  aria-describedby={fieldState.invalid ? errorId : undefined}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="register-name">Name</FieldLabel>
+              <Input
+                {...field}
+                id="register-name"
+                autoComplete="name"
+                aria-invalid={fieldState.invalid}
+                aria-describedby={
+                  fieldState.invalid ? "register-name-error" : undefined
+                }
+              />
+              {fieldState.error ? (
+                <FieldError
+                  id="register-name-error"
+                  errors={[fieldState.error]}
                 />
-                {fieldState.error ? (
-                  <FieldError id={errorId} errors={[fieldState.error]} />
-                ) : null}
-              </Field>
-            );
-          }}
+              ) : null}
+            </Field>
+          )}
         />
         <Controller
           name="email"
           control={form.control}
-          render={({ field, fieldState }) => {
-            const errorId = "register-email-error";
-            return (
-              <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="register-email">Email</FieldLabel>
-                <Input
-                  {...field}
-                  id="register-email"
-                  type="email"
-                  autoComplete="email"
-                  aria-invalid={fieldState.invalid}
-                  aria-describedby={fieldState.invalid ? errorId : undefined}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="register-email">Email</FieldLabel>
+              <Input
+                {...field}
+                id="register-email"
+                type="email"
+                autoComplete="email"
+                aria-invalid={fieldState.invalid}
+                aria-describedby={
+                  fieldState.invalid ? "register-email-error" : undefined
+                }
+              />
+              {fieldState.error ? (
+                <FieldError
+                  id="register-email-error"
+                  errors={[fieldState.error]}
                 />
-                {fieldState.error ? (
-                  <FieldError id={errorId} errors={[fieldState.error]} />
-                ) : null}
-              </Field>
-            );
-          }}
+              ) : null}
+            </Field>
+          )}
         />
         <Controller
           name="password"
           control={form.control}
-          render={({ field, fieldState }) => {
-            const descriptionId = "register-password-description";
-            const errorId = "register-password-error";
-            const describedBy = fieldState.invalid
-              ? `${descriptionId} ${errorId}`
-              : descriptionId;
-
-            return (
-              <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="register-password">Password</FieldLabel>
-                <Input
-                  {...field}
-                  id="register-password"
-                  type="password"
-                  autoComplete="new-password"
-                  aria-invalid={fieldState.invalid}
-                  aria-describedby={describedBy}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="register-password">Password</FieldLabel>
+              <Input
+                {...field}
+                id="register-password"
+                type="password"
+                autoComplete="new-password"
+                aria-invalid={fieldState.invalid}
+                aria-describedby={
+                  fieldState.invalid
+                    ? "register-password-description register-password-error"
+                    : "register-password-description"
+                }
+              />
+              <FieldDescription id="register-password-description">
+                Use at least 8 characters.
+              </FieldDescription>
+              {fieldState.error ? (
+                <FieldError
+                  id="register-password-error"
+                  errors={[fieldState.error]}
                 />
-                <FieldDescription id={descriptionId}>
-                  Use at least 8 characters.
-                </FieldDescription>
-                {fieldState.error ? (
-                  <FieldError id={errorId} errors={[fieldState.error]} />
-                ) : null}
-              </Field>
-            );
-          }}
+              ) : null}
+            </Field>
+          )}
         />
       </FieldGroup>
       <Button type="submit" className="w-full" disabled={signUp.isPending}>

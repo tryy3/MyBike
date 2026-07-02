@@ -44,48 +44,52 @@ export function LoginForm({ redirectTo = "/" }: LoginFormProps) {
         <Controller
           name="email"
           control={form.control}
-          render={({ field, fieldState }) => {
-            const errorId = "login-email-error";
-            return (
-              <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="login-email">Email</FieldLabel>
-                <Input
-                  {...field}
-                  id="login-email"
-                  type="email"
-                  autoComplete="email"
-                  aria-invalid={fieldState.invalid}
-                  aria-describedby={fieldState.invalid ? errorId : undefined}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="login-email">Email</FieldLabel>
+              <Input
+                {...field}
+                id="login-email"
+                type="email"
+                autoComplete="email"
+                aria-invalid={fieldState.invalid}
+                aria-describedby={
+                  fieldState.invalid ? "login-email-error" : undefined
+                }
+              />
+              {fieldState.error ? (
+                <FieldError
+                  id="login-email-error"
+                  errors={[fieldState.error]}
                 />
-                {fieldState.error ? (
-                  <FieldError id={errorId} errors={[fieldState.error]} />
-                ) : null}
-              </Field>
-            );
-          }}
+              ) : null}
+            </Field>
+          )}
         />
         <Controller
           name="password"
           control={form.control}
-          render={({ field, fieldState }) => {
-            const errorId = "login-password-error";
-            return (
-              <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="login-password">Password</FieldLabel>
-                <Input
-                  {...field}
-                  id="login-password"
-                  type="password"
-                  autoComplete="current-password"
-                  aria-invalid={fieldState.invalid}
-                  aria-describedby={fieldState.invalid ? errorId : undefined}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="login-password">Password</FieldLabel>
+              <Input
+                {...field}
+                id="login-password"
+                type="password"
+                autoComplete="current-password"
+                aria-invalid={fieldState.invalid}
+                aria-describedby={
+                  fieldState.invalid ? "login-password-error" : undefined
+                }
+              />
+              {fieldState.error ? (
+                <FieldError
+                  id="login-password-error"
+                  errors={[fieldState.error]}
                 />
-                {fieldState.error ? (
-                  <FieldError id={errorId} errors={[fieldState.error]} />
-                ) : null}
-              </Field>
-            );
-          }}
+              ) : null}
+            </Field>
+          )}
         />
       </FieldGroup>
       <Button type="submit" className="w-full" disabled={signIn.isPending}>
