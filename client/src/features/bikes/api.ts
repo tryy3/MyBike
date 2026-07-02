@@ -27,8 +27,8 @@ export function useUpdateBike(id: string) {
   return useMutation({
     mutationFn: (data: BikeUpdate) => api.updateBike(id, data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.bikes });
-      qc.invalidateQueries({ queryKey: queryKeys.bike(id) });
+      void qc.invalidateQueries({ queryKey: queryKeys.bikes });
+      void qc.invalidateQueries({ queryKey: queryKeys.bike(id) });
     },
   });
 }
@@ -38,7 +38,7 @@ export function useDeleteBike() {
   return useMutation({
     mutationFn: (id: string) => api.deleteBike(id),
     onSuccess: (_data, id) => {
-      qc.invalidateQueries({ queryKey: queryKeys.bikes });
+      void qc.invalidateQueries({ queryKey: queryKeys.bikes });
       qc.removeQueries({ queryKey: queryKeys.bike(id) });
     },
   });

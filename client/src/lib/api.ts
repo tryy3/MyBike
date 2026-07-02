@@ -21,14 +21,21 @@ export class ApiError extends Error {
   }
 }
 
+function mergeHeaders(base: Record<string, string>, extra?: HeadersInit): Headers {
+  const headers = new Headers(base);
+  if (extra) {
+    new Headers(extra).forEach((value, key) => {
+      headers.set(key, value);
+    });
+  }
+  return headers;
+}
+
 async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(path, {
     ...options,
     credentials: "include",
-    headers: {
-      "content-type": "application/json",
-      ...(options.headers ?? {}),
-    },
+    headers: mergeHeaders({ "content-type": "application/json" }, options.headers),
   });
 
   let body: unknown = null;

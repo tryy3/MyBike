@@ -5,10 +5,7 @@ const AUTH_PATHS = new Set(["/login", "/register"]);
 /**
  * Validates a post-auth destination. Only same-origin relative paths are allowed.
  */
-export function getSafeRedirectPath(
-  value: string | null | undefined,
-  fallback = "/",
-): string {
+export function getSafeRedirectPath(value: string | null | undefined, fallback = "/"): string {
   if (!value || typeof value !== "string") {
     return fallback;
   }
@@ -38,10 +35,7 @@ export function getSafeRedirectPath(
 /** Store the current location when redirecting an unauthenticated user to login. */
 export function saveAuthReturnTo(): void {
   try {
-    const path =
-      window.location.pathname +
-      window.location.search +
-      window.location.hash;
+    const path = window.location.pathname + window.location.search + window.location.hash;
     const safe = getSafeRedirectPath(path, "");
     if (!safe) {
       return;

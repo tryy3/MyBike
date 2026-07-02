@@ -17,7 +17,7 @@ export function useSignIn() {
       return result.data;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.bikes });
+      void qc.invalidateQueries({ queryKey: queryKeys.bikes });
     },
   });
 }
@@ -37,7 +37,7 @@ export function useSignUp() {
       return result.data;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.bikes });
+      void qc.invalidateQueries({ queryKey: queryKeys.bikes });
     },
   });
 }

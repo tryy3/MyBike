@@ -70,6 +70,19 @@
 
         shellHook = ''
           echo "🚲 MyBike dev environment"
+
+          # Vite+ (`vp`) ships as a local npm devDependency; use Nix's Node.js.
+          if [ ! -x node_modules/.bin/vp ]; then
+            echo "Installing npm dependencies (vite-plus / vp)..."
+            npm install --no-fund --no-audit
+          fi
+          export PATH="$PWD/node_modules/.bin:$PATH"
+
+          if [ ! -f shared/dist/index.d.ts ]; then
+            echo "Building shared package..."
+            npm run build:shared --no-fund --no-audit
+          fi
+
           export NIX_LD_LIBRARY_PATH="${chromeLdPath}''${NIX_LD_LIBRARY_PATH:+:$NIX_LD_LIBRARY_PATH}"
           export LD_LIBRARY_PATH="${chromeLdPath}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
         '';
