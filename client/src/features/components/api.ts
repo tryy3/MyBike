@@ -79,7 +79,7 @@ export function useImportComponents(bikeId: string) {
     onSuccess: (data, vars) => {
       // Only invalidate when the import actually committed.
       if (!vars.dryRun) {
-        qc.invalidateQueries({ queryKey: queryKeys.bike(bikeId) });
+        void qc.invalidateQueries({ queryKey: queryKeys.bike(bikeId) });
       }
     },
   });
