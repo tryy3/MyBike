@@ -15,7 +15,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { useSignUp } from "./api";
 
-export function RegisterForm() {
+interface RegisterFormProps {
+  redirectTo?: string;
+}
+
+export function RegisterForm({ redirectTo }: RegisterFormProps) {
   const signUp = useSignUp();
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
@@ -124,7 +128,7 @@ export function RegisterForm() {
         Already have an account?{" "}
         <Link
           to="/login"
-          search={{ redirect: undefined }}
+          search={{ redirect: redirectTo }}
           className="underline"
         >
           Sign in

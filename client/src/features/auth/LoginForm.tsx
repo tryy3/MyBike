@@ -96,7 +96,7 @@ export function LoginForm({ redirectTo = "/" }: LoginFormProps) {
       </Button>
       <p className="text-center text-sm text-muted-foreground">
         No account?{" "}
-        <Link to="/register" className="underline">
+        <Link to="/register" search={{ redirect: redirectTo }} className="underline">
           Create one
         </Link>
       </p>
