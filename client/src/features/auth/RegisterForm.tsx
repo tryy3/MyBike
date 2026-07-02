@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { registerSchema, type RegisterInput } from "shared";
@@ -7,13 +7,11 @@ import { registerSchema, type RegisterInput } from "shared";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { consumeAuthReturnTo } from "@/lib/auth-return-to";
 import { useSignUp } from "./api";
 
-interface RegisterFormProps {
-  redirectTo?: string;
-}
-
-export function RegisterForm({ redirectTo }: RegisterFormProps) {
+export function RegisterForm() {
+  const navigate = useNavigate();
   const signUp = useSignUp();
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
@@ -24,7 +22,7 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
     signUp.mutate(data, {
       onSuccess: () => {
         toast.success("Account created");
-        window.location.href = "/";
+        void navigate({ href: consumeAuthReturnTo(), replace: true });
       },
       onError: (err) => {
         toast.error(err.message);
@@ -107,7 +105,7 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
       </Button>
       <p className="text-center text-sm text-muted-foreground">
         Already have an account?{" "}
-        <Link to="/login" search={{ redirect: redirectTo }} className="underline">
+        <Link to="/login" className="underline">
           Sign in
         </Link>
       </p>

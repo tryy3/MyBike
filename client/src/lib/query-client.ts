@@ -1,10 +1,11 @@
 import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
+import { saveAuthReturnTo } from "./auth-return-to";
 import { ApiError } from "./api";
 
 function redirectToLogin(): void {
   if (window.location.pathname === "/login") return;
-  const redirect = encodeURIComponent(window.location.pathname);
-  window.location.assign(`/login?redirect=${redirect}`);
+  saveAuthReturnTo();
+  window.location.assign("/login");
 }
 
 function handleAuthError(queryClient: QueryClient, error: unknown): void {
