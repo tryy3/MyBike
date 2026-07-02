@@ -1,9 +1,8 @@
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
+import { drizzle } from "drizzle-orm/node-sqlite";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import * as schema from "./schema.js";
-import * as authSchema from "./auth-schema.js";
+import { relations } from "./relations.js";
 
 const dbPath = process.env.DB_PATH ?? "./data/mybike.db";
 
@@ -13,9 +12,9 @@ if (dir && !existsSync(dir)) {
   mkdirSync(dir, { recursive: true });
 }
 
-const sqlite = new Database(dbPath);
-sqlite.pragma("journal_mode = WAL");
-sqlite.pragma("foreign_keys = ON");
+const sqlite = new DatabaseSync(dbPath);
+sqlite.exec("PRAGMA journal_mode = WAL");
+sqlite.exec("PRAGMA foreign_keys = ON");
 
-export const db = drizzle(sqlite, { schema: { ...schema, ...authSchema } });
+export const db = drizzle({ client: sqlite, relations });
 export { sqlite };

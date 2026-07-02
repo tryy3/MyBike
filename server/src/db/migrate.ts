@@ -1,4 +1,4 @@
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { migrate } from "drizzle-orm/node-sqlite/migrator";
 import { db } from "./index.js";
 
 export function applyMigrations() {

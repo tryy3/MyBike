@@ -68,15 +68,15 @@ npm run -w client dev          # UI on :5173
 
 ## Cursor Cloud specific instructions
 
-The VM startup update script runs `npm install` only. Before starting the dev servers (or running server/client typecheck/tests) on a fresh checkout you MUST run these two steps yourself — both produce gitignored output, so they never persist across VMs:
+Cloud agents run on a snapshot-managed environment (the previous `.cursor/environment.json` + Dockerfile were removed) that already has **Node 26** available. The startup update script runs `npm install`, builds `shared`, and applies DB migrations so a fresh agent is ready for dev servers and typecheck.
 
-1. `npm run -w shared build` — server and client import `shared` from its compiled `dist/` (see `shared/package.json` `exports`). Without this, `npm run -w server dev` / `client dev` fail to resolve `shared`. `tsx watch` does **not** recompile `shared`, so rebuild it after editing anything under `shared/src`.
-2. `npm run -w server db:migrate` — creates the SQLite DB at `server/data/mybike.db` (gitignored). Required before the API can serve requests.
+If you edit anything under `shared/src`, rebuild with `npm run -w shared build` before running server/client dev or typecheck — `tsx watch` does **not** recompile `shared`.
 
 Other notes:
 
 - `.env` is optional in dev (the server has built-in auth fallbacks), but recommended: `cp .env.example .env` and set `BETTER_AUTH_SECRET`. `.env` is gitignored.
-- Node: `flake.nix` pins Node 26, but the VM runs Node 22, which builds/runs the app, tests, and lint fine (`better-sqlite3` compiles against Node 22). `npm install` prints an `EBADENGINE` warning for `agent-browser` (wants Node ≥24) — harmless for the app; only browser-automation tooling cares.
+- Node: requires **Node 26+** (`engines` in root `package.json`, `.nvmrc`, `flake.nix`). The server uses the built-in `node:sqlite` driver (no native addon rebuild).
+- **Node version / nvm override (important):** the Cursor exec-daemon injects `/exec-daemon` into `PATH` ahead of nvm's bin, and `/exec-daemon/node` is **v22** — so without an override, `node` resolves to v22. We force **nvm's v26** by (a) `nvm alias default 26` and (b) symlink shims in `~/.local/bin` (`node`/`npm`/`npx` → the nvm v26 binaries). `~/.local/bin` is always earlier in `PATH` than `/exec-daemon` (via `~/.profile`, plus a guard in `~/.bashrc`), so the shims win in every shell/tool/update-script context. Both `~/.local/bin` and `~/.nvm` live in the home dir, so this persists in the snapshot. If a fresh agent ever shows `node -v` = v22, re-create the shims: `NVM_DIR=$HOME/.nvm; . $NVM_DIR/nvm.sh; nvm alias default 26; d=$(dirname "$(nvm which default)"); for b in node npm npx; do ln -sfn "$d/$b" "$HOME/.local/bin/$b"; done`. Do **not** edit `/exec-daemon` (root-owned daemon infra).
 - Run both dev servers together: API `npm run -w server dev` (:3001) and UI `npm run -w client dev` (:5173). The client proxies `/api` → `:3001`.
 - Auth is cookie-based (better-auth). Unauthenticated `/api/*` requests return `401` — this is expected, not a failure. Register at `/register`, then use the app.
 - The "Add component" form requires a non-empty **Name** field (min 1 char) in addition to brand/model; component categories are the fixed granular set from `shared/src/categories.ts` (e.g. separate "Front wheel"/"Rear wheel", no combined "Wheels").

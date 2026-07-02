@@ -53,8 +53,10 @@ export const COMPONENT_CSV_COLUMNS = [
 
 export type ComponentCsvColumn = (typeof COMPONENT_CSV_COLUMNS)[number];
 
+export const COMPONENT_IMPORT_MAX_BYTES = 256 * 1024;
+
 export const componentImportSchema = z.object({
-  csv: z.string().min(1),
+  csv: z.string().min(1).max(COMPONENT_IMPORT_MAX_BYTES),
   dryRun: z.boolean().optional(),
 });
 

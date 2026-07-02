@@ -5,6 +5,7 @@ import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
 import { useSignOut } from "@/features/auth/api";
 import { useSession } from "@/lib/auth-client";
+import { requireSession } from "@/lib/auth-guard";
 import { rootRoute } from "./root";
 
 function AppHeader() {
@@ -65,5 +66,6 @@ function AppLayout() {
 export const appLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: "app",
+  beforeLoad: () => requireSession(),
   component: AppLayout,
 });
