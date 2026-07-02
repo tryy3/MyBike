@@ -13,7 +13,6 @@ import { BikeDetailPage } from "./routes/bike-detail";
 import { LoginPage } from "./routes/login";
 import { RegisterPage } from "./routes/register";
 import { redirectIfAuthenticated } from "./lib/auth-guard";
-import { safeRedirectPath } from "./lib/safe-redirect";
 
 const indexRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
@@ -38,7 +37,7 @@ const loginRoute = createRoute({
   beforeLoad: () => redirectIfAuthenticated(),
   component: LoginPage,
   validateSearch: (search: Record<string, unknown>) => ({
-    redirect: safeRedirectPath(search.redirect),
+    redirect: typeof search.redirect === "string" ? search.redirect : undefined,
   }),
 });
 
