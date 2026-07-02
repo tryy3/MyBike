@@ -1,0 +1,18 @@
+services:
+  mybike:
+    build:
+      context: .
+    image: mybike:local
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: "3001"
+      DB_PATH: /data/mybike.db
+      BETTER_AUTH_URL: http://localhost:3001
+      CLIENT_URL: http://localhost:3001
+      BETTER_AUTH_SECRET: replace-this-with-a-long-random-secret
+    volumes:
+      - mybike-data:/data
+
+volumes:
+  mybike-data:
