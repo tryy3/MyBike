@@ -75,6 +75,7 @@ If you edit anything under `shared/src`, rebuild with `npm run -w shared build` 
 Other notes:
 
 - `.env` is optional in dev (the server has built-in auth fallbacks), but recommended: `cp .env.example .env` and set `BETTER_AUTH_SECRET`. `.env` is gitignored.
+- Node: requires **Node 26+** (`engines` in root `package.json`, `.nvmrc`, `flake.nix`). The server uses the built-in `node:sqlite` driver (no native addon rebuild). `npm install` may print an `EBADENGINE` warning for `agent-browser` (wants Node ≥24) on older runtimes — use Node 26 for the app and tooling.
 - If a saved environment snapshot in the Cursor dashboard overrides the Dockerfile, delete it from Cloud Agents → Environments so agents pick up `.cursor/environment.json`.
 - Run both dev servers together: API `npm run -w server dev` (:3001) and UI `npm run -w client dev` (:5173). The client proxies `/api` → `:3001`.
 - Auth is cookie-based (better-auth). Unauthenticated `/api/*` requests return `401` — this is expected, not a failure. Register at `/register`, then use the app.

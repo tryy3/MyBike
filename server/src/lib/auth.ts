@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2";
 import { db } from "../db/index";
-import * as authSchema from "../db/auth-schema";
+import { account, session, user, verification } from "../db/auth-schema";
 import { resolveAuthConfig } from "./auth-config";
 
 const { secret, baseURL, clientURL } = resolveAuthConfig();
@@ -13,7 +13,7 @@ export const auth = betterAuth({
   trustedOrigins: [clientURL],
   database: drizzleAdapter(db, {
     provider: "sqlite",
-    schema: authSchema,
+    schema: { user, session, account, verification },
   }),
   emailAndPassword: {
     enabled: true,

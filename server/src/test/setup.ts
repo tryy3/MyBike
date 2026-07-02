@@ -2,7 +2,7 @@ import { mkdtempSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { migrate } from "drizzle-orm/node-sqlite/migrator";
 
 const testDir = mkdtempSync(join(tmpdir(), "mybike-test-"));
 process.env.DB_PATH = join(testDir, "test.db");
