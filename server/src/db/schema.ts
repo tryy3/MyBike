@@ -6,7 +6,7 @@ import {
   text,
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
-import { user } from "./auth-schema";
+import { user } from "./auth-schema.js";
 
 function uuid() {
   return crypto.randomUUID();

@@ -6,14 +6,20 @@
     "client",
     "shared"
   ],
+  "engines": {
+    "node": ">=26.0.0"
+  },
+  "overrides": {
+    "drizzle-orm": "1.0.0-rc.4"
+  },
   "scripts": {
     "test": "npm run -w shared test && npm run -w server test"
   },
   "dependencies": {
-    "agent-browser": "^0.31.1"
+    "agent-browser": "^0.31.1",
+    "drizzle-orm": "1.0.0-rc.4"
   },
   "allowScripts": {
-    "better-sqlite3@12.11.1": true,
     "esbuild@0.18.20": true,
     "esbuild@0.25.12": true,
     "esbuild@0.28.1": true

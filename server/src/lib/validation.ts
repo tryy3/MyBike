@@ -1,6 +1,6 @@
 import type { Request } from "express";
 import { ZodError, type ZodType } from "zod";
-import { badRequest } from "./errors";
+import { badRequest } from "./errors.js";
 
 export function parseBody<T>(req: Request, schema: ZodType<T>): T {
   const result = schema.safeParse(req.body);
