@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { AlertTriangleIcon, FileUpIcon, UploadIcon } from "lucide-react";
+import { COMPONENT_IMPORT_MAX_BYTES } from "shared";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +28,10 @@ interface ImportComponentsDialogProps {
   bikeId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+function formatMaxImportSize(): string {
+  return `${Math.floor(COMPONENT_IMPORT_MAX_BYTES / 1024)} KB`;
 }
 
 export function ImportComponentsDialog({
@@ -72,6 +77,17 @@ export function ImportComponentsDialog({
       setFileName(null);
       setPreview(null);
       setRowErrors([]);
+      return;
+    }
+    if (file.size > COMPONENT_IMPORT_MAX_BYTES) {
+      const message = `CSV is too large. Choose a file up to ${formatMaxImportSize()}.`;
+      setCsv(null);
+      setFileName(file.name);
+      setPreview(null);
+      setRowErrors([{ row: 0, message }]);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      importMut.reset();
+      toast.error("CSV file is too large", { description: message });
       return;
     }
     const text = await file.text();
@@ -137,7 +153,8 @@ export function ImportComponentsDialog({
               </code>
               . Leave the <code className="text-xs">id</code> column empty to
               add a new component; fill it in to update an existing one. The
-              first row must be the header. Max 1000 rows.
+              first row must be the header. Max 1000 rows and{" "}
+              {formatMaxImportSize()}.
             </DialogDescription>
           </DialogHeader>
 
