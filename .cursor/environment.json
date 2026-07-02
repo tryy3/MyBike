@@ -1,0 +1,8 @@
+{
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "install": "npm install && npm run -w shared build && npm run -w server db:migrate",
+  "start": "sudo service docker start"
+}
