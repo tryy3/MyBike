@@ -53,7 +53,8 @@ RUN update-alternatives --set iptables /usr/sbin/iptables-legacy && \
 ########################################################
 
 # ensure no password authentication
-RUN echo 'PasswordAuthentication no\nChallengeResponseAuthentication no\nUsePAM no' > /etc/ssh/sshd_config.d/disable_password_auth.conf
+RUN mkdir -p /etc/ssh/sshd_config.d && \
+    echo 'PasswordAuthentication no\nChallengeResponseAuthentication no\nUsePAM no' > /etc/ssh/sshd_config.d/disable_password_auth.conf
 
 # Create non-root user (only if it doesn't exist)
 RUN id -u ubuntu &>/dev/null || useradd -m -s /bin/bash ubuntu
