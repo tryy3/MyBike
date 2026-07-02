@@ -1,4 +1,4 @@
-FROM node:26-bookworm-slim AS build
+FROM node:26-bookworm-slim AS base
 
 WORKDIR /app
 
@@ -9,14 +9,18 @@ COPY shared/package.json ./shared/package.json
 COPY server/package.json ./server/package.json
 COPY client/package.json ./client/package.json
 
-RUN npm ci
+FROM base AS prod-deps
+
+RUN npm ci --omit=dev --ignore-scripts
+
+FROM base AS build
+
+RUN npm ci --ignore-scripts
 
 COPY . .
 
 RUN npm run -w shared build \
-  && npm run -w client build \
-  && npm exec -w server -- tsc \
-  && npm prune --omit=dev
+  && sh -c 'npm exec -w client -- vite build & npm exec -w server -- tsc & wait'
 
 FROM node:26-bookworm-slim AS runtime
 
@@ -29,7 +33,7 @@ ENV NODE_ENV=production \
 
 RUN mkdir -p /data && chown node:node /data
 
-COPY --from=build --chown=node:node /app/node_modules /app/node_modules
+COPY --from=prod-deps --chown=node:node /app/node_modules /app/node_modules
 COPY --from=build --chown=node:node /app/package.json /app/package-lock.json /app/
 COPY --from=build --chown=node:node /app/shared/package.json /app/shared/package.json
 COPY --from=build --chown=node:node /app/shared/dist /app/shared/dist
