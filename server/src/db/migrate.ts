@@ -24,8 +24,17 @@ function formatToMillis(dateStr: string): number {
   return Date.UTC(year, month, day, hour, minute, second);
 }
 
+function hasTable(tableName: string): boolean {
+  const row = sqlite
+    .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?")
+    .get(tableName);
+  return row !== undefined;
+}
+
 /** If a failed run added all component columns but never recorded the migration, mark it applied. */
 function recoverPartialComponentFieldsMigration(migrationsFolder: string) {
+  if (!hasTable("__drizzle_migrations") || !hasTable("components")) return;
+
   const applied = sqlite
     .prepare("SELECT name FROM __drizzle_migrations WHERE name = ?")
     .get(COMPONENT_FIELDS_MIGRATION) as { name: string } | undefined;
