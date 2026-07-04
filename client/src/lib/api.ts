@@ -8,6 +8,7 @@ import type {
   ComponentInsert,
   ComponentReorder,
   ComponentUpdate,
+  FieldSuggestions,
 } from "shared";
 
 export class ApiError extends Error {
@@ -97,6 +98,8 @@ export const api = {
   // Direct browser download link for export — used as an `<a href download>`
   // so the file streams without going through the JSON apiFetch wrapper.
   exportComponentsUrl: (bikeId: string) => `/api/bikes/${bikeId}/components/export.csv`,
+
+  getFieldSuggestions: () => apiFetch<FieldSuggestions>("/api/field-suggestions"),
 };
 
 export interface ImportResult {
@@ -114,4 +117,5 @@ export interface ImportRowError {
 export const queryKeys = {
   bikes: ["bikes"] as const,
   bike: (id: string) => ["bikes", id] as const,
+  fieldSuggestions: ["field-suggestions"] as const,
 };

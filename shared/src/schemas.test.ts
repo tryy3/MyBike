@@ -4,6 +4,7 @@ import {
   COMPONENT_IMPORT_MAX_BYTES,
   componentImportSchema,
   componentInsertSchema,
+  componentUpdateSchema,
 } from "./schemas/component.js";
 import { CATEGORY_IDS } from "./categories.js";
 import { describe, expect, it } from "vite-plus/test";
@@ -26,11 +27,18 @@ describe("bikeInsertSchema", () => {
   });
 });
 
+const validComponent = {
+  category: "frame" as const,
+  name: "Frame",
+  brand: "Brand",
+  model: "Model",
+};
+
 describe("componentInsertSchema", () => {
   it("requires a known category", () => {
     const result = componentInsertSchema.safeParse({
+      ...validComponent,
       category: "not-a-category",
-      name: "Part",
     });
     expect(result.success).toBe(false);
   });
@@ -38,11 +46,44 @@ describe("componentInsertSchema", () => {
   it("accepts every predefined category", () => {
     for (const category of CATEGORY_IDS) {
       const result = componentInsertSchema.safeParse({
+        ...validComponent,
         category,
-        name: "Part",
       });
       expect(result.success).toBe(true);
     }
+  });
+
+  it("requires brand and model", () => {
+    expect(componentInsertSchema.safeParse({ category: "frame", name: "Frame" }).success).toBe(
+      false,
+    );
+    expect(
+      componentInsertSchema.safeParse({ category: "frame", name: "Frame", brand: "", model: "M" })
+        .success,
+    ).toBe(false);
+  });
+
+  it("accepts optional usage and purchase fields", () => {
+    const result = componentInsertSchema.safeParse({
+      ...validComponent,
+      distanceMeters: 2400500,
+      movingTimeMinutes: 90,
+      purchaseDate: "2024-06-15",
+      purchaseCost: 299.99,
+      purchaseStore: "Local shop",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.distanceMeters).toBe(2400500);
+      expect(result.data.purchaseStore).toBe("Local shop");
+    }
+  });
+});
+
+describe("componentUpdateSchema", () => {
+  it("rejects empty brand when provided", () => {
+    const result = componentUpdateSchema.safeParse({ brand: "  " });
+    expect(result.success).toBe(false);
   });
 });
 
@@ -56,6 +97,11 @@ describe("COMPONENT_CSV_COLUMNS", () => {
       "model",
       "notes",
       "isActive",
+      "distanceMeters",
+      "movingTimeMinutes",
+      "purchaseDate",
+      "purchaseCost",
+      "purchaseStore",
     ]);
   });
 });

@@ -10,6 +10,29 @@ function csvHeader(): string {
   return COMPONENT_CSV_COLUMNS.join(",");
 }
 
+function componentPayload(overrides: Record<string, unknown> = {}) {
+  return { category: "frame", name: "Part", brand: "Brand", model: "Model", ...overrides };
+}
+
+function csvRow(values: Partial<Record<string, string>> = {}) {
+  const defaults: Record<string, string> = {
+    id: "",
+    category: "frame",
+    name: "Imported Frame",
+    brand: "Brand",
+    model: "Model",
+    notes: "",
+    isActive: "false",
+    distanceMeters: "",
+    movingTimeMinutes: "",
+    purchaseDate: "",
+    purchaseCost: "",
+    purchaseStore: "",
+  };
+  const row = { ...defaults, ...values };
+  return COMPONENT_CSV_COLUMNS.map((col) => row[col]).join(",");
+}
+
 describe("authentication", () => {
   it("returns 401 for unauthenticated bike list", async () => {
     await request(app).get("/api/bikes").expect(401);
@@ -34,7 +57,7 @@ describe("active component invariant", () => {
 
     const created = await agent
       .post(`/api/bikes/${bike.body.id}/components`)
-      .send({ category: "frame", name: "Frame A", isActive: false })
+      .send(componentPayload({ category: "frame", name: "Frame A", isActive: false }))
       .expect(201);
 
     expect(created.body.isActive).toBe(true);
@@ -47,12 +70,12 @@ describe("active component invariant", () => {
 
     const first = await agent
       .post(`/api/bikes/${bikeId}/components`)
-      .send({ category: "fork", name: "Fork A", isActive: false })
+      .send(componentPayload({ category: "fork", name: "Fork A", isActive: false }))
       .expect(201);
 
     const second = await agent
       .post(`/api/bikes/${bikeId}/components`)
-      .send({ category: "fork", name: "Fork B", isActive: true })
+      .send(componentPayload({ category: "fork", name: "Fork B", isActive: true }))
       .expect(201);
 
     expect(second.body.isActive).toBe(true);
@@ -70,11 +93,11 @@ describe("active component invariant", () => {
 
     const a = await agent
       .post(`/api/bikes/${bikeId}/components`)
-      .send({ category: "front-wheel", name: "Wheel A", isActive: false })
+      .send(componentPayload({ category: "front-wheel", name: "Wheel A", isActive: false }))
       .expect(201);
     const b = await agent
       .post(`/api/bikes/${bikeId}/components`)
-      .send({ category: "front-wheel", name: "Wheel B", isActive: false })
+      .send(componentPayload({ category: "front-wheel", name: "Wheel B", isActive: false }))
       .expect(201);
 
     await agent.patch(`/api/components/${b.body.id}/activate`).expect(200);
@@ -94,7 +117,7 @@ describe("CSV import", () => {
     const bike = await agent.post("/api/bikes").send({ name: "Import Bike" }).expect(201);
     const bikeId = bike.body.id;
 
-    const csv = [csvHeader(), ",frame,Imported Frame,,,,false"].join("\n");
+    const csv = [csvHeader(), csvRow()].join("\n");
 
     const dry = await agent
       .post(`/api/bikes/${bikeId}/components/import`)
@@ -124,7 +147,7 @@ describe("CSV import", () => {
     const bikeA = await agentA.post("/api/bikes").send({ name: "Private Bike" }).expect(201);
     const foreignComponent = await agentA
       .post(`/api/bikes/${bikeA.body.id}/components`)
-      .send({ category: "frame", name: "Private Frame" })
+      .send(componentPayload({ category: "frame", name: "Private Frame" }))
       .expect(201);
 
     const bikeB = await agentB.post("/api/bikes").send({ name: "Import Target" }).expect(201);
@@ -132,9 +155,9 @@ describe("CSV import", () => {
     const invalidId = "00000000-0000-4000-8000-000000000000";
     const foreignCsv = [
       csvHeader(),
-      `${foreignComponent.body.id},frame,Foreign Frame,,,,false`,
+      csvRow({ id: foreignComponent.body.id, name: "Foreign Frame" }),
     ].join("\n");
-    const unknownCsv = [csvHeader(), `${invalidId},frame,Unknown Frame,,,,false`].join("\n");
+    const unknownCsv = [csvHeader(), csvRow({ id: invalidId, name: "Unknown Frame" })].join("\n");
 
     const foreign = await agentB
       .post(`/api/bikes/${bikeB.body.id}/components/import`)
@@ -160,11 +183,11 @@ describe("reorder", () => {
 
     const a = await agent
       .post(`/api/bikes/${bikeId}/components`)
-      .send({ category: "crankset", name: "Crank A", isActive: false })
+      .send(componentPayload({ category: "crankset", name: "Crank A", isActive: false }))
       .expect(201);
     await agent
       .post(`/api/bikes/${bikeId}/components`)
-      .send({ category: "crankset", name: "Crank B", isActive: false })
+      .send(componentPayload({ category: "crankset", name: "Crank B", isActive: false }))
       .expect(201);
 
     await agent
@@ -185,5 +208,80 @@ describe("bikes CRUD", () => {
     const bike = await agent.post("/api/bikes").send({ name: "Update Bike" }).expect(201);
 
     await agent.put(`/api/bikes/${bike.body.id}`).send({}).expect(400);
+  });
+});
+
+describe("component metadata", () => {
+  it("round-trips optional usage and purchase fields", async () => {
+    const { agent } = await createAuthenticatedAgent(app);
+    const bike = await agent.post("/api/bikes").send({ name: "Meta Bike" }).expect(201);
+
+    const created = await agent
+      .post(`/api/bikes/${bike.body.id}/components`)
+      .send(
+        componentPayload({
+          category: "chain",
+          name: "Chain",
+          brand: "Shimano",
+          model: "CN-HG701",
+          distanceMeters: 1500000,
+          movingTimeMinutes: 125,
+          purchaseDate: "2023-01-10",
+          purchaseCost: 45.5,
+          purchaseStore: "Local shop",
+        }),
+      )
+      .expect(201);
+
+    expect(created.body).toMatchObject({
+      distanceMeters: 1500000,
+      movingTimeMinutes: 125,
+      purchaseDate: "2023-01-10",
+      purchaseCost: 45.5,
+      purchaseStore: "Local shop",
+    });
+  });
+});
+
+describe("field suggestions", () => {
+  it("returns garage-wide deduped suggestions for the authenticated user", async () => {
+    const { agent: agentA } = await createAuthenticatedAgent(app);
+    const { agent: agentB } = await createAuthenticatedAgent(app);
+
+    const bikeA = await agentA.post("/api/bikes").send({ name: "Garage A" }).expect(201);
+    const bikeB = await agentA.post("/api/bikes").send({ name: "Garage B" }).expect(201);
+
+    await agentA
+      .post(`/api/bikes/${bikeA.body.id}/components`)
+      .send(
+        componentPayload({
+          category: "frame",
+          name: "Race Frame",
+          brand: "Bianchi",
+          model: "Oltre",
+          purchaseStore: "Shop One",
+        }),
+      )
+      .expect(201);
+    await agentA
+      .post(`/api/bikes/${bikeB.body.id}/components`)
+      .send(
+        componentPayload({
+          category: "fork",
+          name: "Race Fork",
+          brand: "bianchi",
+          model: "Fork Pro",
+          purchaseStore: "Shop One",
+        }),
+      )
+      .expect(201);
+
+    const suggestions = await agentA.get("/api/field-suggestions").expect(200);
+    expect(suggestions.body.brand).toEqual(["Bianchi"]);
+    expect(suggestions.body.name).toEqual(["Race Fork", "Race Frame"]);
+    expect(suggestions.body.purchaseStore).toEqual(["Shop One"]);
+
+    await agentB.get("/api/field-suggestions").expect(200);
+    expect((await agentB.get("/api/field-suggestions")).body.brand).toEqual([]);
   });
 });

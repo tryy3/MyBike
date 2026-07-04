@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { user } from "./auth-schema.js";
 
 function uuid() {
@@ -45,6 +45,11 @@ export const components = sqliteTable(
     brand: text("brand"),
     model: text("model"),
     notes: text("notes"),
+    distanceMeters: integer("distance_meters"),
+    movingTimeMinutes: integer("moving_time_minutes"),
+    purchaseDate: text("purchase_date"),
+    purchaseCost: real("purchase_cost"),
+    purchaseStore: text("purchase_store"),
     isActive: integer("is_active", { mode: "boolean" }).notNull().default(false),
     // Manual ordering within a (bike, category). New components are appended at
     // max+1 so the default order matches creation order; the user can reorder

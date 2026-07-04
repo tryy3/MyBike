@@ -29,13 +29,13 @@ Future work (out of scope): Strava integration for automatic distance/time, user
 
 ### New columns on `components`
 
-| Column | Type | Nullable | Notes |
-|--------|------|----------|-------|
-| `distance_meters` | `integer` | yes | Canonical distance storage |
-| `moving_time_minutes` | `integer` | yes | Total minutes |
-| `purchase_date` | `text` | yes | ISO `YYYY-MM-DD` |
-| `purchase_cost` | `real` | yes | Plain number, no currency |
-| `purchase_store` | `text` | yes | Free text |
+| Column                | Type      | Nullable | Notes                      |
+| --------------------- | --------- | -------- | -------------------------- |
+| `distance_meters`     | `integer` | yes      | Canonical distance storage |
+| `moving_time_minutes` | `integer` | yes      | Total minutes              |
+| `purchase_date`       | `text`    | yes      | ISO `YYYY-MM-DD`           |
+| `purchase_cost`       | `real`    | yes      | Plain number, no currency  |
+| `purchase_store`      | `text`    | yes      | Free text                  |
 
 Drizzle column names: `distanceMeters`, `movingTimeMinutes`, `purchaseDate`, `purchaseCost`, `purchaseStore`.
 
@@ -130,17 +130,17 @@ Add shadcn **Combobox** component to `client/src/components/ui/`.
 
 ### `ComponentForm` changes
 
-| Field | Control | Combobox |
-|-------|---------|----------|
-| Name | ComboboxField | yes |
-| Brand | ComboboxField | yes |
-| Model | ComboboxField | yes |
-| Distance | Number input, label **"Distance (km)"** | no |
-| Moving time | Hours + minutes number inputs | no |
-| Purchase date | `<input type="date">` | no |
-| Purchase cost | Number input (no currency) | no |
-| Purchase store | ComboboxField | yes |
-| Notes | Textarea | no |
+| Field          | Control                                 | Combobox |
+| -------------- | --------------------------------------- | -------- |
+| Name           | ComboboxField                           | yes      |
+| Brand          | ComboboxField                           | yes      |
+| Model          | ComboboxField                           | yes      |
+| Distance       | Number input, label **"Distance (km)"** | no       |
+| Moving time    | Hours + minutes number inputs           | no       |
+| Purchase date  | `<input type="date">`                   | no       |
+| Purchase cost  | Number input (no currency)              | no       |
+| Purchase store | ComboboxField                           | yes      |
+| Notes          | Textarea                                | no       |
 
 **Distance form logic:**
 

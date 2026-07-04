@@ -1,23 +1,71 @@
 import { z } from "zod";
 import { CATEGORY_IDS } from "../categories.js";
 
+const requiredString = z.string().trim().min(1).max(200);
+const optionalString = z
+  .string()
+  .max(200)
+  .nullish()
+  .transform((v) => (v == null || v.trim() === "" ? null : v.trim()));
+
+const optionalNotes = z
+  .string()
+  .max(5000)
+  .nullish()
+  .transform((v) => (v == null || v.trim() === "" ? null : v));
+
+const optionalInt = z
+  .number()
+  .int()
+  .min(0)
+  .nullish()
+  .transform((v) => (v == null ? null : v));
+
+const optionalCost = z
+  .number()
+  .min(0)
+  .nullish()
+  .transform((v) => (v == null ? null : v));
+
+const purchaseDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD")
+  .nullish()
+  .transform((v) => (v == null || v.trim() === "" ? null : v));
+
+const componentOptionalFields = {
+  distanceMeters: optionalInt,
+  movingTimeMinutes: optionalInt,
+  purchaseDate: purchaseDateSchema,
+  purchaseCost: optionalCost,
+  purchaseStore: optionalString,
+};
+
 export const componentBaseSchema = z.object({
-  name: z.string().min(1).max(200),
-  brand: z.string().max(200).nullish(),
-  model: z.string().max(200).nullish(),
-  notes: z.string().max(5000).nullish(),
+  name: requiredString,
+  brand: z.string().max(200).nullable(),
+  model: z.string().max(200).nullable(),
+  notes: optionalNotes,
   isActive: z.boolean().default(false),
+  ...componentOptionalFields,
 });
 
 export const componentInsertSchema = componentBaseSchema.extend({
   category: z.enum(CATEGORY_IDS),
+  brand: requiredString,
+  model: requiredString,
 });
 
 export const componentUpdateSchema = z.object({
-  name: z.string().min(1).max(200).optional(),
-  brand: z.string().max(200).nullish(),
-  model: z.string().max(200).nullish(),
-  notes: z.string().max(5000).nullish(),
+  name: requiredString.optional(),
+  brand: requiredString.optional(),
+  model: requiredString.optional(),
+  notes: optionalNotes,
+  distanceMeters: optionalInt,
+  movingTimeMinutes: optionalInt,
+  purchaseDate: purchaseDateSchema,
+  purchaseCost: optionalCost,
+  purchaseStore: optionalString,
 });
 
 export const componentSchema = componentBaseSchema.extend({
@@ -27,6 +75,13 @@ export const componentSchema = componentBaseSchema.extend({
   sortOrder: z.number().int(),
   createdAt: z.number().int(),
   updatedAt: z.number().int(),
+});
+
+export const fieldSuggestionsSchema = z.object({
+  name: z.array(z.string()),
+  brand: z.array(z.string()),
+  model: z.array(z.string()),
+  purchaseStore: z.array(z.string()),
 });
 
 // Reorder the components within a single (bike, category). `orderedIds` must
@@ -49,7 +104,15 @@ export const COMPONENT_CSV_COLUMNS = [
   "model",
   "notes",
   "isActive",
+  "distanceMeters",
+  "movingTimeMinutes",
+  "purchaseDate",
+  "purchaseCost",
+  "purchaseStore",
 ] as const;
+
+/** Header row accepted by import before the new optional columns were added. */
+export const COMPONENT_CSV_LEGACY_COLUMNS = COMPONENT_CSV_COLUMNS.slice(0, 7);
 
 export type ComponentCsvColumn = (typeof COMPONENT_CSV_COLUMNS)[number];
 
@@ -61,6 +124,7 @@ export const componentImportSchema = z.object({
 });
 
 export type ComponentImportBody = z.infer<typeof componentImportSchema>;
+export type FieldSuggestions = z.infer<typeof fieldSuggestionsSchema>;
 
 export type ComponentBase = z.infer<typeof componentBaseSchema>;
 export type ComponentInsert = z.infer<typeof componentInsertSchema>;
