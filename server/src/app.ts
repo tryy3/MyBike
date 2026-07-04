@@ -5,6 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import bikesRouter from "./routes/bikes.js";
 import componentsRouter from "./routes/components.js";
+import fieldSuggestionsRouter from "./routes/field-suggestions.js";
 import { errorHandler } from "./lib/errors.js";
 import { auth } from "./lib/auth.js";
 import { sqlite } from "./db/index.js";
@@ -32,6 +33,7 @@ export function createApp() {
   app.use("/api/bikes", bikesRouter);
   app.use("/api/bikes/:bikeId/components", componentsRouter);
   app.use("/api/components", componentsRouter);
+  app.use("/api/field-suggestions", fieldSuggestionsRouter);
 
   if (process.env.NODE_ENV === "production") {
     const clientDistPath = resolve(__dirname, "../../client/dist");

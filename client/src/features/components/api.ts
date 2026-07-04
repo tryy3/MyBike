@@ -1,13 +1,23 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, queryKeys } from "@/lib/api";
 import type { BikeDetail, ComponentInsert, ComponentReorder, ComponentUpdate } from "shared";
 
 // All component mutations invalidate the parent bike detail.
+export function useFieldSuggestions() {
+  return useQuery({
+    queryKey: queryKeys.fieldSuggestions,
+    queryFn: () => api.getFieldSuggestions(),
+  });
+}
+
 export function useCreateComponent(bikeId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: ComponentInsert) => api.createComponent(bikeId, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.bike(bikeId) }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.bike(bikeId) });
+      void qc.invalidateQueries({ queryKey: queryKeys.fieldSuggestions });
+    },
   });
 }
 
@@ -16,7 +26,10 @@ export function useUpdateComponent(bikeId: string) {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: ComponentUpdate }) =>
       api.updateComponent(id, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.bike(bikeId) }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.bike(bikeId) });
+      void qc.invalidateQueries({ queryKey: queryKeys.fieldSuggestions });
+    },
   });
 }
 
@@ -24,7 +37,10 @@ export function useDeleteComponent(bikeId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api.deleteComponent(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.bike(bikeId) }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.bike(bikeId) });
+      void qc.invalidateQueries({ queryKey: queryKeys.fieldSuggestions });
+    },
   });
 }
 
@@ -80,6 +96,7 @@ export function useImportComponents(bikeId: string) {
       // Only invalidate when the import actually committed.
       if (!vars.dryRun) {
         void qc.invalidateQueries({ queryKey: queryKeys.bike(bikeId) });
+        void qc.invalidateQueries({ queryKey: queryKeys.fieldSuggestions });
       }
     },
   });
