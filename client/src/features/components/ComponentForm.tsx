@@ -18,22 +18,63 @@ import {
   minutesToHoursMinutes,
 } from "./form-utils";
 
-const optionalNumericString = z
-  .string()
-  .refine((v) => v.trim() === "" || Number.isFinite(Number(v)), "Must be a number");
+const optionalNonNegativeNumber = (label: string) =>
+  z.string().refine((v) => {
+    const trimmed = v.trim();
+    if (trimmed === "") return true;
+    const n = Number(trimmed);
+    return Number.isFinite(n) && n >= 0;
+  }, `${label} must be a non-negative number`);
 
-const formSchema = z.object({
-  name: z.string().min(1).max(200),
-  brand: z.string().min(1).max(200),
-  model: z.string().min(1).max(200),
-  notes: z.string().max(5000).nullish(),
-  distanceKm: optionalNumericString,
-  movingTimeHours: optionalNumericString,
-  movingTimeMinutes: optionalNumericString,
-  purchaseDate: z.string().nullish(),
-  purchaseCost: optionalNumericString,
-  purchaseStore: z.string().max(200).nullish(),
-});
+const optionalWholeNumber = (label: string, max?: number) =>
+  z.string().refine(
+    (v) => {
+      const trimmed = v.trim();
+      if (trimmed === "") return true;
+      const n = Number(trimmed);
+      if (!Number.isInteger(n) || n < 0) return false;
+      return max == null || n <= max;
+    },
+    max != null
+      ? `${label} must be a whole number from 0 to ${max}`
+      : `${label} must be a whole number ≥ 0`,
+  );
+
+const formSchema = z
+  .object({
+    name: z.string().min(1).max(200),
+    brand: z.string().min(1).max(200),
+    model: z.string().min(1).max(200),
+    notes: z.string().max(5000).nullish(),
+    distanceKm: optionalNonNegativeNumber("Distance"),
+    movingTimeHours: optionalWholeNumber("Hours"),
+    movingTimeMinutes: optionalWholeNumber("Minutes", 59),
+    purchaseDate: z.string().nullish(),
+    purchaseCost: optionalNonNegativeNumber("Purchase cost"),
+    purchaseStore: z.string().max(200).nullish(),
+  })
+  .superRefine((data, ctx) => {
+    const hours = data.movingTimeHours?.trim() ?? "";
+    const minutes = data.movingTimeMinutes?.trim() ?? "";
+    if (hours === "" && minutes === "") return;
+
+    const h = hours === "" ? 0 : Number(hours);
+    const m = minutes === "" ? 0 : Number(minutes);
+    if (!Number.isInteger(h) || h < 0) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Hours must be a whole number ≥ 0",
+        path: ["movingTimeHours"],
+      });
+    }
+    if (!Number.isInteger(m) || m < 0 || m > 59) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Minutes must be a whole number from 0 to 59",
+        path: ["movingTimeMinutes"],
+      });
+    }
+  });
 type ComponentFormValues = z.infer<typeof formSchema>;
 
 interface ComponentFormProps {
@@ -74,23 +115,22 @@ function toFormValues(component: Component): ComponentFormValues {
 
 function normalize(raw: ComponentFormValues) {
   const trim = (v: string | null | undefined) => (!v || v.trim() === "" ? null : v.trim());
-  const distanceMeters = kmInputToMeters(raw.distanceKm ?? "");
-  const movingTimeMinutes = hoursMinutesToMinutes(
-    raw.movingTimeHours ?? "",
-    raw.movingTimeMinutes ?? "",
-  );
-  const purchaseCostRaw = raw.purchaseCost?.trim() ?? "";
-  const purchaseCost = purchaseCostRaw === "" ? null : Number(purchaseCostRaw);
 
   return {
     name: raw.name.trim(),
     brand: raw.brand.trim(),
     model: raw.model.trim(),
     notes: trim(raw.notes ?? null),
-    distanceMeters,
-    movingTimeMinutes,
+    distanceMeters: kmInputToMeters(raw.distanceKm ?? ""),
+    movingTimeMinutes: hoursMinutesToMinutes(
+      raw.movingTimeHours ?? "",
+      raw.movingTimeMinutes ?? "",
+    ),
     purchaseDate: trim(raw.purchaseDate ?? null),
-    purchaseCost: purchaseCost != null && Number.isFinite(purchaseCost) ? purchaseCost : null,
+    purchaseCost: (() => {
+      const trimmed = raw.purchaseCost?.trim() ?? "";
+      return trimmed === "" ? null : Number(trimmed);
+    })(),
     purchaseStore: trim(raw.purchaseStore ?? null),
   };
 }

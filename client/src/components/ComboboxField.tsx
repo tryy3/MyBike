@@ -71,19 +71,29 @@ function CreatableCombobox({
   errorId?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const filtered = useMemo(() => {
+
+  const items = useMemo(() => {
     const query = value.trim().toLowerCase();
-    if (!query) return suggestions;
-    return suggestions.filter((s) => s.toLowerCase().includes(query));
+    const matches = !query
+      ? suggestions
+      : suggestions.filter((s) => s.toLowerCase().includes(query));
+
+    const trimmed = value.trim();
+    if (trimmed && !matches.some((s) => s.toLowerCase() === trimmed.toLowerCase())) {
+      return [trimmed, ...matches];
+    }
+    return matches;
   }, [suggestions, value]);
 
   return (
     <Combobox
       open={open}
       onOpenChange={setOpen}
-      value={value}
+      inputValue={value}
+      onInputValueChange={(next) => onChange(next)}
+      value={value || null}
       onValueChange={(next) => onChange(next ?? "")}
-      items={filtered}
+      items={items}
       itemToStringLabel={(item) => item}
       isItemEqualToValue={(a, b) => a.toLowerCase() === b.toLowerCase()}
     >

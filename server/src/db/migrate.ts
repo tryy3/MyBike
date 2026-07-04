@@ -6,6 +6,14 @@ import { db, sqlite } from "./index.js";
 
 const COMPONENT_FIELDS_MIGRATION = "20260704053807_handy_sersi";
 
+const COMPONENT_FIELDS_COLUMNS = [
+  "distance_meters",
+  "moving_time_minutes",
+  "purchase_date",
+  "purchase_cost",
+  "purchase_store",
+] as const;
+
 function formatToMillis(dateStr: string): number {
   const year = parseInt(dateStr.slice(0, 4), 10);
   const month = parseInt(dateStr.slice(4, 6), 10) - 1;
@@ -16,16 +24,20 @@ function formatToMillis(dateStr: string): number {
   return Date.UTC(year, month, day, hour, minute, second);
 }
 
-/** If a failed run added component columns but never recorded the migration, mark it applied. */
+/** If a failed run added all component columns but never recorded the migration, mark it applied. */
 function recoverPartialComponentFieldsMigration(migrationsFolder: string) {
   const applied = sqlite
     .prepare("SELECT name FROM __drizzle_migrations WHERE name = ?")
     .get(COMPONENT_FIELDS_MIGRATION) as { name: string } | undefined;
   if (applied) return;
 
-  const columns = sqlite.prepare("PRAGMA table_info(components)").all() as { name: string }[];
-  const hasDistance = columns.some((c) => c.name === "distance_meters");
-  if (!hasDistance) return;
+  const columnNames = new Set(
+    (sqlite.prepare("PRAGMA table_info(components)").all() as { name: string }[]).map(
+      (c) => c.name,
+    ),
+  );
+  const hasAllColumns = COMPONENT_FIELDS_COLUMNS.every((name) => columnNames.has(name));
+  if (!hasAllColumns) return;
 
   const migrationPath = join(migrationsFolder, COMPONENT_FIELDS_MIGRATION, "migration.sql");
   const query = readFileSync(migrationPath, "utf8");

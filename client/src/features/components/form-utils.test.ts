@@ -19,4 +19,10 @@ describe("form-utils", () => {
     expect(hoursMinutesToMinutes("2", "5")).toBe(125);
     expect(hoursMinutesToMinutes("", "")).toBeNull();
   });
+
+  it("rejects invalid distance and moving time conversions", () => {
+    expect(kmInputToMeters("-1")).toBeNull();
+    expect(hoursMinutesToMinutes("-1", "0")).toBeNull();
+    expect(hoursMinutesToMinutes("0", "60")).toBeNull();
+  });
 });
