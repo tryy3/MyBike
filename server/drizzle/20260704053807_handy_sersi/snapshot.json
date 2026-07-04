@@ -1,33 +1,13 @@
 {
-  "version": "7",
   "dialect": "sqlite",
   "id": "d04810fd-25c7-44d0-b995-5a8bf22a8d35",
   "prevIds": [
     "a84ba947-10a9-420b-9596-0ff868cb97bc"
   ],
+  "version": "7",
   "ddl": [
     {
       "name": "bikes",
-      "entityType": "tables"
-    },
-    {
-      "name": "components",
-      "entityType": "tables"
-    },
-    {
-      "name": "account",
-      "entityType": "tables"
-    },
-    {
-      "name": "session",
-      "entityType": "tables"
-    },
-    {
-      "name": "user",
-      "entityType": "tables"
-    },
-    {
-      "name": "verification",
       "entityType": "tables"
     },
     {
@@ -37,8 +17,17 @@
       "default": null,
       "generated": null,
       "name": "id",
-      "entityType": "columns",
-      "table": "bikes"
+      "table": "bikes",
+      "entityType": "columns"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "bikes_pk",
+      "table": "bikes",
+      "entityType": "pks"
     },
     {
       "type": "text",
@@ -47,8 +36,8 @@
       "default": null,
       "generated": null,
       "name": "user_id",
-      "entityType": "columns",
-      "table": "bikes"
+      "table": "bikes",
+      "entityType": "columns"
     },
     {
       "type": "text",
@@ -57,8 +46,8 @@
       "default": null,
       "generated": null,
       "name": "name",
-      "entityType": "columns",
-      "table": "bikes"
+      "table": "bikes",
+      "entityType": "columns"
     },
     {
       "type": "text",
@@ -67,8 +56,8 @@
       "default": null,
       "generated": null,
       "name": "brand",
-      "entityType": "columns",
-      "table": "bikes"
+      "table": "bikes",
+      "entityType": "columns"
     },
     {
       "type": "text",
@@ -77,8 +66,8 @@
       "default": null,
       "generated": null,
       "name": "model",
-      "entityType": "columns",
-      "table": "bikes"
+      "table": "bikes",
+      "entityType": "columns"
     },
     {
       "type": "integer",
@@ -87,8 +76,8 @@
       "default": null,
       "generated": null,
       "name": "year",
-      "entityType": "columns",
-      "table": "bikes"
+      "table": "bikes",
+      "entityType": "columns"
     },
     {
       "type": "text",
@@ -97,8 +86,8 @@
       "default": null,
       "generated": null,
       "name": "notes",
-      "entityType": "columns",
-      "table": "bikes"
+      "table": "bikes",
+      "entityType": "columns"
     },
     {
       "type": "integer",
@@ -107,8 +96,8 @@
       "default": null,
       "generated": null,
       "name": "created_at",
-      "entityType": "columns",
-      "table": "bikes"
+      "table": "bikes",
+      "entityType": "columns"
     },
     {
       "type": "integer",
@@ -117,508 +106,36 @@
       "default": null,
       "generated": null,
       "name": "updated_at",
-      "entityType": "columns",
-      "table": "bikes"
+      "table": "bikes",
+      "entityType": "columns"
     },
     {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "id",
-      "entityType": "columns",
-      "table": "components"
+      "columns": [
+        {
+          "value": "name",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_bikes_name",
+      "table": "bikes",
+      "entityType": "indexes"
     },
     {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "bike_id",
-      "entityType": "columns",
-      "table": "components"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "category",
-      "entityType": "columns",
-      "table": "components"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "name",
-      "entityType": "columns",
-      "table": "components"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "brand",
-      "entityType": "columns",
-      "table": "components"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "model",
-      "entityType": "columns",
-      "table": "components"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "notes",
-      "entityType": "columns",
-      "table": "components"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "distance_meters",
-      "entityType": "columns",
-      "table": "components"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "moving_time_minutes",
-      "entityType": "columns",
-      "table": "components"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "purchase_date",
-      "entityType": "columns",
-      "table": "components"
-    },
-    {
-      "type": "real",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "purchase_cost",
-      "entityType": "columns",
-      "table": "components"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "purchase_store",
-      "entityType": "columns",
-      "table": "components"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "false",
-      "generated": null,
-      "name": "is_active",
-      "entityType": "columns",
-      "table": "components"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "0",
-      "generated": null,
-      "name": "sort_order",
-      "entityType": "columns",
-      "table": "components"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "table": "components"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "table": "components"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "id",
-      "entityType": "columns",
-      "table": "account"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "account_id",
-      "entityType": "columns",
-      "table": "account"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "provider_id",
-      "entityType": "columns",
-      "table": "account"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "user_id",
-      "entityType": "columns",
-      "table": "account"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "access_token",
-      "entityType": "columns",
-      "table": "account"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "refresh_token",
-      "entityType": "columns",
-      "table": "account"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "id_token",
-      "entityType": "columns",
-      "table": "account"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "access_token_expires_at",
-      "entityType": "columns",
-      "table": "account"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "refresh_token_expires_at",
-      "entityType": "columns",
-      "table": "account"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "scope",
-      "entityType": "columns",
-      "table": "account"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "password",
-      "entityType": "columns",
-      "table": "account"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(cast(unixepoch('subsecond') * 1000 as integer))",
-      "generated": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "table": "account"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "table": "account"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "id",
-      "entityType": "columns",
-      "table": "session"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "expires_at",
-      "entityType": "columns",
-      "table": "session"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "token",
-      "entityType": "columns",
-      "table": "session"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(cast(unixepoch('subsecond') * 1000 as integer))",
-      "generated": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "table": "session"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "table": "session"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "ip_address",
-      "entityType": "columns",
-      "table": "session"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "user_agent",
-      "entityType": "columns",
-      "table": "session"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "user_id",
-      "entityType": "columns",
-      "table": "session"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "id",
-      "entityType": "columns",
-      "table": "user"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "name",
-      "entityType": "columns",
-      "table": "user"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "email",
-      "entityType": "columns",
-      "table": "user"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "false",
-      "generated": null,
-      "name": "email_verified",
-      "entityType": "columns",
-      "table": "user"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "image",
-      "entityType": "columns",
-      "table": "user"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(cast(unixepoch('subsecond') * 1000 as integer))",
-      "generated": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "table": "user"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(cast(unixepoch('subsecond') * 1000 as integer))",
-      "generated": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "table": "user"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "id",
-      "entityType": "columns",
-      "table": "verification"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "identifier",
-      "entityType": "columns",
-      "table": "verification"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "value",
-      "entityType": "columns",
-      "table": "verification"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "expires_at",
-      "entityType": "columns",
-      "table": "verification"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(cast(unixepoch('subsecond') * 1000 as integer))",
-      "generated": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "table": "verification"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(cast(unixepoch('subsecond') * 1000 as integer))",
-      "generated": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "table": "verification"
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_bikes_user",
+      "table": "bikes",
+      "entityType": "indexes"
     },
     {
       "columns": [
@@ -632,62 +149,22 @@
       "onDelete": "CASCADE",
       "nameExplicit": false,
       "name": "bikes_user_id_user_id_fk",
-      "entityType": "fks",
-      "table": "bikes"
-    },
-    {
-      "columns": [
-        "bike_id"
-      ],
-      "tableTo": "bikes",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "nameExplicit": false,
-      "name": "components_bike_id_bikes_id_fk",
-      "entityType": "fks",
-      "table": "components"
-    },
-    {
-      "columns": [
-        "user_id"
-      ],
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "nameExplicit": false,
-      "name": "account_user_id_user_id_fk",
-      "entityType": "fks",
-      "table": "account"
-    },
-    {
-      "columns": [
-        "user_id"
-      ],
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "nameExplicit": false,
-      "name": "session_user_id_user_id_fk",
-      "entityType": "fks",
-      "table": "session"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "bikes_pk",
       "table": "bikes",
-      "entityType": "pks"
+      "entityType": "fks"
+    },
+    {
+      "name": "components",
+      "entityType": "tables"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "table": "components",
+      "entityType": "columns"
     },
     {
       "columns": [
@@ -699,68 +176,154 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "account_pk",
-      "table": "account",
-      "entityType": "pks"
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "bike_id",
+      "table": "components",
+      "entityType": "columns"
     },
     {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "session_pk",
-      "table": "session",
-      "entityType": "pks"
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "category",
+      "table": "components",
+      "entityType": "columns"
     },
     {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "user_pk",
-      "table": "user",
-      "entityType": "pks"
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "table": "components",
+      "entityType": "columns"
     },
     {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "verification_pk",
-      "table": "verification",
-      "entityType": "pks"
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "brand",
+      "table": "components",
+      "entityType": "columns"
     },
     {
-      "columns": [
-        {
-          "value": "name",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_bikes_name",
-      "entityType": "indexes",
-      "table": "bikes"
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "model",
+      "table": "components",
+      "entityType": "columns"
     },
     {
-      "columns": [
-        {
-          "value": "user_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_bikes_user",
-      "entityType": "indexes",
-      "table": "bikes"
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "table": "components",
+      "entityType": "columns"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "distance_meters",
+      "table": "components",
+      "entityType": "columns"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "moving_time_minutes",
+      "table": "components",
+      "entityType": "columns"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "purchase_date",
+      "table": "components",
+      "entityType": "columns"
+    },
+    {
+      "type": "real",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "purchase_cost",
+      "table": "components",
+      "entityType": "columns"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "purchase_store",
+      "table": "components",
+      "entityType": "columns"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "is_active",
+      "table": "components",
+      "entityType": "columns"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "sort_order",
+      "table": "components",
+      "entityType": "columns"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_at",
+      "table": "components",
+      "entityType": "columns"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "updated_at",
+      "table": "components",
+      "entityType": "columns"
     },
     {
       "columns": [
@@ -773,8 +336,8 @@
       "where": null,
       "origin": "manual",
       "name": "idx_components_bike",
-      "entityType": "indexes",
-      "table": "components"
+      "table": "components",
+      "entityType": "indexes"
     },
     {
       "columns": [
@@ -795,8 +358,8 @@
       "where": null,
       "origin": "manual",
       "name": "idx_components_category_order",
-      "entityType": "indexes",
-      "table": "components"
+      "table": "components",
+      "entityType": "indexes"
     },
     {
       "columns": [
@@ -813,8 +376,166 @@
       "where": "\"components\".\"is_active\" = 1",
       "origin": "manual",
       "name": "idx_components_active_per_category",
-      "entityType": "indexes",
-      "table": "components"
+      "table": "components",
+      "entityType": "indexes"
+    },
+    {
+      "columns": [
+        "bike_id"
+      ],
+      "tableTo": "bikes",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "components_bike_id_bikes_id_fk",
+      "table": "components",
+      "entityType": "fks"
+    },
+    {
+      "name": "account",
+      "entityType": "tables"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "table": "account",
+      "entityType": "columns"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "account_pk",
+      "table": "account",
+      "entityType": "pks"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "account_id",
+      "table": "account",
+      "entityType": "columns"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "provider_id",
+      "table": "account",
+      "entityType": "columns"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "table": "account",
+      "entityType": "columns"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "access_token",
+      "table": "account",
+      "entityType": "columns"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "refresh_token",
+      "table": "account",
+      "entityType": "columns"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id_token",
+      "table": "account",
+      "entityType": "columns"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "access_token_expires_at",
+      "table": "account",
+      "entityType": "columns"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "refresh_token_expires_at",
+      "table": "account",
+      "entityType": "columns"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "scope",
+      "table": "account",
+      "entityType": "columns"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "password",
+      "table": "account",
+      "entityType": "columns"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast(unixepoch('subsecond') * 1000 as integer))",
+      "generated": null,
+      "name": "created_at",
+      "table": "account",
+      "entityType": "columns"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "updated_at",
+      "table": "account",
+      "entityType": "columns"
     },
     {
       "columns": [
@@ -827,8 +548,130 @@
       "where": null,
       "origin": "manual",
       "name": "account_userId_idx",
-      "entityType": "indexes",
-      "table": "account"
+      "table": "account",
+      "entityType": "indexes"
+    },
+    {
+      "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "account_user_id_user_id_fk",
+      "table": "account",
+      "entityType": "fks"
+    },
+    {
+      "name": "session",
+      "entityType": "tables"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "table": "session",
+      "entityType": "columns"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "session_pk",
+      "table": "session",
+      "entityType": "pks"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "expires_at",
+      "table": "session",
+      "entityType": "columns"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "token",
+      "table": "session",
+      "entityType": "columns"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast(unixepoch('subsecond') * 1000 as integer))",
+      "generated": null,
+      "name": "created_at",
+      "table": "session",
+      "entityType": "columns"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "updated_at",
+      "table": "session",
+      "entityType": "columns"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ip_address",
+      "table": "session",
+      "entityType": "columns"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_agent",
+      "table": "session",
+      "entityType": "columns"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "table": "session",
+      "entityType": "columns"
+    },
+    {
+      "columns": [
+        {
+          "value": "token",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "session_token_unique",
+      "table": "session",
+      "entityType": "indexes"
     },
     {
       "columns": [
@@ -841,8 +684,193 @@
       "where": null,
       "origin": "manual",
       "name": "session_userId_idx",
-      "entityType": "indexes",
-      "table": "session"
+      "table": "session",
+      "entityType": "indexes"
+    },
+    {
+      "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "session_user_id_user_id_fk",
+      "table": "session",
+      "entityType": "fks"
+    },
+    {
+      "name": "user",
+      "entityType": "tables"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "table": "user",
+      "entityType": "columns"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "user_pk",
+      "table": "user",
+      "entityType": "pks"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "table": "user",
+      "entityType": "columns"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "email",
+      "table": "user",
+      "entityType": "columns"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "email_verified",
+      "table": "user",
+      "entityType": "columns"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "image",
+      "table": "user",
+      "entityType": "columns"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast(unixepoch('subsecond') * 1000 as integer))",
+      "generated": null,
+      "name": "created_at",
+      "table": "user",
+      "entityType": "columns"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast(unixepoch('subsecond') * 1000 as integer))",
+      "generated": null,
+      "name": "updated_at",
+      "table": "user",
+      "entityType": "columns"
+    },
+    {
+      "columns": [
+        {
+          "value": "email",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "user_email_unique",
+      "table": "user",
+      "entityType": "indexes"
+    },
+    {
+      "name": "verification",
+      "entityType": "tables"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "table": "verification",
+      "entityType": "columns"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "verification_pk",
+      "table": "verification",
+      "entityType": "pks"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "identifier",
+      "table": "verification",
+      "entityType": "columns"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "value",
+      "table": "verification",
+      "entityType": "columns"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "expires_at",
+      "table": "verification",
+      "entityType": "columns"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast(unixepoch('subsecond') * 1000 as integer))",
+      "generated": null,
+      "name": "created_at",
+      "table": "verification",
+      "entityType": "columns"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast(unixepoch('subsecond') * 1000 as integer))",
+      "generated": null,
+      "name": "updated_at",
+      "table": "verification",
+      "entityType": "columns"
     },
     {
       "columns": [
@@ -855,26 +883,8 @@
       "where": null,
       "origin": "manual",
       "name": "verification_identifier_idx",
-      "entityType": "indexes",
-      "table": "verification"
-    },
-    {
-      "columns": [
-        "token"
-      ],
-      "nameExplicit": false,
-      "name": "session_token_unique",
-      "entityType": "uniques",
-      "table": "session"
-    },
-    {
-      "columns": [
-        "email"
-      ],
-      "nameExplicit": false,
-      "name": "user_email_unique",
-      "entityType": "uniques",
-      "table": "user"
+      "table": "verification",
+      "entityType": "indexes"
     }
   ],
   "renames": []
