@@ -3,6 +3,7 @@ import { HttpError } from "./errors.js";
 const STRAVA_API_BASE = "https://www.strava.com/api/v3";
 const STRAVA_OAUTH_URL = "https://www.strava.com/oauth/token";
 const MAX_ACTIVITY_PAGES = 10;
+const ACTIVITIES_PER_PAGE = 200;
 
 export interface StravaActivity {
   stravaActivityId: string;
@@ -125,7 +126,7 @@ export async function fetchStravaActivities(accessToken: string): Promise<Strava
 
   for (let page = 1; page <= MAX_ACTIVITY_PAGES; page++) {
     const url = new URL(`${STRAVA_API_BASE}/athlete/activities`);
-    url.searchParams.set("per_page", "200");
+    url.searchParams.set("per_page", String(ACTIVITIES_PER_PAGE));
     url.searchParams.set("page", String(page));
 
     const raw = await fetchJson(url, {
@@ -138,6 +139,8 @@ export async function fetchStravaActivities(accessToken: string): Promise<Strava
       const activity = normalizeActivity(item as RawStravaActivity);
       if (activity) activities.push(activity);
     }
+
+    if (raw.length < ACTIVITIES_PER_PAGE) break;
   }
 
   console.log(

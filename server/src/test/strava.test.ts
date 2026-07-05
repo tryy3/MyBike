@@ -30,6 +30,7 @@ const originalFetch = globalThis.fetch;
 let mockActivities: MockActivity[] = [];
 let mockAthleteBikes: MockBike[] = [];
 let mockGearNames = new Map<string, string>();
+let stravaRequestPaths: string[] = [];
 
 function stravaFetchMock(input: RequestInfo | URL): Response | Promise<Response> {
   const requestUrl =
@@ -38,6 +39,8 @@ function stravaFetchMock(input: RequestInfo | URL): Response | Promise<Response>
   if (url.hostname !== "www.strava.com") {
     throw new Error(`Unexpected Strava request: ${url.toString()}`);
   }
+
+  stravaRequestPaths.push(`${url.pathname}${url.search}`);
 
   if (url.pathname === "/api/v3/athlete") {
     return new Response(JSON.stringify({ bikes: mockAthleteBikes }), {
@@ -57,8 +60,10 @@ function stravaFetchMock(input: RequestInfo | URL): Response | Promise<Response>
   }
 
   if (url.pathname.endsWith("/athlete/activities")) {
-    const page = url.searchParams.get("page") ?? "1";
-    const body = page === "1" ? mockActivities : [];
+    const page = Number(url.searchParams.get("page") ?? "1");
+    const perPage = Number(url.searchParams.get("per_page") ?? "200");
+    const start = (page - 1) * perPage;
+    const body = mockActivities.slice(start, start + perPage);
     return new Response(JSON.stringify(body), {
       status: 200,
       headers: { "content-type": "application/json" },
@@ -72,6 +77,7 @@ beforeEach(() => {
   mockActivities = [];
   mockAthleteBikes = [];
   mockGearNames = new Map();
+  stravaRequestPaths = [];
   globalThis.fetch = async (input: RequestInfo | URL) => stravaFetchMock(input);
 });
 
@@ -180,6 +186,49 @@ describe("Strava import", () => {
         recommendedAction: "create",
       }),
     ]);
+    expect(stravaRequestPaths).toContain("/api/v3/athlete");
+  });
+
+  it("skips athlete and gear lookups when activities include embedded gear names", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    await connectStravaAccount(testUser.email);
+
+    mockActivities = [
+      {
+        id: 100,
+        gear_id: "b100",
+        gear: { id: "b100", name: "Road Bike" },
+        distance: 1000,
+        moving_time: 600,
+        start_date: "2026-07-02T10:00:00Z",
+      },
+    ];
+
+    await agent.get("/api/strava/import/preview").expect(200);
+
+    expect(stravaRequestPaths).toContain("/api/v3/athlete/activities?per_page=200&page=1");
+    expect(stravaRequestPaths.some((path) => path === "/api/v3/athlete")).toBe(false);
+    expect(stravaRequestPaths.some((path) => path.startsWith("/api/v3/gear/"))).toBe(false);
+  });
+
+  it("stops activity pagination when a page returns fewer than per_page items", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    await connectStravaAccount(testUser.email);
+
+    mockActivities = Array.from({ length: 280 }, (_, index) => ({
+      id: index + 1,
+      gear_id: null,
+      distance: 1000,
+      moving_time: 600,
+      start_date: "2026-07-02T10:00:00Z",
+    }));
+
+    await agent.get("/api/strava/import/preview").expect(200);
+
+    const activityPages = stravaRequestPaths.filter((path) =>
+      path.startsWith("/api/v3/athlete/activities"),
+    );
+    expect(activityPages).toHaveLength(2);
   });
 });
 

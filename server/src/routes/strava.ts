@@ -322,12 +322,19 @@ function addCounters(target: SyncCounters, source: SyncCounters): void {
 
 async function loadAggregates(userId: string): Promise<Map<string, GearAggregate>> {
   const token = await getStravaAccessToken(userId);
-  const [activities, athleteBikes] = await Promise.all([
-    fetchStravaActivities(token),
-    fetchStravaAthleteBikes(token),
-  ]);
-  const gearNames = new Map(athleteBikes.map((bike) => [bike.id, bike.name]));
+  const activities = await fetchStravaActivities(token);
   const aggregates = aggregateActivities(activities);
+
+  const gearNames = new Map<string, string>();
+  const needsNameResolution = [...aggregates.values()].some((aggregate) =>
+    needsGearLookup(aggregate, gearNames),
+  );
+  if (!needsNameResolution) return aggregates;
+
+  const athleteBikes = await fetchStravaAthleteBikes(token);
+  for (const bike of athleteBikes) {
+    gearNames.set(bike.id, bike.name);
+  }
   applyGearNames(aggregates, gearNames);
   await resolveMissingGearNames(token, aggregates, gearNames);
   return aggregates;
