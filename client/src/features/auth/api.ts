@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { signIn, signOut, signUp } from "@/lib/auth-client";
 import { api, queryKeys } from "@/lib/api";
-import { peekAuthReturnTo } from "@/lib/auth-return-to";
+import { clearAuthReturnTo, peekAuthReturnTo } from "@/lib/auth-return-to";
 import type { LoginInput, RegisterInput } from "shared";
 
 export function useStravaAuthConfig() {
@@ -69,6 +70,7 @@ export function useSignUp() {
 
 export function useSignOut() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   return useMutation({
     mutationFn: async () => {
       const result = await signOut();
@@ -78,6 +80,8 @@ export function useSignOut() {
     },
     onSuccess: () => {
       qc.clear();
+      clearAuthReturnTo();
+      void navigate({ to: "/login", replace: true });
     },
   });
 }

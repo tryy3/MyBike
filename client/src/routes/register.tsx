@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { Link } from "@tanstack/react-router";
 import { BikeIcon } from "lucide-react";
 import { RegisterForm } from "@/features/auth/RegisterForm";
 
@@ -28,11 +27,6 @@ export function RegisterPage() {
         </div>
         <RegisterForm />
       </div>
-      <p className="mt-8 text-center text-sm text-muted-foreground">
-        <Link to="/login" className="underline">
-          Sign in instead
-        </Link>
-      </p>
     </div>
   );
 }

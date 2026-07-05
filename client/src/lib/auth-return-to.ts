@@ -56,6 +56,15 @@ export function peekAuthReturnTo(fallback = "/"): string {
   }
 }
 
+/** Discard any stored post-auth return path (e.g. after sign-out). */
+export function clearAuthReturnTo(): void {
+  try {
+    sessionStorage.removeItem(RETURN_TO_KEY);
+  } catch {
+    // sessionStorage unavailable (private browsing, disabled, etc.)
+  }
+}
+
 /** Read and clear the stored return path, falling back when missing or invalid. */
 export function consumeAuthReturnTo(fallback = "/"): string {
   try {

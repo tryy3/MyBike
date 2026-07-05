@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { BikeIcon, CloudIcon, Loader2Icon, RefreshCwIcon, RouteIcon } from "lucide-react";
+import {
+  BikeIcon,
+  CircleCheckIcon,
+  CloudIcon,
+  Loader2Icon,
+  RefreshCwIcon,
+  RouteIcon,
+} from "lucide-react";
 import type { StravaImportItem } from "shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -178,8 +185,15 @@ export function IntegrationsPage() {
                 components.
               </CardDescription>
             </div>
-            <Badge variant={connected ? "secondary" : "outline"}>
-              {connected ? "Connected" : "Not connected"}
+            <Badge variant={connected ? "success" : "outline"}>
+              {connected ? (
+                <>
+                  <CircleCheckIcon data-icon="inline-start" />
+                  Connected
+                </>
+              ) : (
+                "Not connected"
+              )}
             </Badge>
           </div>
         </CardHeader>
