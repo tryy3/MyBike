@@ -5,6 +5,7 @@ import { rootRoute } from "./routes/root";
 import { appLayoutRoute } from "./routes/app-layout";
 import { BikesListPage } from "./routes/bikes-list";
 import { BikeDetailPage } from "./routes/bike-detail";
+import { IntegrationsPage } from "./routes/integrations";
 import { LoginPage } from "./routes/login";
 import { RegisterPage } from "./routes/register";
 import { redirectIfAuthenticated } from "./lib/auth-guard";
@@ -19,6 +20,12 @@ const bikeRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: "/bikes/$bikeId",
   component: BikeDetailWrapper,
+});
+
+const integrationsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/settings/integrations",
+  component: IntegrationsPage,
 });
 
 function BikeDetailWrapper() {
@@ -65,7 +72,7 @@ function NotFound() {
 }
 
 const routeTree = rootRoute.addChildren([
-  appLayoutRoute.addChildren([indexRoute, bikeRoute]),
+  appLayoutRoute.addChildren([indexRoute, bikeRoute, integrationsRoute]),
   loginRoute,
   registerRoute,
 ]);

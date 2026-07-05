@@ -9,6 +9,11 @@ import type {
   ComponentReorder,
   ComponentUpdate,
   FieldSuggestions,
+  StravaImportCommit,
+  StravaImportCommitResult,
+  StravaImportPreview,
+  StravaStatus,
+  StravaSyncResult,
 } from "shared";
 
 export class ApiError extends Error {
@@ -100,6 +105,15 @@ export const api = {
   exportComponentsUrl: (bikeId: string) => `/api/bikes/${bikeId}/components/export.csv`,
 
   getFieldSuggestions: () => apiFetch<FieldSuggestions>("/api/field-suggestions"),
+
+  // --- Strava ---------------------------------------------------------------
+  getStravaStatus: () => apiFetch<StravaStatus>("/api/strava/status"),
+  getStravaConnectUrl: () =>
+    apiFetch<{ authorizationUrl: string }>("/api/strava/connect").then((r) => r.authorizationUrl),
+  previewStravaImport: () => apiFetch<StravaImportPreview>("/api/strava/import/preview"),
+  commitStravaImport: (data: StravaImportCommit) =>
+    apiFetch<StravaImportCommitResult>("/api/strava/import/commit", json("POST", data)),
+  syncStrava: () => apiFetch<StravaSyncResult>("/api/strava/sync", { method: "POST" }),
 };
 
 export interface ImportResult {
@@ -118,4 +132,5 @@ export const queryKeys = {
   bikes: ["bikes"] as const,
   bike: (id: string) => ["bikes", id] as const,
   fieldSuggestions: ["field-suggestions"] as const,
+  stravaStatus: ["strava", "status"] as const,
 };
