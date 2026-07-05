@@ -30,6 +30,7 @@ export const stravaImportItemSchema = z.object({
   activityCount: z.number().int().min(0),
   matchedBikeId: z.string().uuid().nullable(),
   matchedBikeName: z.string().nullable(),
+  matchReason: z.enum(["strava_link", "name"]).nullable(),
   recommendedAction: z.enum(["link", "create"]),
 });
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { BikeIcon, CloudIcon, RefreshCwIcon, RouteIcon } from "lucide-react";
+import { BikeIcon, CloudIcon, Loader2Icon, RefreshCwIcon, RouteIcon } from "lucide-react";
 import type { StravaImportItem } from "shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -55,7 +56,18 @@ function actionLabel(action: ImportAction, item: StravaImportItem): string {
   return item.matchedBikeName ? `Link to ${item.matchedBikeName}` : "Link matched bike";
 }
 
+function matchBadge(item: StravaImportItem) {
+  if (item.matchReason === "strava_link" && item.matchedBikeName) {
+    return <Badge variant="secondary">Already linked to {item.matchedBikeName}</Badge>;
+  }
+  if (item.matchReason === "name" && item.matchedBikeName) {
+    return <Badge variant="secondary">Matches {item.matchedBikeName}</Badge>;
+  }
+  return <Badge variant="outline">No MyBike match</Badge>;
+}
+
 export function IntegrationsPage() {
+  const navigate = useNavigate();
   const status = useStravaStatus();
   const connect = useStravaConnect();
   const preview = usePreviewStravaImport();
@@ -84,6 +96,7 @@ export function IntegrationsPage() {
   }
 
   async function previewImport(): Promise<void> {
+    setImportOpen(true);
     try {
       const result = await preview.mutateAsync();
       const nextActions: Record<string, ImportAction> = {};
@@ -91,8 +104,8 @@ export function IntegrationsPage() {
         nextActions[item.gearId] = item.recommendedAction;
       }
       setActions(nextActions);
-      setImportOpen(true);
     } catch (err) {
+      setImportOpen(false);
       toast.error("Could not load Strava bikes", {
         description: err instanceof Error ? err.message : "Try reconnecting Strava.",
       });
@@ -118,6 +131,7 @@ export function IntegrationsPage() {
         description: `${result.linked} linked, ${result.created} created, ${result.creditedComponents} component credits applied.`,
       });
       setImportOpen(false);
+      await navigate({ to: "/" });
     } catch (err) {
       toast.error("Could not apply Strava import", {
         description: err instanceof Error ? err.message : "Review the choices and try again.",
@@ -201,11 +215,27 @@ export function IntegrationsPage() {
             onClick={previewImport}
             disabled={!connected || preview.isPending}
           >
-            Preview import
+            {preview.isPending ? (
+              <>
+                <Loader2Icon data-icon="inline-start" className="animate-spin" />
+                Loading from Strava…
+              </>
+            ) : (
+              "Preview import"
+            )}
           </Button>
           <Button variant="outline" onClick={syncNow} disabled={!connected || sync.isPending}>
-            <RefreshCwIcon data-icon="inline-start" />
-            Sync now
+            {sync.isPending ? (
+              <>
+                <Loader2Icon data-icon="inline-start" className="animate-spin" />
+                Syncing…
+              </>
+            ) : (
+              <>
+                <RefreshCwIcon data-icon="inline-start" />
+                Sync now
+              </>
+            )}
           </Button>
           {connected && status.data ? (
             <span className="text-sm text-muted-foreground">
@@ -215,7 +245,13 @@ export function IntegrationsPage() {
         </CardFooter>
       </Card>
 
-      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+      <Dialog
+        open={importOpen}
+        onOpenChange={(open) => {
+          if (!open && (preview.isPending || commit.isPending)) return;
+          setImportOpen(open);
+        }}
+      >
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Review Strava import</DialogTitle>
@@ -226,7 +262,36 @@ export function IntegrationsPage() {
           </DialogHeader>
 
           <div className="flex max-h-[55vh] flex-col gap-3 overflow-y-auto pr-1">
-            {importItems.length === 0 ? (
+            {preview.isPending ? (
+              <div
+                className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed p-10 text-center"
+                role="status"
+                aria-live="polite"
+              >
+                <Loader2Icon className="size-8 animate-spin text-muted-foreground" aria-hidden />
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm font-medium text-foreground">Fetching data from Strava</p>
+                  <p className="text-sm text-muted-foreground">
+                    Loading your bikes and activity history. This can take a moment.
+                  </p>
+                </div>
+              </div>
+            ) : commit.isPending ? (
+              <div
+                className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed p-10 text-center"
+                role="status"
+                aria-live="polite"
+              >
+                <Loader2Icon className="size-8 animate-spin text-muted-foreground" aria-hidden />
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm font-medium text-foreground">Applying Strava import</p>
+                  <p className="text-sm text-muted-foreground">
+                    Linking bikes and crediting historical ride mileage to active components. This
+                    can take a moment.
+                  </p>
+                </div>
+              </div>
+            ) : importItems.length === 0 ? (
               <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
                 No Strava bike activity was found.
               </p>
@@ -239,12 +304,11 @@ export function IntegrationsPage() {
                       <div className="flex flex-col gap-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-medium">{item.stravaBikeName}</span>
-                          {item.matchedBikeName ? (
-                            <Badge variant="secondary">Matched {item.matchedBikeName}</Badge>
-                          ) : (
-                            <Badge variant="outline">New bike</Badge>
-                          )}
+                          {matchBadge(item)}
                         </div>
+                        <p className="text-xs text-muted-foreground">
+                          Strava gear ID: {item.gearId}
+                        </p>
                         <p className="text-sm text-muted-foreground">
                           {item.activityCount} ride{item.activityCount === 1 ? "" : "s"} ·{" "}
                           {formatDistance(item.distanceMeters)} ·{" "}
@@ -254,6 +318,7 @@ export function IntegrationsPage() {
 
                       <Select
                         value={currentAction}
+                        disabled={commit.isPending}
                         onValueChange={(value) =>
                           setActions((prev) => ({
                             ...prev,
@@ -288,15 +353,27 @@ export function IntegrationsPage() {
             <Button
               variant="outline"
               onClick={() => setImportOpen(false)}
-              disabled={commit.isPending}
+              disabled={commit.isPending || preview.isPending}
             >
               Cancel
             </Button>
             <Button
               onClick={commitImport}
-              disabled={commit.isPending || importItems.length === 0 || actionableCount === 0}
+              disabled={
+                commit.isPending ||
+                preview.isPending ||
+                importItems.length === 0 ||
+                actionableCount === 0
+              }
             >
-              Apply {actionableCount} choice{actionableCount === 1 ? "" : "s"}
+              {commit.isPending ? (
+                <>
+                  <Loader2Icon data-icon="inline-start" className="animate-spin" />
+                  Applying…
+                </>
+              ) : (
+                `Apply ${actionableCount} choice${actionableCount === 1 ? "" : "s"}`
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

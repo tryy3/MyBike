@@ -21,6 +21,13 @@ export interface StravaTokenResponse {
   scope?: string;
 }
 
+export interface StravaGearSummary {
+  id: string;
+  name: string;
+  primary: boolean;
+  distanceMeters: number;
+}
+
 interface RawStravaActivity {
   id?: unknown;
   gear_id?: unknown;
@@ -69,8 +76,31 @@ function normalizeActivity(raw: RawStravaActivity): StravaActivity | null {
   };
 }
 
+function stravaRequestLabel(url: URL | string): string {
+  const parsed = typeof url === "string" ? new URL(url) : url;
+  return `${parsed.pathname}${parsed.search}`;
+}
+
+function logStravaResponse(
+  method: string,
+  label: string,
+  status: number,
+  durationMs: number,
+  detail?: string,
+): void {
+  const suffix = detail ? ` — ${detail}` : "";
+  console.log(`[strava] ← ${method} ${label} ${status} (${durationMs}ms)${suffix}`);
+}
+
 async function fetchJson(url: URL | string, init: RequestInit): Promise<unknown> {
+  const method = init.method ?? "GET";
+  const label = stravaRequestLabel(url);
+  const startedAt = Date.now();
+  console.log(`[strava] → ${method} ${label}`);
+
   const res = await fetch(url, init);
+  const durationMs = Date.now() - startedAt;
+
   if (!res.ok) {
     let detail = res.statusText;
     try {
@@ -79,13 +109,19 @@ async function fetchJson(url: URL | string, init: RequestInit): Promise<unknown>
     } catch {
       // Keep status text if Strava did not return JSON.
     }
+    logStravaResponse(method, label, res.status, durationMs, detail);
     throw new HttpError(res.status === 401 ? 401 : 502, `Strava request failed: ${detail}`);
   }
-  return res.json();
+
+  const data = await res.json();
+  const responseDetail = Array.isArray(data) ? `items=${data.length}` : undefined;
+  logStravaResponse(method, label, res.status, durationMs, responseDetail);
+  return data;
 }
 
 export async function fetchStravaActivities(accessToken: string): Promise<StravaActivity[]> {
   const activities: StravaActivity[] = [];
+  let pagesFetched = 0;
 
   for (let page = 1; page <= MAX_ACTIVITY_PAGES; page++) {
     const url = new URL(`${STRAVA_API_BASE}/athlete/activities`);
@@ -97,20 +133,63 @@ export async function fetchStravaActivities(accessToken: string): Promise<Strava
     });
     if (!Array.isArray(raw) || raw.length === 0) break;
 
+    pagesFetched += 1;
     for (const item of raw) {
       const activity = normalizeActivity(item as RawStravaActivity);
       if (activity) activities.push(activity);
     }
   }
 
+  console.log(
+    `[strava] activities summary: ${activities.length} normalized across ${pagesFetched} page${pagesFetched === 1 ? "" : "s"}`,
+  );
   return activities;
+}
+
+function normalizeGearSummaries(raw: unknown): StravaGearSummary[] {
+  if (!Array.isArray(raw)) return [];
+
+  const gear: StravaGearSummary[] = [];
+  for (const item of raw) {
+    const bike = item as Record<string, unknown>;
+    if (typeof bike.id !== "string" || typeof bike.name !== "string") continue;
+    const distance = Number(bike.distance ?? 0);
+    gear.push({
+      id: bike.id,
+      name: bike.name,
+      primary: bike.primary === true,
+      distanceMeters: Number.isFinite(distance) ? Math.max(0, Math.round(distance)) : 0,
+    });
+  }
+  return gear;
+}
+
+export async function fetchStravaAthleteBikes(accessToken: string): Promise<StravaGearSummary[]> {
+  const raw = await fetchJson(`${STRAVA_API_BASE}/athlete`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  const data = raw as { bikes?: unknown };
+  const bikes = normalizeGearSummaries(data.bikes);
+  console.log(`[strava] athlete bikes: ${bikes.length} registered`);
+  return bikes;
+}
+
+export async function fetchStravaGearName(
+  accessToken: string,
+  gearId: string,
+): Promise<string | null> {
+  const raw = await fetchJson(`${STRAVA_API_BASE}/gear/${gearId}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  const data = raw as { name?: unknown };
+  return typeof data.name === "string" && data.name.length > 0 ? data.name : null;
 }
 
 export function buildStravaAuthorizationUrl(state: string): string {
   const { clientId } = requireStravaCredentials();
   const redirectUri =
     process.env.STRAVA_REDIRECT_URI ?? "http://localhost:3001/api/strava/callback";
-  const scopes = process.env.STRAVA_SCOPES ?? "read,activity:read_all";
+  const scopes = process.env.STRAVA_SCOPES ?? "read,activity:read_all,profile:read_all";
   const url = new URL("https://www.strava.com/oauth/authorize");
   url.searchParams.set("client_id", clientId);
   url.searchParams.set("redirect_uri", redirectUri);

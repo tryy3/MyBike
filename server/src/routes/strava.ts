@@ -11,6 +11,8 @@ import {
   buildStravaAuthorizationUrl,
   exchangeStravaCode,
   fetchStravaActivities,
+  fetchStravaAthleteBikes,
+  fetchStravaGearName,
   refreshStravaAccessToken,
   type StravaActivity,
   type StravaTokenResponse,
@@ -58,6 +60,44 @@ function parseCookies(header: string | undefined): Record<string, string> {
 
 function normalizeName(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+interface BikeMatch {
+  bike: BikeRow;
+  reason: "strava_link" | "name";
+}
+
+function applyGearNames(
+  aggregates: Map<string, GearAggregate>,
+  gearNames: Map<string, string>,
+): void {
+  for (const aggregate of aggregates.values()) {
+    const resolved = gearNames.get(aggregate.gearId);
+    if (resolved) aggregate.stravaBikeName = resolved;
+  }
+}
+
+function needsGearLookup(aggregate: GearAggregate, gearNames: Map<string, string>): boolean {
+  if (gearNames.has(aggregate.gearId)) return false;
+  return aggregate.stravaBikeName === aggregate.gearId || aggregate.stravaBikeName.length === 0;
+}
+
+async function resolveMissingGearNames(
+  token: string,
+  aggregates: Map<string, GearAggregate>,
+  gearNames: Map<string, string>,
+): Promise<void> {
+  const missing = [...aggregates.values()].filter((aggregate) =>
+    needsGearLookup(aggregate, gearNames),
+  );
+  if (missing.length === 0) return;
+
+  await Promise.all(
+    missing.map(async (aggregate) => {
+      const name = await fetchStravaGearName(token, aggregate.gearId);
+      if (name) aggregate.stravaBikeName = name;
+    }),
+  );
 }
 
 function aggregateActivities(activities: StravaActivity[]): Map<string, GearAggregate> {
@@ -129,7 +169,7 @@ function upsertStravaAccount(userId: string, token: StravaTokenResponse): void {
     accessToken: token.accessToken,
     refreshToken: token.refreshToken,
     accessTokenExpiresAt: new Date(token.expiresAtMs),
-    scope: token.scope ?? "read,activity:read_all",
+    scope: token.scope ?? "read,activity:read_all,profile:read_all",
   };
 
   if (existing) {
@@ -145,12 +185,15 @@ function upsertStravaAccount(userId: string, token: StravaTokenResponse): void {
     .run();
 }
 
-function matchBike(aggregate: GearAggregate, allBikes: BikeRow[]): BikeRow | null {
+function matchBike(aggregate: GearAggregate, allBikes: BikeRow[]): BikeMatch | null {
   const linked = allBikes.find((bike) => bike.stravaGearId === aggregate.gearId);
-  if (linked) return linked;
+  if (linked) return { bike: linked, reason: "strava_link" };
 
   const normalizedStravaName = normalizeName(aggregate.stravaBikeName);
-  return allBikes.find((bike) => normalizeName(bike.name) === normalizedStravaName) ?? null;
+  if (normalizedStravaName.length === 0) return null;
+
+  const byName = allBikes.find((bike) => normalizeName(bike.name) === normalizedStravaName);
+  return byName ? { bike: byName, reason: "name" } : null;
 }
 
 function ensureDecisionGear(
@@ -279,8 +322,15 @@ function addCounters(target: SyncCounters, source: SyncCounters): void {
 
 async function loadAggregates(userId: string): Promise<Map<string, GearAggregate>> {
   const token = await getStravaAccessToken(userId);
-  const activities = await fetchStravaActivities(token);
-  return aggregateActivities(activities);
+  const [activities, athleteBikes] = await Promise.all([
+    fetchStravaActivities(token),
+    fetchStravaAthleteBikes(token),
+  ]);
+  const gearNames = new Map(athleteBikes.map((bike) => [bike.id, bike.name]));
+  const aggregates = aggregateActivities(activities);
+  applyGearNames(aggregates, gearNames);
+  await resolveMissingGearNames(token, aggregates, gearNames);
+  return aggregates;
 }
 
 stravaRouter.get("/status", (req, res) => {
@@ -339,8 +389,9 @@ stravaRouter.get("/import/preview", async (req, res) => {
         distanceMeters: aggregate.distanceMeters,
         movingTimeMinutes: aggregate.movingTimeMinutes,
         activityCount: aggregate.activityCount,
-        matchedBikeId: matched?.id ?? null,
-        matchedBikeName: matched?.name ?? null,
+        matchedBikeId: matched?.bike.id ?? null,
+        matchedBikeName: matched?.bike.name ?? null,
+        matchReason: matched?.reason ?? null,
         recommendedAction: matched ? "link" : "create",
       };
     })

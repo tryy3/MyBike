@@ -7,6 +7,13 @@ import { createAuthenticatedAgent } from "./auth-helper.js";
 
 const app = createApp();
 
+interface MockBike {
+  id: string;
+  name: string;
+  primary?: boolean;
+  distance?: number;
+}
+
 interface MockActivity {
   id: number;
   gear_id: string | null;
@@ -21,6 +28,56 @@ interface MockActivity {
 
 const originalFetch = globalThis.fetch;
 let mockActivities: MockActivity[] = [];
+let mockAthleteBikes: MockBike[] = [];
+let mockGearNames = new Map<string, string>();
+
+function stravaFetchMock(input: RequestInfo | URL): Response | Promise<Response> {
+  const requestUrl =
+    typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+  const url = new URL(requestUrl);
+  if (url.hostname !== "www.strava.com") {
+    throw new Error(`Unexpected Strava request: ${url.toString()}`);
+  }
+
+  if (url.pathname === "/api/v3/athlete") {
+    return new Response(JSON.stringify({ bikes: mockAthleteBikes }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  }
+
+  const gearMatch = url.pathname.match(/^\/api\/v3\/gear\/(.+)$/);
+  if (gearMatch) {
+    const gearId = gearMatch[1]!;
+    const name = mockGearNames.get(gearId) ?? null;
+    return new Response(JSON.stringify(name ? { id: gearId, name } : {}), {
+      status: name ? 200 : 404,
+      headers: { "content-type": "application/json" },
+    });
+  }
+
+  if (url.pathname.endsWith("/athlete/activities")) {
+    const page = url.searchParams.get("page") ?? "1";
+    const body = page === "1" ? mockActivities : [];
+    return new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  }
+
+  throw new Error(`Unexpected Strava request: ${url.toString()}`);
+}
+
+beforeEach(() => {
+  mockActivities = [];
+  mockAthleteBikes = [];
+  mockGearNames = new Map();
+  globalThis.fetch = async (input: RequestInfo | URL) => stravaFetchMock(input);
+});
+
+afterEach(() => {
+  globalThis.fetch = originalFetch;
+});
 
 function componentPayload(overrides: Record<string, unknown> = {}) {
   return { category: "chain", name: "Chain", brand: "Shimano", model: "CN-HG701", ...overrides };
@@ -38,32 +95,10 @@ async function connectStravaAccount(email: string) {
       accessToken: "access-token",
       refreshToken: "refresh-token",
       accessTokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
-      scope: "read,activity:read_all",
+      scope: "read,activity:read_all,profile:read_all",
     })
     .run();
 }
-
-beforeEach(() => {
-  mockActivities = [];
-  globalThis.fetch = async (input: RequestInfo | URL) => {
-    const requestUrl =
-      typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-    const url = new URL(requestUrl);
-    if (url.hostname !== "www.strava.com" || !url.pathname.endsWith("/athlete/activities")) {
-      throw new Error(`Unexpected Strava request: ${url.toString()}`);
-    }
-    const page = url.searchParams.get("page") ?? "1";
-    const body = page === "1" ? mockActivities : [];
-    return new Response(JSON.stringify(body), {
-      status: 200,
-      headers: { "content-type": "application/json" },
-    });
-  };
-});
-
-afterEach(() => {
-  globalThis.fetch = originalFetch;
-});
 
 describe("Strava import", () => {
   it("previews and commits a matched Strava bike into active component mileage", async () => {
@@ -80,12 +115,12 @@ describe("Strava import", () => {
       {
         id: 123,
         gear_id: "b123",
-        gear: { id: "b123", name: "Road Bike" },
         distance: 1234.5,
         moving_time: 3600,
         start_date: "2026-07-01T10:00:00Z",
       },
     ];
+    mockAthleteBikes = [{ id: "b123", name: "Road Bike" }];
 
     const preview = await agent.get("/api/strava/import/preview").expect(200);
     expect(preview.body.items).toEqual([
@@ -95,6 +130,7 @@ describe("Strava import", () => {
         distanceMeters: 1235,
         movingTimeMinutes: 60,
         matchedBikeId: bike.body.id,
+        matchReason: "name",
         recommendedAction: "link",
       }),
     ]);
@@ -118,6 +154,32 @@ describe("Strava import", () => {
     const updated = detail.body.components.find((c: { id: string }) => c.id === component.body.id);
     expect(updated.distanceMeters).toBe(2235);
     expect(updated.movingTimeMinutes).toBe(70);
+  });
+
+  it("resolves bike names from athlete gear when activities only include gear_id", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    await connectStravaAccount(testUser.email);
+
+    mockActivities = [
+      {
+        id: 999,
+        gear_id: "b999",
+        distance: 5000,
+        moving_time: 1800,
+        start_date: "2026-07-02T10:00:00Z",
+      },
+    ];
+    mockAthleteBikes = [{ id: "b999", name: "Gravel Rig" }];
+
+    const preview = await agent.get("/api/strava/import/preview").expect(200);
+    expect(preview.body.items).toEqual([
+      expect.objectContaining({
+        gearId: "b999",
+        stravaBikeName: "Gravel Rig",
+        matchReason: null,
+        recommendedAction: "create",
+      }),
+    ]);
   });
 });
 
@@ -144,12 +206,12 @@ describe("Strava sync", () => {
       {
         id: 456,
         gear_id: "gravel-1",
-        gear: { id: "gravel-1", name: "Gravel Bike" },
         distance: 2000,
         moving_time: 1200,
         start_date: "2026-07-03T10:00:00Z",
       },
     ];
+    mockAthleteBikes = [{ id: "gravel-1", name: "Gravel Bike" }];
 
     const first = await agent.post("/api/strava/sync").expect(200);
     const second = await agent.post("/api/strava/sync").expect(200);
