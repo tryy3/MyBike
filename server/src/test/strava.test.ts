@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
-import request from "supertest";
 import { eq } from "drizzle-orm";
 import { account, user } from "../db/auth-schema.js";
 import { db } from "../db/index.js";
@@ -47,7 +46,9 @@ async function connectStravaAccount(email: string) {
 beforeEach(() => {
   mockActivities = [];
   globalThis.fetch = async (input: RequestInfo | URL) => {
-    const url = new URL(String(input));
+    const requestUrl =
+      typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    const url = new URL(requestUrl);
     if (url.hostname !== "www.strava.com" || !url.pathname.endsWith("/athlete/activities")) {
       throw new Error(`Unexpected Strava request: ${url.toString()}`);
     }

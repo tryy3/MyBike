@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { account } from "../db/auth-schema.js";
 import { bikes, components, stravaActivities, stravaActivityComponents } from "../db/schema.js";
 import type { BikeRow } from "../db/schema.js";
@@ -184,7 +184,8 @@ function createImportedMileageComponent(
       name: "Strava mileage estimate",
       brand: "Strava",
       model: aggregate.stravaBikeName,
-      notes: "Created during Strava import so historical ride distance has an initial component to credit.",
+      notes:
+        "Created during Strava import so historical ride distance has an initial component to credit.",
       distanceMeters: 0,
       movingTimeMinutes: 0,
       isActive: true,
@@ -385,12 +386,13 @@ stravaRouter.post("/import/commit", async (req, res) => {
 
       let bike: BikeRow;
       if (decision.action === "link") {
-        bike = tx
+        const linkedBike = tx
           .select()
           .from(bikes)
           .where(and(eq(bikes.id, decision.bikeId), eq(bikes.userId, userId)))
-          .get() as BikeRow | undefined;
-        if (!bike) throw notFound("Bike");
+          .get();
+        if (!linkedBike) throw notFound("Bike");
+        bike = linkedBike;
         if (alreadyLinked && alreadyLinked.id !== bike.id) {
           throw badRequest("That Strava bike is already linked to another bike");
         }

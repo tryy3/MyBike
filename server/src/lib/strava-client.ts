@@ -43,7 +43,10 @@ function requireStravaCredentials() {
 }
 
 function normalizeActivity(raw: RawStravaActivity): StravaActivity | null {
-  if (raw.id == null || raw.start_date == null) return null;
+  const activityId =
+    typeof raw.id === "string" || typeof raw.id === "number" ? String(raw.id) : null;
+  const startDate = typeof raw.start_date === "string" ? raw.start_date : null;
+  if (!activityId || !startDate) return null;
   const distance = Number(raw.distance ?? 0);
   const movingTimeSeconds = Number(raw.moving_time ?? 0);
   if (!Number.isFinite(distance) || !Number.isFinite(movingTimeSeconds)) return null;
@@ -57,12 +60,12 @@ function normalizeActivity(raw: RawStravaActivity): StravaActivity | null {
   const gearName = typeof raw.gear?.name === "string" ? raw.gear.name : null;
 
   return {
-    stravaActivityId: String(raw.id),
+    stravaActivityId: activityId,
     gearId,
     gearName,
     distanceMeters: Math.max(0, Math.round(distance)),
     movingTimeMinutes: Math.max(0, Math.round(movingTimeSeconds / 60)),
-    startDate: String(raw.start_date),
+    startDate,
   };
 }
 
@@ -105,7 +108,8 @@ export async function fetchStravaActivities(accessToken: string): Promise<Strava
 
 export function buildStravaAuthorizationUrl(state: string): string {
   const { clientId } = requireStravaCredentials();
-  const redirectUri = process.env.STRAVA_REDIRECT_URI ?? "http://localhost:3001/api/strava/callback";
+  const redirectUri =
+    process.env.STRAVA_REDIRECT_URI ?? "http://localhost:3001/api/strava/callback";
   const scopes = process.env.STRAVA_SCOPES ?? "read,activity:read_all";
   const url = new URL("https://www.strava.com/oauth/authorize");
   url.searchParams.set("client_id", clientId);
@@ -122,7 +126,7 @@ function parseTokenResponse(raw: unknown, fallbackScope?: string): StravaTokenRe
   const athlete = data.athlete as Record<string, unknown> | undefined;
   if (
     !athlete ||
-    athlete.id == null ||
+    (typeof athlete.id !== "string" && typeof athlete.id !== "number") ||
     typeof data.access_token !== "string" ||
     typeof data.refresh_token !== "string" ||
     typeof data.expires_at !== "number"

@@ -261,7 +261,10 @@ export function IntegrationsPage() {
                           }))
                         }
                       >
-                        <SelectTrigger size="sm" aria-label={`Import action for ${item.stravaBikeName}`}>
+                        <SelectTrigger
+                          size="sm"
+                          aria-label={`Import action for ${item.stravaBikeName}`}
+                        >
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -282,7 +285,11 @@ export function IntegrationsPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setImportOpen(false)} disabled={commit.isPending}>
+            <Button
+              variant="outline"
+              onClick={() => setImportOpen(false)}
+              disabled={commit.isPending}
+            >
               Cancel
             </Button>
             <Button
