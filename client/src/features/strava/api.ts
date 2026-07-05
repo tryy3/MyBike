@@ -28,6 +28,8 @@ export function useCommitStravaImport() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.stravaStatus });
       void qc.invalidateQueries({ queryKey: queryKeys.bikes });
+      void qc.invalidateQueries({ queryKey: queryKeys.garageStats });
+      void qc.invalidateQueries({ queryKey: ["stats", "bike"] });
     },
   });
 }
@@ -39,6 +41,8 @@ export function useSyncStrava() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.stravaStatus });
       void qc.invalidateQueries({ queryKey: queryKeys.bikes });
+      void qc.invalidateQueries({ queryKey: queryKeys.garageStats });
+      void qc.invalidateQueries({ queryKey: ["stats", "bike"] });
     },
   });
 }

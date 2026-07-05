@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CategoryDetailContent, type CategoryFormMode } from "./CategoryDetailContent";
+import type { WearByComponentId } from "./ComponentsSplitView";
 
 interface CategoryDetailDialogProps {
   bikeId: string;
@@ -17,6 +18,7 @@ interface CategoryDetailDialogProps {
   componentsByCategory: Map<string, Component[]>;
   formMode: CategoryFormMode;
   onFormModeChange: (mode: CategoryFormMode) => void;
+  wearByComponentId?: WearByComponentId;
   onOpenChange: (open: boolean) => void;
 }
 
@@ -27,6 +29,7 @@ export function CategoryDetailDialog({
   componentsByCategory,
   formMode,
   onFormModeChange,
+  wearByComponentId,
   onOpenChange,
 }: CategoryDetailDialogProps) {
   if (!categoryId) return null;
@@ -49,6 +52,7 @@ export function CategoryDetailDialog({
             components={components}
             formMode={formMode}
             onFormModeChange={onFormModeChange}
+            wearByComponentId={wearByComponentId}
           />
         </div>
       </DialogContent>

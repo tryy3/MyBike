@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -39,14 +39,30 @@ import {
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { BikeForm } from "@/features/bikes/BikeForm";
 import { useBikes, useDeleteBike } from "@/features/bikes/api";
+import { useGarageStats } from "@/features/stats/api";
+import { formatStatsLine } from "@/lib/format-stats";
 import { cn } from "@/lib/utils";
 
 export function BikesListPage() {
   const { data, isPending, isError, error, refetch, isFetching } = useBikes();
+  const garageStats = useGarageStats();
   const deleteBike = useDeleteBike();
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Bike | null>(null);
   const [deleting, setDeleting] = useState<Bike | null>(null);
+
+  const statsByBikeId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const entry of garageStats.data?.bikes ?? []) {
+      map.set(
+        entry.bikeId,
+        entry.rideStats
+          ? formatStatsLine(entry.rideStats.distanceMeters, entry.rideStats.movingTimeMinutes)
+          : "—",
+      );
+    }
+    return map;
+  }, [garageStats.data]);
 
   useEffect(() => {
     document.title = "Bikes | MyBike";
@@ -109,6 +125,7 @@ export function BikesListPage() {
                 <TableHead>Bike</TableHead>
                 <TableHead className="hidden sm:table-cell">Brand / Model</TableHead>
                 <TableHead className="hidden md:table-cell text-right">Components</TableHead>
+                <TableHead className="hidden lg:table-cell text-right">Mileage</TableHead>
                 <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
@@ -125,6 +142,9 @@ export function BikesListPage() {
                       <span className="text-xs font-normal text-muted-foreground">
                         {[bike.year].filter(Boolean).join(" · ")}
                       </span>
+                      <span className="text-xs font-normal text-muted-foreground tabular-nums lg:hidden">
+                        {statsByBikeId.get(bike.id) ?? "—"}
+                      </span>
                     </Link>
                   </TableCell>
                   <TableCell className="hidden sm:table-cell text-muted-foreground">
@@ -132,6 +152,9 @@ export function BikesListPage() {
                   </TableCell>
                   <TableCell className="hidden md:table-cell text-right tabular-nums">
                     {bike.componentCount}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell text-right tabular-nums text-muted-foreground">
+                    {statsByBikeId.get(bike.id) ?? "—"}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">

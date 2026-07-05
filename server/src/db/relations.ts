@@ -1,10 +1,17 @@
 import { defineRelations } from "drizzle-orm";
-import { bikes, components, stravaActivities, stravaActivityComponents } from "./schema.js";
+import {
+  bikes,
+  components,
+  stravaActivities,
+  stravaActivityComponents,
+  stravaBikes,
+} from "./schema.js";
 import { account, session, user, verification } from "./auth-schema.js";
 
 const schema = {
   bikes,
   components,
+  stravaBikes,
   stravaActivities,
   stravaActivityComponents,
   user,
@@ -33,6 +40,16 @@ export const relations = defineRelations(schema, (r) => ({
   bikes: {
     components: r.many.components(),
     stravaActivities: r.many.stravaActivities(),
+    stravaBike: r.one.stravaBikes({
+      from: r.bikes.id,
+      to: r.stravaBikes.bikeId,
+    }),
+  },
+  stravaBikes: {
+    bike: r.one.bikes({
+      from: r.stravaBikes.bikeId,
+      to: r.bikes.id,
+    }),
   },
   components: {
     bike: r.one.bikes({

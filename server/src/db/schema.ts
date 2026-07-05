@@ -77,6 +77,31 @@ export const components = sqliteTable(
   ],
 );
 
+export const stravaBikes = sqliteTable(
+  "strava_bikes",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => uuid()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    stravaGearId: text("strava_gear_id").notNull(),
+    bikeId: text("bike_id")
+      .notNull()
+      .references(() => bikes.id, { onDelete: "cascade" }),
+    linkedAt: integer("linked_at").notNull().$defaultFn(nowMs),
+    // Activities with start_date before this day (YYYY-MM-DD) are stored but not
+    // linked to components unless the user opted into historical component credit.
+    componentCreditFrom: text("component_credit_from").notNull(),
+  },
+  (t) => [
+    uniqueIndex("idx_strava_bikes_user_gear").on(t.userId, t.stravaGearId),
+    uniqueIndex("idx_strava_bikes_user_bike").on(t.userId, t.bikeId),
+    index("idx_strava_bikes_bike").on(t.bikeId),
+  ],
+);
+
 export const stravaActivities = sqliteTable(
   "strava_activities",
   {
@@ -95,6 +120,7 @@ export const stravaActivities = sqliteTable(
     movingTimeMinutes: integer("moving_time_minutes").notNull(),
     startDate: text("start_date").notNull(),
     processedAt: integer("processed_at").notNull().$defaultFn(nowMs),
+    editedAt: integer("edited_at"),
   },
   (t) => [
     index("idx_strava_activities_user").on(t.userId),
@@ -127,4 +153,5 @@ export const stravaActivityComponents = sqliteTable(
 
 export type BikeRow = typeof bikes.$inferSelect;
 export type ComponentRow = typeof components.$inferSelect;
+export type StravaBikeRow = typeof stravaBikes.$inferSelect;
 export type StravaActivityRow = typeof stravaActivities.$inferSelect;

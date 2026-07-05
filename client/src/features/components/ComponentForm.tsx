@@ -208,7 +208,7 @@ export function ComponentForm({ bikeId, category, component, onDone }: Component
               const errorId = `${field.name}-error`;
               return (
                 <Field className="flex-1" data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor={field.name}>Distance (km)</FieldLabel>
+                  <FieldLabel htmlFor={field.name}>Starting distance (km)</FieldLabel>
                   <Input
                     id={field.name}
                     {...field}
@@ -217,11 +217,15 @@ export function ComponentForm({ bikeId, category, component, onDone }: Component
                     min={0}
                     step={0.1}
                     inputMode="decimal"
-                    placeholder="e.g. 2400"
+                    placeholder="e.g. 100"
                     autoComplete="off"
                     aria-invalid={fieldState.invalid}
                     aria-describedby={fieldState.invalid ? errorId : undefined}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Wear before MyBike or Strava tracking. Ride mileage is added from synced
+                    activities.
+                  </p>
                   {fieldState.invalid && <FieldError id={errorId} errors={[fieldState.error]} />}
                 </Field>
               );

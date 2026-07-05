@@ -106,8 +106,12 @@ async function connectStravaAccount(email: string) {
     .run();
 }
 
+function todayRideDate(time = "10:00:00Z"): string {
+  return `${new Date().toISOString().slice(0, 10)}T${time}`;
+}
+
 describe("Strava import", () => {
-  it("previews and commits a matched Strava bike into active component mileage", async () => {
+  it("previews and commits a matched Strava bike with historical component credit", async () => {
     const { agent, user: testUser } = await createAuthenticatedAgent(app);
     await connectStravaAccount(testUser.email);
 
@@ -123,7 +127,7 @@ describe("Strava import", () => {
         gear_id: "b123",
         distance: 1234.5,
         moving_time: 3600,
-        start_date: "2026-07-01T10:00:00Z",
+        start_date: todayRideDate(),
       },
     ];
     mockAthleteBikes = [{ id: "b123", name: "Road Bike" }];
@@ -145,6 +149,7 @@ describe("Strava import", () => {
       .post("/api/strava/import/commit")
       .send({
         decisions: [{ gearId: "b123", action: "link", bikeId: bike.body.id }],
+        creditHistoricalComponents: true,
       })
       .expect(200);
 
@@ -158,8 +163,55 @@ describe("Strava import", () => {
 
     const detail = await agent.get(`/api/bikes/${bike.body.id}`).expect(200);
     const updated = detail.body.components.find((c: { id: string }) => c.id === component.body.id);
-    expect(updated.distanceMeters).toBe(2235);
-    expect(updated.movingTimeMinutes).toBe(70);
+    expect(updated.distanceMeters).toBe(1000);
+    expect(updated.movingTimeMinutes).toBe(10);
+
+    const stats = await agent.get(`/api/stats/bikes/${bike.body.id}`).expect(200);
+    const wear = stats.body.components.find((c: { id: string }) => c.id === component.body.id);
+    expect(wear.distanceMeters).toBe(2235);
+    expect(wear.movingTimeMinutes).toBe(70);
+  });
+
+  it("skips component links for rides before credit cutoff unless historical opt-in", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    await connectStravaAccount(testUser.email);
+
+    const bike = await agent.post("/api/bikes").send({ name: "Old Rides Bike" }).expect(201);
+    await agent
+      .post(`/api/bikes/${bike.body.id}/components`)
+      .send(componentPayload({ distanceMeters: 500, movingTimeMinutes: 5 }))
+      .expect(201);
+
+    mockActivities = [
+      {
+        id: 124,
+        gear_id: "b124",
+        distance: 5000,
+        moving_time: 1800,
+        start_date: "2020-01-01T10:00:00Z",
+      },
+    ];
+    mockAthleteBikes = [{ id: "b124", name: "Old Rides Bike" }];
+
+    const committed = await agent
+      .post("/api/strava/import/commit")
+      .send({
+        decisions: [{ gearId: "b124", action: "link", bikeId: bike.body.id }],
+        creditHistoricalComponents: false,
+      })
+      .expect(200);
+
+    expect(committed.body).toMatchObject({
+      processedActivities: 1,
+      creditedComponents: 0,
+    });
+
+    const stats = await agent.get(`/api/stats/bikes/${bike.body.id}`).expect(200);
+    expect(stats.body.rideStats).toMatchObject({
+      distanceMeters: 5000,
+      activityCount: 1,
+    });
+    expect(stats.body.components[0].distanceMeters).toBe(500);
   });
 
   it("resolves bike names from athlete gear when activities only include gear_id", async () => {
@@ -257,7 +309,7 @@ describe("Strava sync", () => {
         gear_id: "gravel-1",
         distance: 2000,
         moving_time: 1200,
-        start_date: "2026-07-03T10:00:00Z",
+        start_date: todayRideDate(),
       },
     ];
     mockAthleteBikes = [{ id: "gravel-1", name: "Gravel Bike" }];
@@ -277,7 +329,11 @@ describe("Strava sync", () => {
     });
 
     const detail = await agent.get(`/api/bikes/${bike.body.id}`).expect(200);
-    expect(detail.body.components[0].distanceMeters).toBe(2000);
-    expect(detail.body.components[0].movingTimeMinutes).toBe(20);
+    expect(detail.body.components[0].distanceMeters).toBe(0);
+    expect(detail.body.components[0].movingTimeMinutes).toBe(0);
+
+    const stats = await agent.get(`/api/stats/bikes/${bike.body.id}`).expect(200);
+    expect(stats.body.components[0].distanceMeters).toBe(2000);
+    expect(stats.body.components[0].movingTimeMinutes).toBe(20);
   });
 });

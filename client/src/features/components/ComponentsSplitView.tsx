@@ -7,11 +7,19 @@ import { CategoryDetailPanel } from "./CategoryDetailPanel";
 import { ComponentsNav } from "./ComponentsNav";
 import type { CategoryFormMode } from "./CategoryDetailContent";
 
+export type WearDisplay = {
+  distanceMeters: number | null;
+  movingTimeMinutes: number | null;
+};
+
+export type WearByComponentId = Map<string, WearDisplay>;
+
 interface ComponentsSplitViewProps {
   bikeId: string;
   components: Component[];
   showEmptyCategories: boolean;
   categoriesUsed: number;
+  wearByComponentId?: WearByComponentId;
 }
 
 function buildCategoryMap(components: Component[]): Map<string, Component[]> {
@@ -35,6 +43,7 @@ export function ComponentsSplitView({
   components,
   showEmptyCategories,
   categoriesUsed,
+  wearByComponentId,
 }: ComponentsSplitViewProps) {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [mobileDialogOpen, setMobileDialogOpen] = useState(false);
@@ -67,6 +76,7 @@ export function ComponentsSplitView({
           selectedCategoryId={selectedCategoryId}
           showEmptyCategories={showEmptyCategories}
           categoriesUsed={categoriesUsed}
+          wearByComponentId={wearByComponentId}
           onSelectCategory={handleSelectCategory}
         />
         <CategoryDetailPanel
@@ -75,6 +85,7 @@ export function ComponentsSplitView({
           componentsByCategory={componentsByCategory}
           formMode={formMode}
           onFormModeChange={setFormMode}
+          wearByComponentId={wearByComponentId}
           className="hidden lg:block"
         />
       </div>
@@ -86,6 +97,7 @@ export function ComponentsSplitView({
         componentsByCategory={componentsByCategory}
         formMode={formMode}
         onFormModeChange={setFormMode}
+        wearByComponentId={wearByComponentId}
         onOpenChange={handleDialogOpenChange}
       />
     </>

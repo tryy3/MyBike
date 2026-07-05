@@ -20,6 +20,7 @@ export const stravaImportDecisionSchema = z.discriminatedUnion("action", [
 
 export const stravaImportCommitSchema = z.object({
   decisions: z.array(stravaImportDecisionSchema).min(1),
+  creditHistoricalComponents: z.boolean().default(false),
 });
 
 export const stravaImportItemSchema = z.object({

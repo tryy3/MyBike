@@ -24,11 +24,25 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { cn } from "@/lib/utils";
+import { ComponentStats } from "@/features/stats/ComponentStats";
 import { componentBrandModel } from "./component-display";
 import { ComponentForm } from "./ComponentForm";
 import { useActivateComponent, useDeleteComponent, useReorderComponents } from "./api";
+import type { WearByComponentId } from "./ComponentsSplitView";
 
 export type CategoryFormMode = "add" | { edit: string } | null;
+
+function resolveDisplayWear(
+  component: Component,
+  wearByComponentId?: WearByComponentId,
+): { distanceMeters: number | null; movingTimeMinutes: number | null } {
+  const fromStats = wearByComponentId?.get(component.id);
+  if (fromStats) return fromStats;
+  return {
+    distanceMeters: component.distanceMeters,
+    movingTimeMinutes: component.movingTimeMinutes,
+  };
+}
 
 interface CategoryDetailContentProps {
   bikeId: string;
@@ -37,6 +51,7 @@ interface CategoryDetailContentProps {
   components: Component[];
   formMode: CategoryFormMode;
   onFormModeChange: (mode: CategoryFormMode) => void;
+  wearByComponentId?: WearByComponentId;
 }
 
 export function CategoryDetailContent({
@@ -46,6 +61,7 @@ export function CategoryDetailContent({
   components,
   formMode,
   onFormModeChange,
+  wearByComponentId,
 }: CategoryDetailContentProps) {
   const reorder = useReorderComponents(bikeId);
   const activate = useActivateComponent(bikeId);
@@ -172,6 +188,7 @@ export function CategoryDetailContent({
                         <ComponentRow
                           key={c.id}
                           component={c}
+                          displayWear={resolveDisplayWear(c, wearByComponentId)}
                           canActivate={false}
                           draggable={sortable}
                           activating={activate.isPending}
@@ -197,6 +214,7 @@ export function CategoryDetailContent({
                         <ComponentRow
                           key={c.id}
                           component={c}
+                          displayWear={resolveDisplayWear(c, wearByComponentId)}
                           canActivate={components.length > 1}
                           draggable={sortable}
                           activating={activate.isPending}
@@ -238,6 +256,7 @@ export function CategoryDetailContent({
 
 function ComponentRow({
   component,
+  displayWear,
   canActivate,
   draggable,
   activating,
@@ -247,6 +266,7 @@ function ComponentRow({
   onDelete,
 }: {
   component: Component;
+  displayWear: { distanceMeters: number | null; movingTimeMinutes: number | null };
   canActivate: boolean;
   draggable: boolean;
   activating: boolean;
@@ -299,6 +319,11 @@ function ComponentRow({
           <span className="truncate text-sm text-muted-foreground">
             {componentBrandModel(component) ?? "—"}
           </span>
+          <ComponentStats
+            distanceMeters={displayWear.distanceMeters}
+            movingTimeMinutes={displayWear.movingTimeMinutes}
+            className="text-xs text-muted-foreground"
+          />
         </div>
       </div>
 

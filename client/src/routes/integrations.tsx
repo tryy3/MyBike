@@ -43,19 +43,9 @@ import {
   useStravaStatus,
   useSyncStrava,
 } from "@/features/strava/api";
+import { formatDistance, formatMovingTime } from "@/lib/format-stats";
 
 type ImportAction = "link" | "create" | "skip";
-
-function formatDistance(meters: number): string {
-  return `${(meters / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 })} km`;
-}
-
-function formatMovingTime(minutes: number): string {
-  if (minutes < 60) return `${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  const remainder = minutes % 60;
-  return remainder === 0 ? `${hours} h` : `${hours} h ${remainder} min`;
-}
 
 function actionLabel(action: ImportAction, item: StravaImportItem): string {
   if (action === "skip") return "Skip";
@@ -83,6 +73,7 @@ export function IntegrationsPage() {
 
   const [importOpen, setImportOpen] = useState(false);
   const [actions, setActions] = useState<Record<string, ImportAction>>({});
+  const [creditHistoricalComponents, setCreditHistoricalComponents] = useState(false);
 
   useEffect(() => {
     document.title = "Integrations | MyBike";
@@ -133,7 +124,7 @@ export function IntegrationsPage() {
     });
 
     try {
-      const result = await commit.mutateAsync({ decisions });
+      const result = await commit.mutateAsync({ decisions, creditHistoricalComponents });
       toast.success("Strava import applied", {
         description: `${result.linked} linked, ${result.created} created, ${result.creditedComponents} component credits applied.`,
       });
@@ -362,6 +353,23 @@ export function IntegrationsPage() {
               })
             )}
           </div>
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={creditHistoricalComponents}
+              disabled={commit.isPending || preview.isPending}
+              onChange={(event) => setCreditHistoricalComponents(event.target.checked)}
+            />
+            <span className="flex flex-col gap-1">
+              <span className="font-medium">Credit past rides to current components</span>
+              <span className="text-muted-foreground">
+                Off by default. When unchecked, only rides from today forward are linked to your
+                active components; older rides still count toward bike totals.
+              </span>
+            </span>
+          </label>
 
           <DialogFooter>
             <Button

@@ -1,12 +1,19 @@
 import { Router } from "express";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { account } from "../db/auth-schema.js";
-import { bikes, components, stravaActivities, stravaActivityComponents } from "../db/schema.js";
+import {
+  bikes,
+  components,
+  stravaActivities,
+  stravaActivityComponents,
+  stravaBikes,
+} from "../db/schema.js";
 import type { BikeRow } from "../db/schema.js";
 import { db } from "../db/index.js";
 import { HttpError, badRequest, notFound } from "../lib/errors.js";
 import { getAuthContext, requireAuth } from "../lib/require-auth.js";
 import { parseBody } from "../lib/validation.js";
+import { activityDateOnOrAfterCreditFrom } from "../lib/wear-baseline.js";
 import {
   buildStravaAuthorizationUrl,
   exchangeStravaCode,
@@ -242,6 +249,76 @@ function createImportedMileageComponent(
     .run();
 }
 
+function todayIsoDate(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function resolveLinkedBike(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  userId: string,
+  gearId: string,
+): { bikeId: string; componentCreditFrom: string } | null {
+  const link = tx
+    .select({
+      bikeId: stravaBikes.bikeId,
+      componentCreditFrom: stravaBikes.componentCreditFrom,
+    })
+    .from(stravaBikes)
+    .where(and(eq(stravaBikes.userId, userId), eq(stravaBikes.stravaGearId, gearId)))
+    .get();
+  if (link) return link;
+
+  const bike = tx
+    .select({ id: bikes.id })
+    .from(bikes)
+    .where(and(eq(bikes.userId, userId), eq(bikes.stravaGearId, gearId)))
+    .get();
+  if (!bike) return null;
+
+  return { bikeId: bike.id, componentCreditFrom: "1970-01-01" };
+}
+
+function upsertStravaBikeLink(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  userId: string,
+  bikeId: string,
+  stravaGearId: string,
+  creditHistoricalComponents: boolean,
+): void {
+  const creditFrom = creditHistoricalComponents ? "1970-01-01" : todayIsoDate();
+  const byBike = tx
+    .select({ id: stravaBikes.id })
+    .from(stravaBikes)
+    .where(and(eq(stravaBikes.userId, userId), eq(stravaBikes.bikeId, bikeId)))
+    .get();
+  const byGear = tx
+    .select({ id: stravaBikes.id, bikeId: stravaBikes.bikeId })
+    .from(stravaBikes)
+    .where(and(eq(stravaBikes.userId, userId), eq(stravaBikes.stravaGearId, stravaGearId)))
+    .get();
+
+  if (byGear && byGear.bikeId !== bikeId) {
+    throw badRequest("That Strava bike is already linked to another bike");
+  }
+
+  if (byBike) {
+    tx.update(stravaBikes)
+      .set({ stravaGearId, componentCreditFrom: creditFrom })
+      .where(eq(stravaBikes.id, byBike.id))
+      .run();
+    return;
+  }
+
+  tx.insert(stravaBikes)
+    .values({
+      userId,
+      bikeId,
+      stravaGearId,
+      componentCreditFrom: creditFrom,
+    })
+    .run();
+}
+
 function processActivity(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   userId: string,
@@ -265,12 +342,8 @@ function processActivity(
     return { processedActivities: 0, skippedActivities: 1, creditedComponents: 0 };
   }
 
-  const bike = tx
-    .select()
-    .from(bikes)
-    .where(and(eq(bikes.userId, userId), eq(bikes.stravaGearId, activity.gearId)))
-    .get();
-  if (!bike) {
+  const linked = resolveLinkedBike(tx, userId, activity.gearId);
+  if (!linked) {
     return { processedActivities: 0, skippedActivities: 1, creditedComponents: 0 };
   }
 
@@ -278,7 +351,7 @@ function processActivity(
     .insert(stravaActivities)
     .values({
       userId,
-      bikeId: bike.id,
+      bikeId: linked.bikeId,
       stravaActivityId: activity.stravaActivityId,
       stravaGearId: activity.gearId,
       distanceMeters: activity.distanceMeters,
@@ -288,20 +361,21 @@ function processActivity(
     .returning()
     .get();
 
+  if (!activityDateOnOrAfterCreditFrom(activity.startDate, linked.componentCreditFrom)) {
+    return {
+      processedActivities: 1,
+      skippedActivities: 0,
+      creditedComponents: 0,
+    };
+  }
+
   const activeComponents = tx
     .select()
     .from(components)
-    .where(and(eq(components.bikeId, bike.id), eq(components.isActive, true)))
+    .where(and(eq(components.bikeId, linked.bikeId), eq(components.isActive, true)))
     .all();
 
   for (const component of activeComponents) {
-    tx.update(components)
-      .set({
-        distanceMeters: sql`coalesce(${components.distanceMeters}, 0) + ${activity.distanceMeters}`,
-        movingTimeMinutes: sql`coalesce(${components.movingTimeMinutes}, 0) + ${activity.movingTimeMinutes}`,
-      })
-      .where(eq(components.id, component.id))
-      .run();
     tx.insert(stravaActivityComponents)
       .values({
         activityId: createdActivity.id,
@@ -348,9 +422,9 @@ async function loadAggregates(userId: string): Promise<Map<string, GearAggregate
 stravaRouter.get("/status", (req, res) => {
   const { userId } = getAuthContext(req);
   const linkedBikes = db
-    .select({ id: bikes.id })
-    .from(bikes)
-    .where(and(eq(bikes.userId, userId), sql`${bikes.stravaGearId} IS NOT NULL`))
+    .select({ id: stravaBikes.id })
+    .from(stravaBikes)
+    .where(eq(stravaBikes.userId, userId))
     .all().length;
 
   res.json({
@@ -460,6 +534,13 @@ stravaRouter.post("/import/commit", async (req, res) => {
           throw badRequest("That Strava bike is already linked to another bike");
         }
         tx.update(bikes).set({ stravaGearId: decision.gearId }).where(eq(bikes.id, bike.id)).run();
+        upsertStravaBikeLink(
+          tx,
+          userId,
+          bike.id,
+          decision.gearId,
+          data.creditHistoricalComponents ?? false,
+        );
         counters.linked += 1;
       } else {
         if (alreadyLinked) {
@@ -475,6 +556,13 @@ stravaRouter.post("/import/commit", async (req, res) => {
           .returning()
           .get();
         createImportedMileageComponent(tx, bike.id, aggregate);
+        upsertStravaBikeLink(
+          tx,
+          userId,
+          bike.id,
+          decision.gearId,
+          data.creditHistoricalComponents ?? false,
+        );
         counters.created += 1;
       }
 

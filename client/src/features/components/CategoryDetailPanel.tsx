@@ -4,6 +4,7 @@ import { categoryLabel } from "shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { CategoryDetailContent, type CategoryFormMode } from "./CategoryDetailContent";
+import type { WearByComponentId } from "./ComponentsSplitView";
 
 interface CategoryDetailPanelProps {
   bikeId: string;
@@ -11,6 +12,7 @@ interface CategoryDetailPanelProps {
   componentsByCategory: Map<string, Component[]>;
   formMode: CategoryFormMode;
   onFormModeChange: (mode: CategoryFormMode) => void;
+  wearByComponentId?: WearByComponentId;
   className?: string;
 }
 
@@ -20,6 +22,7 @@ export function CategoryDetailPanel({
   componentsByCategory,
   formMode,
   onFormModeChange,
+  wearByComponentId,
   className,
 }: CategoryDetailPanelProps) {
   if (!selectedCategoryId) {
@@ -52,6 +55,7 @@ export function CategoryDetailPanel({
           components={components}
           formMode={formMode}
           onFormModeChange={onFormModeChange}
+          wearByComponentId={wearByComponentId}
         />
       </CardContent>
     </Card>

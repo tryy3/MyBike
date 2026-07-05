@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -9,7 +9,7 @@ import {
   Trash2Icon,
   UploadIcon,
 } from "lucide-react";
-import { CATEGORIES } from "shared";
+import { CATEGORIES, categoryLabel } from "shared";
 import type { Component } from "shared";
 
 import { Badge } from "@/components/ui/badge";
@@ -27,9 +27,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { BikeForm } from "@/features/bikes/BikeForm";
 import { useBike, useDeleteBike } from "@/features/bikes/api";
-import { ComponentsSplitView } from "@/features/components/ComponentsSplitView";
+import {
+  ComponentsSplitView,
+  type WearByComponentId,
+} from "@/features/components/ComponentsSplitView";
 import { ImportComponentsDialog } from "@/features/components/ImportComponentsDialog";
 import { buildTemplateCsv, downloadCsv } from "@/features/components/csv";
+import { useBikeStats } from "@/features/stats/api";
+import { ActivityList } from "@/features/activities/ActivityList";
+import { ComponentStats } from "@/features/stats/ComponentStats";
+import { formatDistance, formatMovingTime, hasStats } from "@/lib/format-stats";
 import { api } from "@/lib/api";
 
 interface BikeDetailPageProps {
@@ -49,6 +56,7 @@ function groupByCategory(components: Component[]): Map<string, Component[]> {
 export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
   const navigate = useNavigate();
   const { data, isPending, isError, error, refetch } = useBike(bikeId);
+  const bikeStats = useBikeStats(bikeId);
   const deleteBike = useDeleteBike();
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -63,6 +71,17 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
       document.title = "MyBike";
     };
   }, [data?.name]);
+
+  const wearByComponentId = useMemo((): WearByComponentId => {
+    const map: WearByComponentId = new Map();
+    for (const c of bikeStats.data?.components ?? []) {
+      map.set(c.id, {
+        distanceMeters: c.distanceMeters,
+        movingTimeMinutes: c.movingTimeMinutes,
+      });
+    }
+    return map;
+  }, [bikeStats.data?.components]);
 
   function handleDownloadTemplate(): void {
     downloadCsv("mybike-components-template.csv", buildTemplateCsv());
@@ -103,8 +122,11 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
 
   const grouped = groupByCategory(data.components);
   const categoriesUsed = grouped.size;
-  const activeCount = data.components.filter((c) => c.isActive).length;
   const emptyCategoryCount = CATEGORIES.length - categoriesUsed;
+  const wearComponents =
+    bikeStats.data?.components.filter(
+      (c) => c.isActive && hasStats(c.distanceMeters, c.movingTimeMinutes),
+    ) ?? [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -160,6 +182,14 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
             </Badge>
           </TabsTrigger>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="activities">
+            Activities
+            {bikeStats.data?.rideStats?.activityCount ? (
+              <Badge variant="secondary" className="ml-2">
+                {bikeStats.data.rideStats.activityCount}
+              </Badge>
+            ) : null}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="components" className="flex flex-col gap-4">
@@ -203,19 +233,83 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
             components={data.components}
             showEmptyCategories={showEmptyCategories}
             categoriesUsed={categoriesUsed}
+            wearByComponentId={wearByComponentId}
           />
         </TabsContent>
 
-        <TabsContent value="overview">
+        <TabsContent value="overview" className="flex flex-col gap-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Bike overview</CardTitle>
-              <CardDescription>Snapshot of {data.name} and its setup.</CardDescription>
+              <CardTitle className="text-base">Ride summary</CardTitle>
+              <CardDescription>Strava-synced totals for this bike.</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-3 text-sm">
-              <OverviewRow label="Total components">{data.components.length}</OverviewRow>
-              <OverviewRow label="Categories used">{categoriesUsed}</OverviewRow>
-              <OverviewRow label="Active components">{activeCount}</OverviewRow>
+              <OverviewRow label="Total distance">
+                {bikeStats.data?.rideStats
+                  ? formatDistance(bikeStats.data.rideStats.distanceMeters)
+                  : "—"}
+              </OverviewRow>
+              <OverviewRow label="Moving time">
+                {bikeStats.data?.rideStats
+                  ? formatMovingTime(bikeStats.data.rideStats.movingTimeMinutes)
+                  : "—"}
+              </OverviewRow>
+              <OverviewRow label="Rides synced">
+                {bikeStats.data?.rideStats?.activityCount ?? "—"}
+              </OverviewRow>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Component wear</CardTitle>
+              <CardDescription>Active components with recorded mileage.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3 text-sm">
+              {bikeStats.isPending ? (
+                <p className="text-muted-foreground">Loading stats…</p>
+              ) : wearComponents.length === 0 ? (
+                <p className="text-muted-foreground">
+                  No component mileage yet — sync Strava or enter usage in a component's edit form.
+                </p>
+              ) : (
+                <ul className="flex flex-col divide-y">
+                  {wearComponents.map((component) => (
+                    <li
+                      key={component.id}
+                      className="flex items-center justify-between gap-3 py-2 first:pt-0 last:pb-0"
+                    >
+                      <div className="min-w-0">
+                        <span className="text-muted-foreground">
+                          {categoryLabel(component.category)}
+                        </span>
+                        <span className="text-muted-foreground"> · </span>
+                        <span className="font-medium">{component.name}</span>
+                      </div>
+                      <ComponentStats
+                        distanceMeters={component.distanceMeters}
+                        movingTimeMinutes={component.movingTimeMinutes}
+                        className="shrink-0 text-muted-foreground"
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="activities" className="flex flex-col gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Synced rides</CardTitle>
+              <CardDescription>
+                Strava activities for this bike. Edit a ride to correct distance or linked
+                components.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ActivityList bikeId={bikeId} components={data.components} />
             </CardContent>
           </Card>
         </TabsContent>
