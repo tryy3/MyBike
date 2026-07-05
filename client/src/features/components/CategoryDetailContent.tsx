@@ -22,31 +22,34 @@ import type { Component } from "shared";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { cn } from "@/lib/utils";
+import { componentBrandModel } from "./component-display";
 import { ComponentForm } from "./ComponentForm";
 import { useActivateComponent, useDeleteComponent, useReorderComponents } from "./api";
 
-interface CategorySectionProps {
+export type CategoryFormMode = "add" | { edit: string } | null;
+
+interface CategoryDetailContentProps {
   bikeId: string;
   categoryId: string;
   label: string;
   components: Component[];
+  formMode: CategoryFormMode;
+  onFormModeChange: (mode: CategoryFormMode) => void;
 }
 
-export function CategorySection({ bikeId, categoryId, label, components }: CategorySectionProps) {
+export function CategoryDetailContent({
+  bikeId,
+  categoryId,
+  label,
+  components,
+  formMode,
+  onFormModeChange,
+}: CategoryDetailContentProps) {
   const reorder = useReorderComponents(bikeId);
   const activate = useActivateComponent(bikeId);
   const deleteComponent = useDeleteComponent(bikeId);
-  const [adding, setAdding] = useState(false);
-  const [editing, setEditing] = useState<Component | null>(null);
   const [deleting, setDeleting] = useState<Component | null>(null);
 
   const sensors = useSensors(
@@ -54,14 +57,19 @@ export function CategorySection({ bikeId, categoryId, label, components }: Categ
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
   const sortable = components.length > 1;
+  const sorted = [...components].sort((a, b) => a.sortOrder - b.sortOrder);
+  const editingComponent =
+    formMode && typeof formMode === "object"
+      ? components.find((c) => c.id === formMode.edit)
+      : undefined;
 
   function onDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const oldIndex = components.findIndex((c) => c.id === active.id);
-    const newIndex = components.findIndex((c) => c.id === over.id);
+    const oldIndex = sorted.findIndex((c) => c.id === active.id);
+    const newIndex = sorted.findIndex((c) => c.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
-    const reordered = arrayMove(components, oldIndex, newIndex);
+    const reordered = arrayMove(sorted, oldIndex, newIndex);
     reorder.mutate(
       {
         category: categoryId,
@@ -102,79 +110,117 @@ export function CategorySection({ bikeId, categoryId, label, components }: Categ
     }
   }
 
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between gap-3">
-          <CardTitle className="text-base">{label}</CardTitle>
-          <Badge variant="outline" className="tabular-nums">
-            {components.length}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="flex flex-col">
-        {components.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
-            No components in this category yet.
+  if (formMode === "add") {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1">
+          <h3 className="font-medium">Add {label.toLowerCase()} component</h3>
+          <p className="text-sm text-muted-foreground">
+            Add a component you can swap into this category.
           </p>
-        ) : (
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-            <SortableContext
-              items={components.map((c) => c.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              <ul className="flex flex-col divide-y">
-                {components.map((c) => (
-                  <ComponentRow
-                    key={c.id}
-                    component={c}
-                    canActivate={components.length > 1}
-                    draggable={sortable}
-                    activating={activate.isPending}
-                    onActivate={() => handleActivate(c)}
-                    onEdit={() => setEditing(c)}
-                    onDelete={() => setDeleting(c)}
-                  />
-                ))}
-              </ul>
-            </SortableContext>
-          </DndContext>
-        )}
-      </CardContent>
-      <CardFooter>
-        <Button variant="outline" size="sm" onClick={() => setAdding(true)} className="w-full">
-          <PlusIcon /> Add component
-        </Button>
-      </CardFooter>
+        </div>
+        <ComponentForm
+          bikeId={bikeId}
+          category={categoryId}
+          onDone={() => onFormModeChange(null)}
+        />
+      </div>
+    );
+  }
 
-      <Dialog open={adding} onOpenChange={setAdding}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add {label.toLowerCase()} component</DialogTitle>
-            <DialogDescription>Add a component you can swap into this category.</DialogDescription>
-          </DialogHeader>
-          <ComponentForm bikeId={bikeId} category={categoryId} onDone={() => setAdding(false)} />
-        </DialogContent>
-      </Dialog>
+  if (editingComponent) {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1">
+          <h3 className="font-medium">Edit component</h3>
+          <p className="text-sm text-muted-foreground">
+            Keep names short so they are easy to pick between.
+          </p>
+        </div>
+        <ComponentForm
+          bikeId={bikeId}
+          category={categoryId}
+          component={editingComponent}
+          onDone={() => onFormModeChange(null)}
+        />
+      </div>
+    );
+  }
 
-      <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit component</DialogTitle>
-            <DialogDescription>
-              Keep names short so they are easy to pick between.
-            </DialogDescription>
-          </DialogHeader>
-          {editing && (
-            <ComponentForm
-              bikeId={bikeId}
-              category={categoryId}
-              component={editing}
-              onDone={() => setEditing(null)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+  const hasActive = sorted.some((c) => c.isActive);
+  const hasAlternates = sorted.some((c) => !c.isActive);
+
+  return (
+    <div className="flex flex-col gap-4">
+      {components.length === 0 ? (
+        <p className="py-4 text-center text-sm text-muted-foreground">
+          No components in this category yet.
+        </p>
+      ) : (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+          <SortableContext items={sorted.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+            <div className="flex flex-col gap-4">
+              {hasActive ? (
+                <section className="flex flex-col gap-2">
+                  <h4 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                    Active
+                  </h4>
+                  <ul className="flex flex-col divide-y rounded-lg border">
+                    {sorted
+                      .filter((c) => c.isActive)
+                      .map((c) => (
+                        <ComponentRow
+                          key={c.id}
+                          component={c}
+                          canActivate={false}
+                          draggable={sortable}
+                          activating={activate.isPending}
+                          highlighted
+                          onActivate={() => handleActivate(c)}
+                          onEdit={() => onFormModeChange({ edit: c.id })}
+                          onDelete={() => setDeleting(c)}
+                        />
+                      ))}
+                  </ul>
+                </section>
+              ) : null}
+
+              {hasAlternates ? (
+                <section className="flex flex-col gap-2">
+                  <h4 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                    Alternates
+                  </h4>
+                  <ul className="flex flex-col divide-y rounded-lg border">
+                    {sorted
+                      .filter((c) => !c.isActive)
+                      .map((c) => (
+                        <ComponentRow
+                          key={c.id}
+                          component={c}
+                          canActivate={components.length > 1}
+                          draggable={sortable}
+                          activating={activate.isPending}
+                          onActivate={() => handleActivate(c)}
+                          onEdit={() => onFormModeChange({ edit: c.id })}
+                          onDelete={() => setDeleting(c)}
+                        />
+                      ))}
+                  </ul>
+                </section>
+              ) : null}
+            </div>
+          </SortableContext>
+        </DndContext>
+      )}
+
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onFormModeChange("add")}
+        className="w-full"
+      >
+        <PlusIcon /> Add component
+      </Button>
 
       <ConfirmDialog
         open={!!deleting}
@@ -186,7 +232,7 @@ export function CategorySection({ bikeId, categoryId, label, components }: Categ
         loadingLabel="Deleting…"
         onConfirm={handleDelete}
       />
-    </Card>
+    </div>
   );
 }
 
@@ -195,6 +241,7 @@ function ComponentRow({
   canActivate,
   draggable,
   activating,
+  highlighted,
   onActivate,
   onEdit,
   onDelete,
@@ -203,6 +250,7 @@ function ComponentRow({
   canActivate: boolean;
   draggable: boolean;
   activating: boolean;
+  highlighted?: boolean;
   onActivate: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -222,7 +270,10 @@ function ComponentRow({
     <li
       ref={setNodeRef}
       style={style}
-      className="flex items-center justify-between gap-3 px-1 py-3"
+      className={cn(
+        "flex items-center justify-between gap-3 px-3 py-3",
+        highlighted && "bg-muted/40",
+      )}
     >
       <div className="flex min-w-0 flex-1 items-center gap-1">
         {draggable && (
@@ -246,7 +297,7 @@ function ComponentRow({
             )}
           </div>
           <span className="truncate text-sm text-muted-foreground">
-            {[component.brand, component.model].filter(Boolean).join(" · ") || "—"}
+            {componentBrandModel(component) ?? "—"}
           </span>
         </div>
       </div>

@@ -27,7 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { BikeForm } from "@/features/bikes/BikeForm";
 import { useBike, useDeleteBike } from "@/features/bikes/api";
-import { CategorySection } from "@/features/components/CategorySection";
+import { ComponentsSplitView } from "@/features/components/ComponentsSplitView";
 import { ImportComponentsDialog } from "@/features/components/ImportComponentsDialog";
 import { buildTemplateCsv, downloadCsv } from "@/features/components/csv";
 import { api } from "@/lib/api";
@@ -105,9 +105,6 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
   const categoriesUsed = grouped.size;
   const activeCount = data.components.filter((c) => c.isActive).length;
   const emptyCategoryCount = CATEGORIES.length - categoriesUsed;
-  const visibleCategories = CATEGORIES.filter(
-    (cat) => showEmptyCategories || categoriesUsed === 0 || (grouped.get(cat.id)?.length ?? 0) > 0,
-  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -201,17 +198,12 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
               </Button>
             )}
           </div>
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {visibleCategories.map((cat) => (
-              <CategorySection
-                key={cat.id}
-                bikeId={bikeId}
-                categoryId={cat.id}
-                label={cat.label}
-                components={grouped.get(cat.id) ?? []}
-              />
-            ))}
-          </div>
+          <ComponentsSplitView
+            bikeId={bikeId}
+            components={data.components}
+            showEmptyCategories={showEmptyCategories}
+            categoriesUsed={categoriesUsed}
+          />
         </TabsContent>
 
         <TabsContent value="overview">
