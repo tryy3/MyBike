@@ -14,12 +14,36 @@ export interface StravaActivity {
   startDate: string;
 }
 
+export interface StravaAthleteProfile {
+  id: string;
+  firstname?: string;
+  lastname?: string;
+  username?: string;
+  profile?: string;
+  profileMedium?: string;
+  email?: string;
+}
+
 export interface StravaTokenResponse {
   athleteId: string;
   accessToken: string;
   refreshToken: string;
   expiresAtMs: number;
   scope?: string;
+  athlete?: StravaAthleteProfile;
+}
+
+export const STRAVA_PROVIDER_ID = "strava";
+
+export function stravaPlaceholderEmail(athleteId: string): string {
+  return `strava+${athleteId}@strava.users.mybike`;
+}
+
+export function stravaAthleteDisplayName(athlete: StravaAthleteProfile): string {
+  const fullName = [athlete.firstname, athlete.lastname].filter(Boolean).join(" ").trim();
+  if (fullName.length > 0) return fullName;
+  if (athlete.username) return athlete.username;
+  return `Strava athlete ${athlete.id}`;
 }
 
 export interface StravaGearSummary {
@@ -203,12 +227,29 @@ export function buildStravaAuthorizationUrl(state: string): string {
   return url.toString();
 }
 
+function parseAthleteProfile(
+  raw: Record<string, unknown> | undefined,
+): StravaAthleteProfile | undefined {
+  if (!raw || (typeof raw.id !== "string" && typeof raw.id !== "number")) {
+    return undefined;
+  }
+
+  return {
+    id: String(raw.id),
+    firstname: typeof raw.firstname === "string" ? raw.firstname : undefined,
+    lastname: typeof raw.lastname === "string" ? raw.lastname : undefined,
+    username: typeof raw.username === "string" ? raw.username : undefined,
+    profile: typeof raw.profile === "string" ? raw.profile : undefined,
+    profileMedium: typeof raw.profile_medium === "string" ? raw.profile_medium : undefined,
+    email: typeof raw.email === "string" ? raw.email : undefined,
+  };
+}
+
 function parseTokenResponse(raw: unknown, fallbackScope?: string): StravaTokenResponse {
   const data = raw as Record<string, unknown>;
-  const athlete = data.athlete as Record<string, unknown> | undefined;
+  const athlete = parseAthleteProfile(data.athlete as Record<string, unknown> | undefined);
   if (
     !athlete ||
-    (typeof athlete.id !== "string" && typeof athlete.id !== "number") ||
     typeof data.access_token !== "string" ||
     typeof data.refresh_token !== "string" ||
     typeof data.expires_at !== "number"
@@ -216,11 +257,12 @@ function parseTokenResponse(raw: unknown, fallbackScope?: string): StravaTokenRe
     throw new HttpError(502, "Strava returned an invalid OAuth response");
   }
   return {
-    athleteId: String(athlete.id),
+    athleteId: athlete.id,
     accessToken: data.access_token,
     refreshToken: data.refresh_token,
     expiresAtMs: data.expires_at * 1000,
     scope: typeof data.scope === "string" ? data.scope : fallbackScope,
+    athlete,
   };
 }
 

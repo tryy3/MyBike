@@ -14,15 +14,20 @@ import {
   fetchStravaAthleteBikes,
   fetchStravaGearName,
   refreshStravaAccessToken,
+  STRAVA_PROVIDER_ID,
   type StravaActivity,
   type StravaTokenResponse,
 } from "../lib/strava-client.js";
+import { isStravaOAuthConfigured } from "../lib/strava-oauth.js";
 import { stravaImportCommitSchema, type StravaImportDecision } from "shared";
 
-const STRAVA_PROVIDER_ID = "strava";
 const OAUTH_STATE_COOKIE = "mybike_strava_state";
 
 export const stravaRouter = Router();
+
+stravaRouter.get("/config", (_req, res) => {
+  res.json({ configured: isStravaOAuthConfigured() });
+});
 
 interface GearAggregate {
   gearId: string;

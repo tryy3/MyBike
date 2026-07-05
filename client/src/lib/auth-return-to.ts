@@ -46,6 +46,16 @@ export function saveAuthReturnTo(): void {
   }
 }
 
+/** Read the stored return path without clearing it. */
+export function peekAuthReturnTo(fallback = "/"): string {
+  try {
+    const raw = sessionStorage.getItem(RETURN_TO_KEY);
+    return getSafeRedirectPath(raw, fallback);
+  } catch {
+    return fallback;
+  }
+}
+
 /** Read and clear the stored return path, falling back when missing or invalid. */
 export function consumeAuthReturnTo(fallback = "/"): string {
   try {

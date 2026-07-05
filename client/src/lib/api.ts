@@ -114,6 +114,7 @@ export const api = {
   commitStravaImport: (data: StravaImportCommit) =>
     apiFetch<StravaImportCommitResult>("/api/strava/import/commit", json("POST", data)),
   syncStrava: () => apiFetch<StravaSyncResult>("/api/strava/sync", { method: "POST" }),
+  getStravaConfig: () => apiFetch<{ configured: boolean }>("/api/strava/config"),
 };
 
 export interface ImportResult {
@@ -133,4 +134,5 @@ export const queryKeys = {
   bike: (id: string) => ["bikes", id] as const,
   fieldSuggestions: ["field-suggestions"] as const,
   stravaStatus: ["strava", "status"] as const,
+  stravaConfig: ["strava", "config"] as const,
 };
