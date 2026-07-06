@@ -9,6 +9,7 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field
 import { Input } from "@/components/ui/input";
 import { consumeAuthReturnTo } from "@/lib/auth-return-to";
 import { useSignIn } from "./api";
+import { AuthDivider, StravaAuthButton } from "./StravaAuthButton";
 
 export function LoginForm() {
   const navigate = useNavigate();
@@ -32,6 +33,8 @@ export function LoginForm() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
+      <StravaAuthButton mode="login" />
+      <AuthDivider />
       <FieldGroup>
         <Controller
           name="email"

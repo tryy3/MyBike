@@ -24,10 +24,17 @@ export const bikes = sqliteTable(
     model: text("model"),
     year: integer("year"),
     notes: text("notes"),
+    stravaGearId: text("strava_gear_id"),
     createdAt: integer("created_at").notNull().$defaultFn(nowMs),
     updatedAt: integer("updated_at").notNull().$defaultFn(nowMs).$onUpdateFn(nowMs),
   },
-  (t) => [index("idx_bikes_name").on(t.name), index("idx_bikes_user").on(t.userId)],
+  (t) => [
+    index("idx_bikes_name").on(t.name),
+    index("idx_bikes_user").on(t.userId),
+    uniqueIndex("idx_bikes_user_strava_gear")
+      .on(t.userId, t.stravaGearId)
+      .where(sql`${t.stravaGearId} IS NOT NULL`),
+  ],
 );
 
 export const components = sqliteTable(
@@ -70,5 +77,90 @@ export const components = sqliteTable(
   ],
 );
 
+export const stravaSyncState = sqliteTable("strava_sync_state", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  lastSyncedAt: integer("last_synced_at").notNull(),
+  updatedAt: integer("updated_at").notNull().$defaultFn(nowMs).$onUpdateFn(nowMs),
+});
+
+export const stravaBikes = sqliteTable(
+  "strava_bikes",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => uuid()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    stravaGearId: text("strava_gear_id").notNull(),
+    bikeId: text("bike_id")
+      .notNull()
+      .references(() => bikes.id, { onDelete: "cascade" }),
+    linkedAt: integer("linked_at").notNull().$defaultFn(nowMs),
+    // Activities with start_date before this day (YYYY-MM-DD) are stored but not
+    // linked to components unless the user opted into historical component credit.
+    componentCreditFrom: text("component_credit_from").notNull(),
+  },
+  (t) => [
+    uniqueIndex("idx_strava_bikes_user_gear").on(t.userId, t.stravaGearId),
+    uniqueIndex("idx_strava_bikes_user_bike").on(t.userId, t.bikeId),
+    index("idx_strava_bikes_bike").on(t.bikeId),
+  ],
+);
+
+export const stravaActivities = sqliteTable(
+  "strava_activities",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => uuid()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    bikeId: text("bike_id")
+      .notNull()
+      .references(() => bikes.id, { onDelete: "cascade" }),
+    stravaActivityId: text("strava_activity_id").notNull(),
+    stravaGearId: text("strava_gear_id").notNull(),
+    distanceMeters: integer("distance_meters").notNull(),
+    movingTimeMinutes: integer("moving_time_minutes").notNull(),
+    startDate: text("start_date").notNull(),
+    processedAt: integer("processed_at").notNull().$defaultFn(nowMs),
+    editedAt: integer("edited_at"),
+  },
+  (t) => [
+    index("idx_strava_activities_user").on(t.userId),
+    index("idx_strava_activities_bike").on(t.bikeId),
+    uniqueIndex("idx_strava_activities_user_activity").on(t.userId, t.stravaActivityId),
+  ],
+);
+
+export const stravaActivityComponents = sqliteTable(
+  "strava_activity_components",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => uuid()),
+    activityId: text("activity_id")
+      .notNull()
+      .references(() => stravaActivities.id, { onDelete: "cascade" }),
+    componentId: text("component_id")
+      .notNull()
+      .references(() => components.id, { onDelete: "cascade" }),
+    distanceMeters: integer("distance_meters").notNull(),
+    movingTimeMinutes: integer("moving_time_minutes").notNull(),
+  },
+  (t) => [
+    index("idx_strava_activity_components_activity").on(t.activityId),
+    index("idx_strava_activity_components_component").on(t.componentId),
+    uniqueIndex("idx_strava_activity_components_unique").on(t.activityId, t.componentId),
+  ],
+);
+
+export type StravaSyncStateRow = typeof stravaSyncState.$inferSelect;
 export type BikeRow = typeof bikes.$inferSelect;
 export type ComponentRow = typeof components.$inferSelect;
+export type StravaBikeRow = typeof stravaBikes.$inferSelect;
+export type StravaActivityRow = typeof stravaActivities.$inferSelect;

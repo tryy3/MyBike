@@ -2,8 +2,10 @@ import type { SystemGroupColorToken, SystemGroupNav } from "shared";
 import { getActiveComponent } from "shared";
 
 import { Badge } from "@/components/ui/badge";
+import { ComponentStats } from "@/features/stats/ComponentStats";
 import { cn } from "@/lib/utils";
 import { componentBrandModel } from "./component-display";
+import type { WearByComponentId } from "./ComponentsSplitView";
 
 const GROUP_DOT_CLASS: Record<SystemGroupColorToken, string> = {
   "chart-1": "bg-chart-1",
@@ -40,6 +42,7 @@ interface ComponentsNavProps {
   selectedCategoryId: string | null;
   showEmptyCategories: boolean;
   categoriesUsed: number;
+  wearByComponentId?: WearByComponentId;
   onSelectCategory: (categoryId: string) => void;
 }
 
@@ -48,6 +51,7 @@ export function ComponentsNav({
   selectedCategoryId,
   showEmptyCategories,
   categoriesUsed,
+  wearByComponentId,
   onSelectCategory,
 }: ComponentsNavProps) {
   return (
@@ -80,6 +84,12 @@ export function ComponentsNav({
                 const alternateCount = Math.max(0, components.length - 1);
                 const selected = selectedCategoryId === category.id;
                 const brandModel = active ? componentBrandModel(active) : null;
+                const displayWear = active
+                  ? (wearByComponentId?.get(active.id) ?? {
+                      distanceMeters: active.distanceMeters,
+                      movingTimeMinutes: active.movingTimeMinutes,
+                    })
+                  : null;
 
                 return (
                   <li key={category.id}>
@@ -110,6 +120,13 @@ export function ComponentsNav({
                               <span className="truncate text-xs text-muted-foreground">
                                 {brandModel}
                               </span>
+                            ) : null}
+                            {displayWear ? (
+                              <ComponentStats
+                                distanceMeters={displayWear.distanceMeters}
+                                movingTimeMinutes={displayWear.movingTimeMinutes}
+                                className="truncate text-xs text-muted-foreground"
+                              />
                             ) : null}
                           </>
                         ) : (

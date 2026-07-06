@@ -1,4 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { CircleHelpIcon, RotateCcwIcon } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { useEffect } from "react";
 import { toast } from "sonner";
@@ -9,7 +10,15 @@ import { ComboboxField } from "@/components/ComboboxField";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+  InputGroupText,
+} from "@/components/ui/input-group";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCreateComponent, useFieldSuggestions, useUpdateComponent } from "./api";
 import {
   hoursMinutesToMinutes,
@@ -208,79 +217,125 @@ export function ComponentForm({ bikeId, category, component, onDone }: Component
               const errorId = `${field.name}-error`;
               return (
                 <Field className="flex-1" data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor={field.name}>Distance (km)</FieldLabel>
-                  <Input
-                    id={field.name}
-                    {...field}
-                    value={field.value ?? ""}
-                    type="number"
-                    min={0}
-                    step={0.1}
-                    inputMode="decimal"
-                    placeholder="e.g. 2400"
-                    autoComplete="off"
-                    aria-invalid={fieldState.invalid}
-                    aria-describedby={fieldState.invalid ? errorId : undefined}
-                  />
+                  <FieldLabel htmlFor={field.name} className="items-center">
+                    Starting distance (km)
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="inline-flex shrink-0 text-muted-foreground transition-colors hover:text-foreground"
+                          aria-label="About starting distance"
+                        >
+                          <CircleHelpIcon className="size-3.5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-56 text-pretty">
+                        Wear before MyBike or Strava tracking. Ride mileage is added from synced
+                        activities.
+                      </TooltipContent>
+                    </Tooltip>
+                  </FieldLabel>
+                  <div className="w-full">
+                    <InputGroup className="w-auto min-w-0">
+                      <InputGroupInput
+                        id={field.name}
+                        {...field}
+                        value={field.value ?? ""}
+                        type="number"
+                        min={0}
+                        step={0.1}
+                        inputMode="decimal"
+                        placeholder="e.g. 100"
+                        autoComplete="off"
+                        aria-invalid={fieldState.invalid}
+                        aria-describedby={fieldState.invalid ? errorId : undefined}
+                      />
+                      <InputGroupAddon align="inline-end">
+                        <InputGroupButton
+                          aria-label="Reset starting distance"
+                          disabled={!field.value?.trim()}
+                          onClick={() => field.onChange("")}
+                        >
+                          <RotateCcwIcon />
+                        </InputGroupButton>
+                      </InputGroupAddon>
+                    </InputGroup>
+                  </div>
                   {fieldState.invalid && <FieldError id={errorId} errors={[fieldState.error]} />}
                 </Field>
               );
             }}
           />
 
-          <div className="flex flex-1 gap-2">
-            <Controller
-              name="movingTimeHours"
-              control={form.control}
-              render={({ field, fieldState }) => {
-                const errorId = `${field.name}-error`;
-                return (
-                  <Field className="flex-1" data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor={field.name}>Hours</FieldLabel>
-                    <Input
-                      id={field.name}
-                      {...field}
-                      value={field.value ?? ""}
-                      type="number"
-                      min={0}
-                      step={1}
-                      placeholder="0"
-                      autoComplete="off"
-                      aria-invalid={fieldState.invalid}
-                      aria-describedby={fieldState.invalid ? errorId : undefined}
-                    />
-                    {fieldState.invalid && <FieldError id={errorId} errors={[fieldState.error]} />}
-                  </Field>
-                );
-              }}
-            />
-            <Controller
-              name="movingTimeMinutes"
-              control={form.control}
-              render={({ field, fieldState }) => {
-                const errorId = `${field.name}-error`;
-                return (
-                  <Field className="flex-1" data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor={field.name}>Minutes</FieldLabel>
-                    <Input
-                      id={field.name}
-                      {...field}
-                      value={field.value ?? ""}
-                      type="number"
-                      min={0}
-                      max={59}
-                      step={1}
-                      placeholder="0"
-                      autoComplete="off"
-                      aria-invalid={fieldState.invalid}
-                      aria-describedby={fieldState.invalid ? errorId : undefined}
-                    />
-                    {fieldState.invalid && <FieldError id={errorId} errors={[fieldState.error]} />}
-                  </Field>
-                );
-              }}
-            />
-          </div>
+          <Controller
+            name="movingTimeHours"
+            control={form.control}
+            render={({ field: hoursField, fieldState: hoursState }) => (
+              <Controller
+                name="movingTimeMinutes"
+                control={form.control}
+                render={({ field: minutesField, fieldState: minutesState }) => {
+                  const invalid = hoursState.invalid || minutesState.invalid;
+                  const errorId = "movingTime-error";
+                  const errors = [hoursState.error, minutesState.error];
+                  const hasValue = Boolean(hoursField.value?.trim() || minutesField.value?.trim());
+
+                  return (
+                    <Field className="flex-1" data-invalid={invalid}>
+                      <FieldLabel htmlFor={hoursField.name}>Moving time</FieldLabel>
+                      <div className="w-full">
+                        <InputGroup className="w-auto min-w-0">
+                          <InputGroupInput
+                            id={hoursField.name}
+                            {...hoursField}
+                            value={hoursField.value ?? ""}
+                            type="number"
+                            min={0}
+                            step={1}
+                            placeholder="0"
+                            autoComplete="off"
+                            aria-label="Hours"
+                            aria-invalid={hoursState.invalid}
+                            aria-describedby={invalid ? errorId : undefined}
+                          />
+                          <InputGroupText>h</InputGroupText>
+                          <InputGroupInput
+                            id={minutesField.name}
+                            {...minutesField}
+                            value={minutesField.value ?? ""}
+                            type="number"
+                            min={0}
+                            max={59}
+                            step={1}
+                            placeholder="0"
+                            autoComplete="off"
+                            aria-label="Minutes"
+                            aria-invalid={minutesState.invalid}
+                            aria-describedby={invalid ? errorId : undefined}
+                            className="border-l border-input"
+                          />
+                          <InputGroupText>min</InputGroupText>
+                          <InputGroupAddon align="inline-end">
+                            <InputGroupButton
+                              aria-label="Reset moving time"
+                              disabled={!hasValue}
+                              onClick={() => {
+                                hoursField.onChange("");
+                                minutesField.onChange("");
+                              }}
+                            >
+                              <RotateCcwIcon />
+                            </InputGroupButton>
+                          </InputGroupAddon>
+                        </InputGroup>
+                      </div>
+                      {invalid && <FieldError id={errorId} errors={errors} />}
+                    </Field>
+                  );
+                }}
+              />
+            )}
+          />
         </div>
 
         <div className="flex flex-col gap-4 sm:flex-row">

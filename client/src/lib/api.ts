@@ -1,14 +1,25 @@
 import type {
+  ActivityDetail,
+  ActivityList,
+  ActivityUpdate,
   Bike,
   BikeDetail,
   BikeInsert,
   BikeListItem,
+  BikeStats,
   BikeUpdate,
   Component,
   ComponentInsert,
   ComponentReorder,
   ComponentUpdate,
   FieldSuggestions,
+  GarageStats,
+  StravaImportCommit,
+  StravaImportCommitResult,
+  StravaImportPreview,
+  StravaStatus,
+  StravaBackfillResult,
+  StravaSyncResult,
 } from "shared";
 
 export class ApiError extends Error {
@@ -100,6 +111,35 @@ export const api = {
   exportComponentsUrl: (bikeId: string) => `/api/bikes/${bikeId}/components/export.csv`,
 
   getFieldSuggestions: () => apiFetch<FieldSuggestions>("/api/field-suggestions"),
+
+  // --- Strava ---------------------------------------------------------------
+  getStravaStatus: () => apiFetch<StravaStatus>("/api/strava/status"),
+  getStravaConnectUrl: () =>
+    apiFetch<{ authorizationUrl: string }>("/api/strava/connect").then((r) => r.authorizationUrl),
+  previewStravaImport: () => apiFetch<StravaImportPreview>("/api/strava/import/preview"),
+  commitStravaImport: (data: StravaImportCommit) =>
+    apiFetch<StravaImportCommitResult>("/api/strava/import/commit", json("POST", data)),
+  syncStrava: () => apiFetch<StravaSyncResult>("/api/strava/sync", { method: "POST" }),
+  backfillStravaComponents: () =>
+    apiFetch<StravaBackfillResult>("/api/strava/backfill-components", { method: "POST" }),
+  disconnectStrava: () =>
+    apiFetch<{ disconnected: boolean }>("/api/strava/disconnect", { method: "POST" }),
+  getStravaConfig: () => apiFetch<{ configured: boolean }>("/api/strava/config"),
+
+  // --- Stats ---------------------------------------------------------------
+
+  getGarageStats: () => apiFetch<GarageStats>("/api/stats/garage"),
+  getBikeStats: (bikeId: string) => apiFetch<BikeStats>(`/api/stats/bikes/${bikeId}`),
+
+  listBikeActivities: (bikeId: string, cursor?: string | null) => {
+    const params = new URLSearchParams();
+    if (cursor) params.set("cursor", cursor);
+    const qs = params.toString();
+    return apiFetch<ActivityList>(`/api/bikes/${bikeId}/activities${qs ? `?${qs}` : ""}`);
+  },
+  getActivity: (id: string) => apiFetch<ActivityDetail>(`/api/activities/${id}`),
+  updateActivity: (id: string, data: ActivityUpdate) =>
+    apiFetch<ActivityDetail>(`/api/activities/${id}`, json("PATCH", data)),
 };
 
 export interface ImportResult {
@@ -118,4 +158,9 @@ export const queryKeys = {
   bikes: ["bikes"] as const,
   bike: (id: string) => ["bikes", id] as const,
   fieldSuggestions: ["field-suggestions"] as const,
+  stravaStatus: ["strava", "status"] as const,
+  stravaConfig: ["strava", "config"] as const,
+  garageStats: ["stats", "garage"] as const,
+  bikeStats: (id: string) => ["stats", "bike", id] as const,
+  bikeActivities: (id: string) => ["activities", "bike", id] as const,
 };

@@ -6,6 +6,7 @@ import {
   componentInsertSchema,
   componentUpdateSchema,
 } from "./schemas/component.js";
+import { stravaImportCommitSchema } from "./schemas/strava.js";
 import { CATEGORY_IDS } from "./categories.js";
 import { describe, expect, it } from "vite-plus/test";
 
@@ -114,5 +115,26 @@ describe("componentImportSchema", () => {
     });
 
     expect(result.success).toBe(false);
+  });
+});
+
+describe("stravaImportCommitSchema", () => {
+  it("requires a bike id when linking a Strava bike", () => {
+    expect(
+      stravaImportCommitSchema.safeParse({
+        decisions: [{ gearId: "strava-bike-1", action: "link" }],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepts create and skip import decisions", () => {
+    const result = stravaImportCommitSchema.safeParse({
+      decisions: [
+        { gearId: "strava-bike-1", action: "create" },
+        { gearId: "strava-bike-2", action: "skip" },
+      ],
+    });
+
+    expect(result.success).toBe(true);
   });
 });

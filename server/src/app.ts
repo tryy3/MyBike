@@ -6,6 +6,9 @@ import { fileURLToPath } from "node:url";
 import bikesRouter from "./routes/bikes.js";
 import componentsRouter from "./routes/components.js";
 import fieldSuggestionsRouter from "./routes/field-suggestions.js";
+import statsRouter from "./routes/stats.js";
+import stravaRouter from "./routes/strava.js";
+import { activityRouter, bikeActivitiesRouter } from "./routes/activities.js";
 import { errorHandler } from "./lib/errors.js";
 import { auth } from "./lib/auth.js";
 import { sqlite } from "./db/index.js";
@@ -31,9 +34,13 @@ export function createApp() {
   });
 
   app.use("/api/bikes", bikesRouter);
+  app.use("/api/bikes/:bikeId/activities", bikeActivitiesRouter);
   app.use("/api/bikes/:bikeId/components", componentsRouter);
   app.use("/api/components", componentsRouter);
   app.use("/api/field-suggestions", fieldSuggestionsRouter);
+  app.use("/api/stats", statsRouter);
+  app.use("/api/strava", stravaRouter);
+  app.use("/api/activities", activityRouter);
 
   if (process.env.NODE_ENV === "production") {
     const clientDistPath = resolve(__dirname, "../../client/dist");

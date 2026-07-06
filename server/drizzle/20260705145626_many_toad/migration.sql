@@ -1,0 +1,1 @@
+ALTER TABLE `strava_activities` ADD `edited_at` integer;

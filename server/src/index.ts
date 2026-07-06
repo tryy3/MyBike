@@ -1,3 +1,4 @@
+import "./load-env.js";
 import { createApp } from "./app.js";
 import { applyMigrations } from "./db/migrate.js";
 
