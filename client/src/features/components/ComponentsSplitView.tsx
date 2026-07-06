@@ -70,7 +70,7 @@ export function ComponentsSplitView({
 
   return (
     <>
-      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] lg:items-start lg:gap-6">
+      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(280px,440px)] lg:items-start lg:gap-6">
         <ComponentsNav
           groups={groups}
           selectedCategoryId={selectedCategoryId}
