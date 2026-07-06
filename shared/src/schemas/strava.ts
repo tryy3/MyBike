@@ -61,6 +61,14 @@ export const stravaSyncResultSchema = z.object({
   processedActivities: z.number().int().min(0),
   skippedActivities: z.number().int().min(0),
   creditedComponents: z.number().int().min(0),
+  webhook: z
+    .object({
+      eventsProcessed: z.number().int().min(0),
+      activitiesImported: z.number().int().min(0),
+      skipped: z.number().int().min(0),
+      errors: z.array(z.string()).optional(),
+    })
+    .optional(),
 });
 
 export const stravaBackfillResultSchema = z.object({
