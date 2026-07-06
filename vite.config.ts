@@ -6,6 +6,7 @@ const ignorePatterns = [
   "**/dist/**",
   ".agents/**",
   "server/drizzle/**",
+  "strava-webhook-proxy/drizzle/**",
   "package-lock.json",
   "**/*.db",
 ];
@@ -37,6 +38,10 @@ export default defineConfig({
       },
       {
         files: ["server/**"],
+        env: { node: true },
+      },
+      {
+        files: ["strava-webhook-proxy/**"],
         env: { node: true },
       },
       {

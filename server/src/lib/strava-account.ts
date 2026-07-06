@@ -2,7 +2,11 @@ import { and, eq } from "drizzle-orm";
 import { account } from "../db/auth-schema.js";
 import { db } from "../db/index.js";
 import { HttpError } from "./errors.js";
-import { STRAVA_PROVIDER_ID, type StravaTokenResponse } from "./strava-client.js";
+import {
+  STRAVA_PROVIDER_ID,
+  revokeStravaAccessToken,
+  type StravaTokenResponse,
+} from "./strava-client.js";
 import { findStravaAccount } from "./strava-token.js";
 
 export function findStravaAccountByAthleteId(athleteId: string) {
@@ -48,4 +52,14 @@ export function upsertStravaAccount(userId: string, token: StravaTokenResponse):
       ...values,
     })
     .run();
+}
+
+export async function disconnectStravaUser(userId: string): Promise<void> {
+  const row = findStravaAccount(userId);
+  if (row?.accessToken) {
+    await revokeStravaAccessToken(row.accessToken);
+  }
+  if (row) {
+    db.delete(account).where(eq(account.id, row.id)).run();
+  }
 }

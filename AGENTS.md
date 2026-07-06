@@ -21,8 +21,10 @@ MyBike/
 │       ├── features/      # bikes & components (api + forms + cards)
 │       ├── components/ui/ # shadcn primitives
 │       └── lib/          # api client, query client, utils
+├── strava-webhook-proxy/  # Public Strava webhook relay + pull API (separate deploy)
+│   └── src/
 ├── flake.nix        # Nix devShell
-└── package.json     # npm workspace root (server, client, shared)
+└── package.json     # npm workspace root (server, client, shared, strava-webhook-proxy)
 ```
 
 ## Commands
@@ -34,6 +36,7 @@ Install the Vite+ CLI once: `curl -fsSL https://vite.plus | bash`. Run `vp env o
 | Install deps                | `vp install` (or `npm install`)                        |
 | Server dev                  | `npm run -w server dev`                                |
 | Client dev                  | `npm run -w client dev`                                |
+| Webhook proxy dev           | `npm run -w strava-webhook-proxy dev`                  |
 | Format + lint + typecheck   | `vp check`                                             |
 | Auto-fix format/lint        | `vp check --fix`                                       |
 | Run tests                   | `npm test` (runs shared + server via `vp run -r test`) |
@@ -42,6 +45,8 @@ Install the Vite+ CLI once: `curl -fsSL https://vite.plus | bash`. Run `vp env o
 | Apply migrations            | `npm run -w server db:migrate`                         |
 | Push schema (interactive)   | `npm run -w server db:push`                            |
 | Drizzle Studio              | `npm run -w server db:studio`                          |
+| Proxy migrate               | `npm run -w strava-webhook-proxy db:migrate`           |
+| Strava webhook subscribe    | `npm run -w strava-webhook-proxy subscribe`            |
 
 ## Quality gates
 
@@ -70,6 +75,7 @@ In GitHub **Settings → Branches** for `master`, require the **CI / Check and t
 - Component categories are a fixed, hardcoded set in `shared/src/categories.ts` (`CATEGORIES` — frame, fork, crankset, … plus an `other` catchall). They are always visible and cannot be created/deleted/edited.
 - Components live under a bike + category (`components` table). One active component per (bike, category) is enforced server-side (transaction + unique partial index); clients set it via `PATCH /api/components/:id/activate`.
 - After mutations the client invalidates the affected TanStack Query keys and refetches from the server
+- **Strava webhooks (private hosting):** deploy `strava-webhook-proxy` on a public URL; MyBike pulls events via `STRAVA_WEBHOOK_PROXY_URL` + API key. One-time: set `STRAVA_WEBHOOK_CALLBACK_URL`, `STRAVA_VERIFY_TOKEN`, run `subscribe`. Main server polls on an interval and on manual sync.
 
 **After making changes, run `vp check` for the affected area (or `npm run verify` before pushing). Include `shared` when you touch schemas.**
 

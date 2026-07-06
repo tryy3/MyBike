@@ -4,7 +4,8 @@
   "workspaces": [
     "server",
     "client",
-    "shared"
+    "shared",
+    "strava-webhook-proxy"
   ],
   "scripts": {
     "build:shared": "npm run -w shared build",

@@ -217,6 +217,32 @@ export async function fetchStravaActivities(
   return activities;
 }
 
+export async function fetchStravaActivity(
+  accessToken: string,
+  activityId: string | number,
+): Promise<StravaActivity | null> {
+  const raw = await fetchJson(`${STRAVA_API_BASE}/activities/${activityId}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  return normalizeActivity(raw as RawStravaActivity);
+}
+
+export type StravaTokenProbeResult = "valid" | "revoked" | "error";
+
+/** Lightweight token check without throwing — used to verify deauth webhooks. */
+export async function probeStravaAccessToken(accessToken: string): Promise<StravaTokenProbeResult> {
+  try {
+    const res = await fetch(`${STRAVA_API_BASE}/athlete`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (res.status === 401) return "revoked";
+    if (!res.ok) return "error";
+    return "valid";
+  } catch {
+    return "error";
+  }
+}
+
 function normalizeGearSummaries(raw: unknown): StravaGearSummary[] {
   if (!Array.isArray(raw)) return [];
 
@@ -344,7 +370,10 @@ export async function refreshStravaAccessToken(
 }
 
 export async function revokeStravaAccessToken(accessToken: string): Promise<void> {
-  const { clientId, clientSecret } = requireStravaCredentials();
+  const clientId = process.env.STRAVA_CLIENT_ID;
+  const clientSecret = process.env.STRAVA_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return;
+
   const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
   try {
     await fetch("https://www.strava.com/oauth/deauthorize", {

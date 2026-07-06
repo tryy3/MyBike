@@ -85,6 +85,12 @@ export const stravaSyncState = sqliteTable("strava_sync_state", {
   updatedAt: integer("updated_at").notNull().$defaultFn(nowMs).$onUpdateFn(nowMs),
 });
 
+export const stravaWebhookCursor = sqliteTable("strava_webhook_cursor", {
+  id: integer("id").primaryKey(),
+  lastProxyEventId: integer("last_proxy_event_id").notNull().default(0),
+  updatedAt: integer("updated_at").notNull().$defaultFn(nowMs).$onUpdateFn(nowMs),
+});
+
 export const stravaBikes = sqliteTable(
   "strava_bikes",
   {

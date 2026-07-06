@@ -36,6 +36,9 @@ Base URL for all resource requests: `https://www.strava.com/api/v3`
 | Concern | Location |
 |---------|----------|
 | HTTP client + OAuth helpers | `server/src/lib/strava-client.ts` |
+| Activity sync + webhook processor | `server/src/lib/strava-activity-sync.ts`, `strava-webhook-processor.ts`, `strava-webhook-poller.ts` |
+| Webhook event source (proxy pull) | `server/src/lib/strava-event-source.ts` |
+| Public webhook relay | `strava-webhook-proxy/` (`GET/POST /webhook/strava`, `GET /api/events`) |
 | Routes (connect, callback, import, sync) | `server/src/routes/strava.ts` |
 | Client API | `client/src/features/strava/api.ts` |
 | Shared schemas | `shared/src/schemas/strava.ts` |
@@ -92,7 +95,7 @@ Strava encourages webhooks instead of polling activities. See https://developers
 - Acknowledge each event with `200` within 2s; process asynchronously
 - Respect activity privacy per granted scopes (`activity:read` vs `activity:read_all`)
 
-MyBike currently syncs via manual `/api/strava/sync` and import — webhooks are the recommended future path for incremental updates.
+MyBike syncs via manual `/api/strava/sync`, background proxy polling (when configured), and import. Webhooks hit the public `strava-webhook-proxy` relay; the private server pulls events and fetches activity details from Strava.
 
 ## Rate limits
 

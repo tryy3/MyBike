@@ -1,33 +1,30 @@
 import { Router } from "express";
 import { and, eq } from "drizzle-orm";
-import { account } from "../db/auth-schema.js";
-import {
-  bikes,
-  components,
-  stravaActivities,
-  stravaActivityComponents,
-  stravaBikes,
-} from "../db/schema.js";
+import { bikes, components, stravaBikes } from "../db/schema.js";
 import type { BikeRow } from "../db/schema.js";
 import { db } from "../db/index.js";
 import { badRequest, notFound } from "../lib/errors.js";
 import { getAuthContext, requireAuth } from "../lib/require-auth.js";
 import { parseBody } from "../lib/validation.js";
-import { activityDateOnOrAfterCreditFrom } from "../lib/wear-baseline.js";
 import {
   buildStravaAuthorizationUrl,
   exchangeStravaCode,
   fetchStravaActivities,
   fetchStravaAthleteBikes,
   fetchStravaGearName,
-  revokeStravaAccessToken,
   type StravaActivity,
 } from "../lib/strava-client.js";
 import { isStravaOAuthConfigured } from "../lib/strava-oauth.js";
 import { getSyncAfterSeconds, markSyncedNow } from "../lib/strava-sync-state.js";
-import { upsertStravaAccount } from "../lib/strava-account.js";
+import { disconnectStravaUser, upsertStravaAccount } from "../lib/strava-account.js";
 import { detectImportDrift } from "../lib/strava-import-drift.js";
 import { findStravaAccount, getStravaAccessToken } from "../lib/strava-token.js";
+import {
+  backfillComponentCredits,
+  processActivity,
+  type SyncCounters,
+} from "../lib/strava-activity-sync.js";
+import { drainWebhookEventsBestEffort } from "../lib/strava-webhook-poller.js";
 import { stravaImportCommitSchema, type StravaImportDecision } from "shared";
 
 const OAUTH_STATE_COOKIE = "mybike_strava_state";
@@ -45,12 +42,6 @@ interface GearAggregate {
   movingTimeMinutes: number;
   activityCount: number;
   activities: StravaActivity[];
-}
-
-interface SyncCounters {
-  processedActivities: number;
-  skippedActivities: number;
-  creditedComponents: number;
 }
 
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -201,32 +192,6 @@ function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function resolveLinkedBike(
-  tx: DbTransaction,
-  userId: string,
-  gearId: string,
-): { bikeId: string; componentCreditFrom: string } | null {
-  const link = tx
-    .select({
-      bikeId: stravaBikes.bikeId,
-      componentCreditFrom: stravaBikes.componentCreditFrom,
-    })
-    .from(stravaBikes)
-    .where(and(eq(stravaBikes.userId, userId), eq(stravaBikes.stravaGearId, gearId)))
-    .get();
-  if (link) return link;
-
-  const bike = tx
-    .select({ id: bikes.id })
-    .from(bikes)
-    .where(and(eq(bikes.userId, userId), eq(bikes.stravaGearId, gearId)))
-    .get();
-  if (!bike) return null;
-
-  // Legacy bikes.strava_gear_id without strava_bikes row — credit from today only.
-  return { bikeId: bike.id, componentCreditFrom: todayIsoDate() };
-}
-
 function upsertStravaBikeLink(
   tx: DbTransaction,
   userId: string,
@@ -266,124 +231,6 @@ function upsertStravaBikeLink(
       componentCreditFrom: creditFrom,
     })
     .run();
-}
-
-function creditActivityToActiveComponents(
-  tx: DbTransaction,
-  activityId: string,
-  bikeId: string,
-  activity: Pick<StravaActivity, "distanceMeters" | "movingTimeMinutes">,
-): number {
-  const activeComponents = tx
-    .select()
-    .from(components)
-    .where(and(eq(components.bikeId, bikeId), eq(components.isActive, true)))
-    .all();
-
-  for (const component of activeComponents) {
-    tx.insert(stravaActivityComponents)
-      .values({
-        activityId,
-        componentId: component.id,
-        distanceMeters: activity.distanceMeters,
-        movingTimeMinutes: activity.movingTimeMinutes,
-      })
-      .run();
-  }
-
-  return activeComponents.length;
-}
-
-function processActivity(
-  tx: DbTransaction,
-  userId: string,
-  activity: StravaActivity,
-): SyncCounters {
-  if (!activity.gearId) {
-    return { processedActivities: 0, skippedActivities: 1, creditedComponents: 0 };
-  }
-
-  const existing = tx
-    .select({ id: stravaActivities.id })
-    .from(stravaActivities)
-    .where(
-      and(
-        eq(stravaActivities.userId, userId),
-        eq(stravaActivities.stravaActivityId, activity.stravaActivityId),
-      ),
-    )
-    .get();
-  if (existing) {
-    return { processedActivities: 0, skippedActivities: 1, creditedComponents: 0 };
-  }
-
-  const linked = resolveLinkedBike(tx, userId, activity.gearId);
-  if (!linked) {
-    return { processedActivities: 0, skippedActivities: 1, creditedComponents: 0 };
-  }
-
-  const createdActivity = tx
-    .insert(stravaActivities)
-    .values({
-      userId,
-      bikeId: linked.bikeId,
-      stravaActivityId: activity.stravaActivityId,
-      stravaGearId: activity.gearId,
-      distanceMeters: activity.distanceMeters,
-      movingTimeMinutes: activity.movingTimeMinutes,
-      startDate: activity.startDate,
-    })
-    .returning()
-    .get();
-
-  if (!activityDateOnOrAfterCreditFrom(activity.startDate, linked.componentCreditFrom)) {
-    return {
-      processedActivities: 1,
-      skippedActivities: 0,
-      creditedComponents: 0,
-    };
-  }
-
-  const creditedComponents = creditActivityToActiveComponents(
-    tx,
-    createdActivity.id,
-    linked.bikeId,
-    activity,
-  );
-
-  return {
-    processedActivities: 1,
-    skippedActivities: 0,
-    creditedComponents,
-  };
-}
-
-function backfillComponentCredits(tx: DbTransaction, userId: string): number {
-  const links = tx.select().from(stravaBikes).where(eq(stravaBikes.userId, userId)).all();
-
-  let creditedActivities = 0;
-
-  for (const link of links) {
-    const activities = tx
-      .select()
-      .from(stravaActivities)
-      .where(and(eq(stravaActivities.userId, userId), eq(stravaActivities.bikeId, link.bikeId)))
-      .all();
-
-    for (const activity of activities) {
-      const existingJunction = tx
-        .select({ id: stravaActivityComponents.id })
-        .from(stravaActivityComponents)
-        .where(eq(stravaActivityComponents.activityId, activity.id))
-        .get();
-      if (existingJunction) continue;
-
-      creditActivityToActiveComponents(tx, activity.id, link.bikeId, activity);
-      creditedActivities += 1;
-    }
-  }
-
-  return creditedActivities;
 }
 
 function addCounters(target: SyncCounters, source: SyncCounters): void {
@@ -463,13 +310,7 @@ stravaRouter.get("/callback", async (req, res) => {
 
 stravaRouter.post("/disconnect", async (req, res) => {
   const { userId } = getAuthContext(req);
-  const row = findStravaAccount(userId);
-  if (row?.accessToken) {
-    await revokeStravaAccessToken(row.accessToken);
-  }
-  if (row) {
-    db.delete(account).where(eq(account.id, row.id)).run();
-  }
+  await disconnectStravaUser(userId);
   res.json({ disconnected: true });
 });
 
@@ -592,6 +433,7 @@ stravaRouter.post("/import/commit", async (req, res) => {
 
 stravaRouter.post("/sync", async (req, res) => {
   const { userId } = getAuthContext(req);
+  const webhook = await drainWebhookEventsBestEffort();
   const token = await getStravaAccessToken(userId);
   const afterSeconds = getSyncAfterSeconds(userId);
   const activities = await fetchStravaActivities(token, { afterSeconds });
@@ -608,7 +450,7 @@ stravaRouter.post("/sync", async (req, res) => {
   });
   markSyncedNow(userId);
 
-  res.json(result);
+  res.json({ ...result, webhook });
 });
 
 stravaRouter.post("/backfill-components", (req, res) => {
