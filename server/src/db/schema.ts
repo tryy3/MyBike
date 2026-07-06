@@ -77,6 +77,14 @@ export const components = sqliteTable(
   ],
 );
 
+export const stravaSyncState = sqliteTable("strava_sync_state", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  lastSyncedAt: integer("last_synced_at").notNull(),
+  updatedAt: integer("updated_at").notNull().$defaultFn(nowMs).$onUpdateFn(nowMs),
+});
+
 export const stravaBikes = sqliteTable(
   "strava_bikes",
   {
@@ -151,6 +159,7 @@ export const stravaActivityComponents = sqliteTable(
   ],
 );
 
+export type StravaSyncStateRow = typeof stravaSyncState.$inferSelect;
 export type BikeRow = typeof bikes.$inferSelect;
 export type ComponentRow = typeof components.$inferSelect;
 export type StravaBikeRow = typeof stravaBikes.$inferSelect;

@@ -10,7 +10,7 @@ import {
 } from "../db/schema.js";
 import type { BikeRow } from "../db/schema.js";
 import { db } from "../db/index.js";
-import { HttpError, badRequest, notFound } from "../lib/errors.js";
+import { badRequest, notFound } from "../lib/errors.js";
 import { getAuthContext, requireAuth } from "../lib/require-auth.js";
 import { parseBody } from "../lib/validation.js";
 import { activityDateOnOrAfterCreditFrom } from "../lib/wear-baseline.js";
@@ -20,12 +20,14 @@ import {
   fetchStravaActivities,
   fetchStravaAthleteBikes,
   fetchStravaGearName,
-  refreshStravaAccessToken,
-  STRAVA_PROVIDER_ID,
+  revokeStravaAccessToken,
   type StravaActivity,
-  type StravaTokenResponse,
 } from "../lib/strava-client.js";
 import { isStravaOAuthConfigured } from "../lib/strava-oauth.js";
+import { getSyncAfterSeconds, markSyncedNow } from "../lib/strava-sync-state.js";
+import { upsertStravaAccount } from "../lib/strava-account.js";
+import { detectImportDrift } from "../lib/strava-import-drift.js";
+import { findStravaAccount, getStravaAccessToken } from "../lib/strava-token.js";
 import { stravaImportCommitSchema, type StravaImportDecision } from "shared";
 
 const OAUTH_STATE_COOKIE = "mybike_strava_state";
@@ -51,12 +53,16 @@ interface SyncCounters {
   creditedComponents: number;
 }
 
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 stravaRouter.use(requireAuth);
 
-function toExpiresAt(value: unknown): number {
-  if (value instanceof Date) return value.getTime();
-  if (typeof value === "number") return value;
-  return 0;
+function clientUrl(): string {
+  return process.env.CLIENT_URL ?? "http://localhost:5173";
+}
+
+function oauthCookieSuffix(): string {
+  return process.env.NODE_ENV === "production" ? "; Secure" : "";
 }
 
 function parseCookies(header: string | undefined): Record<string, string> {
@@ -139,64 +145,6 @@ function aggregateActivities(activities: StravaActivity[]): Map<string, GearAggr
   return byGear;
 }
 
-function findStravaAccount(userId: string) {
-  return db
-    .select()
-    .from(account)
-    .where(and(eq(account.userId, userId), eq(account.providerId, STRAVA_PROVIDER_ID)))
-    .get();
-}
-
-async function getStravaAccessToken(userId: string): Promise<string> {
-  const row = findStravaAccount(userId);
-  if (!row?.accessToken) {
-    throw new HttpError(409, "Connect Strava before importing rides");
-  }
-
-  const expiresAt = toExpiresAt(row.accessTokenExpiresAt);
-  if (!row.refreshToken || expiresAt - Date.now() > 60_000) {
-    return row.accessToken;
-  }
-
-  const refreshed = await refreshStravaAccessToken(row.refreshToken, row.scope);
-  db.update(account)
-    .set({
-      accountId: refreshed.athleteId,
-      accessToken: refreshed.accessToken,
-      refreshToken: refreshed.refreshToken,
-      accessTokenExpiresAt: new Date(refreshed.expiresAtMs),
-      scope: refreshed.scope ?? row.scope,
-    })
-    .where(eq(account.id, row.id))
-    .run();
-  return refreshed.accessToken;
-}
-
-function upsertStravaAccount(userId: string, token: StravaTokenResponse): void {
-  const existing = findStravaAccount(userId);
-  const values = {
-    accountId: token.athleteId,
-    providerId: STRAVA_PROVIDER_ID,
-    userId,
-    accessToken: token.accessToken,
-    refreshToken: token.refreshToken,
-    accessTokenExpiresAt: new Date(token.expiresAtMs),
-    scope: token.scope ?? "read,activity:read_all,profile:read_all",
-  };
-
-  if (existing) {
-    db.update(account).set(values).where(eq(account.id, existing.id)).run();
-    return;
-  }
-
-  db.insert(account)
-    .values({
-      id: crypto.randomUUID(),
-      ...values,
-    })
-    .run();
-}
-
 function matchBike(aggregate: GearAggregate, allBikes: BikeRow[]): BikeMatch | null {
   const linked = allBikes.find((bike) => bike.stravaGearId === aggregate.gearId);
   if (linked) return { bike: linked, reason: "strava_link" };
@@ -226,7 +174,7 @@ function ensureDecisionGear(
 }
 
 function createImportedMileageComponent(
-  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  tx: DbTransaction,
   bikeId: string,
   aggregate: GearAggregate,
 ): void {
@@ -254,7 +202,7 @@ function todayIsoDate(): string {
 }
 
 function resolveLinkedBike(
-  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  tx: DbTransaction,
   userId: string,
   gearId: string,
 ): { bikeId: string; componentCreditFrom: string } | null {
@@ -275,11 +223,12 @@ function resolveLinkedBike(
     .get();
   if (!bike) return null;
 
-  return { bikeId: bike.id, componentCreditFrom: "1970-01-01" };
+  // Legacy bikes.strava_gear_id without strava_bikes row — credit from today only.
+  return { bikeId: bike.id, componentCreditFrom: todayIsoDate() };
 }
 
 function upsertStravaBikeLink(
-  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  tx: DbTransaction,
   userId: string,
   bikeId: string,
   stravaGearId: string,
@@ -319,8 +268,34 @@ function upsertStravaBikeLink(
     .run();
 }
 
+function creditActivityToActiveComponents(
+  tx: DbTransaction,
+  activityId: string,
+  bikeId: string,
+  activity: Pick<StravaActivity, "distanceMeters" | "movingTimeMinutes">,
+): number {
+  const activeComponents = tx
+    .select()
+    .from(components)
+    .where(and(eq(components.bikeId, bikeId), eq(components.isActive, true)))
+    .all();
+
+  for (const component of activeComponents) {
+    tx.insert(stravaActivityComponents)
+      .values({
+        activityId,
+        componentId: component.id,
+        distanceMeters: activity.distanceMeters,
+        movingTimeMinutes: activity.movingTimeMinutes,
+      })
+      .run();
+  }
+
+  return activeComponents.length;
+}
+
 function processActivity(
-  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  tx: DbTransaction,
   userId: string,
   activity: StravaActivity,
 ): SyncCounters {
@@ -369,28 +344,46 @@ function processActivity(
     };
   }
 
-  const activeComponents = tx
-    .select()
-    .from(components)
-    .where(and(eq(components.bikeId, linked.bikeId), eq(components.isActive, true)))
-    .all();
-
-  for (const component of activeComponents) {
-    tx.insert(stravaActivityComponents)
-      .values({
-        activityId: createdActivity.id,
-        componentId: component.id,
-        distanceMeters: activity.distanceMeters,
-        movingTimeMinutes: activity.movingTimeMinutes,
-      })
-      .run();
-  }
+  const creditedComponents = creditActivityToActiveComponents(
+    tx,
+    createdActivity.id,
+    linked.bikeId,
+    activity,
+  );
 
   return {
     processedActivities: 1,
     skippedActivities: 0,
-    creditedComponents: activeComponents.length,
+    creditedComponents,
   };
+}
+
+function backfillComponentCredits(tx: DbTransaction, userId: string): number {
+  const links = tx.select().from(stravaBikes).where(eq(stravaBikes.userId, userId)).all();
+
+  let creditedActivities = 0;
+
+  for (const link of links) {
+    const activities = tx
+      .select()
+      .from(stravaActivities)
+      .where(and(eq(stravaActivities.userId, userId), eq(stravaActivities.bikeId, link.bikeId)))
+      .all();
+
+    for (const activity of activities) {
+      const existingJunction = tx
+        .select({ id: stravaActivityComponents.id })
+        .from(stravaActivityComponents)
+        .where(eq(stravaActivityComponents.activityId, activity.id))
+        .get();
+      if (existingJunction) continue;
+
+      creditActivityToActiveComponents(tx, activity.id, link.bikeId, activity);
+      creditedActivities += 1;
+    }
+  }
+
+  return creditedActivities;
 }
 
 function addCounters(target: SyncCounters, source: SyncCounters): void {
@@ -421,6 +414,7 @@ async function loadAggregates(userId: string): Promise<Map<string, GearAggregate
 
 stravaRouter.get("/status", (req, res) => {
   const { userId } = getAuthContext(req);
+  const row = findStravaAccount(userId);
   const linkedBikes = db
     .select({ id: stravaBikes.id })
     .from(stravaBikes)
@@ -428,8 +422,9 @@ stravaRouter.get("/status", (req, res) => {
     .all().length;
 
   res.json({
-    connected: !!findStravaAccount(userId),
+    connected: !!row?.accessToken,
     linkedBikes,
+    needsReconnect: !!row && !row.accessToken,
   });
 });
 
@@ -437,12 +432,17 @@ stravaRouter.get("/connect", (req, res) => {
   const state = crypto.randomUUID();
   res.setHeader(
     "Set-Cookie",
-    `${OAUTH_STATE_COOKIE}=${encodeURIComponent(state)}; HttpOnly; SameSite=Lax; Path=/api/strava; Max-Age=600`,
+    `${OAUTH_STATE_COOKIE}=${encodeURIComponent(state)}; HttpOnly; SameSite=Lax; Path=/api/strava; Max-Age=600${oauthCookieSuffix()}`,
   );
   res.json({ authorizationUrl: buildStravaAuthorizationUrl(state) });
 });
 
 stravaRouter.get("/callback", async (req, res) => {
+  if (req.query.error === "access_denied") {
+    res.redirect(`${clientUrl()}/settings/integrations?strava=denied`);
+    return;
+  }
+
   const { userId } = getAuthContext(req);
   const code = typeof req.query.code === "string" ? req.query.code : null;
   const state = typeof req.query.state === "string" ? req.query.state : null;
@@ -456,9 +456,21 @@ stravaRouter.get("/callback", async (req, res) => {
   upsertStravaAccount(userId, token);
   res.setHeader(
     "Set-Cookie",
-    `${OAUTH_STATE_COOKIE}=; HttpOnly; SameSite=Lax; Path=/api/strava; Max-Age=0`,
+    `${OAUTH_STATE_COOKIE}=; HttpOnly; SameSite=Lax; Path=/api/strava; Max-Age=0${oauthCookieSuffix()}`,
   );
-  res.redirect(`${process.env.CLIENT_URL ?? "http://localhost:5173"}/settings/integrations`);
+  res.redirect(`${clientUrl()}/settings/integrations`);
+});
+
+stravaRouter.post("/disconnect", async (req, res) => {
+  const { userId } = getAuthContext(req);
+  const row = findStravaAccount(userId);
+  if (row?.accessToken) {
+    await revokeStravaAccessToken(row.accessToken);
+  }
+  if (row) {
+    db.delete(account).where(eq(account.id, row.id)).run();
+  }
+  res.json({ disconnected: true });
 });
 
 stravaRouter.get("/import/preview", async (req, res) => {
@@ -497,6 +509,7 @@ stravaRouter.post("/import/commit", async (req, res) => {
   }
 
   const aggregates = await loadAggregates(userId);
+  const warnings = detectImportDrift(data.previewSnapshot, aggregates, data.decisions);
   const result = db.transaction((tx) => {
     const counters = {
       linked: 0,
@@ -574,13 +587,14 @@ stravaRouter.post("/import/commit", async (req, res) => {
     return counters;
   });
 
-  res.json(result);
+  res.json({ ...result, warnings: warnings.length > 0 ? warnings : undefined });
 });
 
 stravaRouter.post("/sync", async (req, res) => {
   const { userId } = getAuthContext(req);
   const token = await getStravaAccessToken(userId);
-  const activities = await fetchStravaActivities(token);
+  const afterSeconds = getSyncAfterSeconds(userId);
+  const activities = await fetchStravaActivities(token, { afterSeconds });
   const result = db.transaction((tx) => {
     const counters: SyncCounters = {
       processedActivities: 0,
@@ -592,8 +606,15 @@ stravaRouter.post("/sync", async (req, res) => {
     }
     return counters;
   });
+  markSyncedNow(userId);
 
   res.json(result);
+});
+
+stravaRouter.post("/backfill-components", (req, res) => {
+  const { userId } = getAuthContext(req);
+  const creditedActivities = db.transaction((tx) => backfillComponentCredits(tx, userId));
+  res.json({ creditedActivities });
 });
 
 export default stravaRouter;

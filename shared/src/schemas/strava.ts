@@ -18,9 +18,17 @@ export const stravaImportDecisionSchema = z.discriminatedUnion("action", [
   }),
 ]);
 
+export const stravaImportPreviewSnapshotItemSchema = z.object({
+  gearId: z.string().min(1),
+  activityCount: z.number().int().min(0),
+  distanceMeters: z.number().int().min(0),
+  movingTimeMinutes: z.number().int().min(0),
+});
+
 export const stravaImportCommitSchema = z.object({
   decisions: z.array(stravaImportDecisionSchema).min(1),
   creditHistoricalComponents: z.boolean().default(false),
+  previewSnapshot: z.array(stravaImportPreviewSnapshotItemSchema).optional(),
 });
 
 export const stravaImportItemSchema = z.object({
@@ -46,6 +54,7 @@ export const stravaImportCommitResultSchema = z.object({
   processedActivities: z.number().int().min(0),
   skippedActivities: z.number().int().min(0),
   creditedComponents: z.number().int().min(0),
+  warnings: z.array(z.string()).optional(),
 });
 
 export const stravaSyncResultSchema = z.object({
@@ -54,15 +63,22 @@ export const stravaSyncResultSchema = z.object({
   creditedComponents: z.number().int().min(0),
 });
 
+export const stravaBackfillResultSchema = z.object({
+  creditedActivities: z.number().int().min(0),
+});
+
 export const stravaStatusSchema = z.object({
   connected: z.boolean(),
   linkedBikes: z.number().int().min(0),
+  needsReconnect: z.boolean().optional(),
 });
 
 export type StravaImportDecision = z.infer<typeof stravaImportDecisionSchema>;
+export type StravaImportPreviewSnapshotItem = z.infer<typeof stravaImportPreviewSnapshotItemSchema>;
 export type StravaImportCommit = z.infer<typeof stravaImportCommitSchema>;
 export type StravaImportItem = z.infer<typeof stravaImportItemSchema>;
 export type StravaImportPreview = z.infer<typeof stravaImportPreviewSchema>;
 export type StravaImportCommitResult = z.infer<typeof stravaImportCommitResultSchema>;
 export type StravaSyncResult = z.infer<typeof stravaSyncResultSchema>;
+export type StravaBackfillResult = z.infer<typeof stravaBackfillResultSchema>;
 export type StravaStatus = z.infer<typeof stravaStatusSchema>;

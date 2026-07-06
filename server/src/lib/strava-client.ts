@@ -5,6 +5,21 @@ const STRAVA_OAUTH_URL = "https://www.strava.com/oauth/token";
 const MAX_ACTIVITY_PAGES = 10;
 const ACTIVITIES_PER_PAGE = 200;
 
+const CYCLING_SPORT_TYPES = new Set([
+  "Ride",
+  "MountainBikeRide",
+  "GravelRide",
+  "EBikeRide",
+  "EMountainBikeRide",
+  "Velomobile",
+  "Handcycle",
+  "VirtualRide",
+]);
+
+export interface FetchStravaActivitiesOptions {
+  afterSeconds?: number;
+}
+
 export interface StravaActivity {
   stravaActivityId: string;
   gearId: string | null;
@@ -63,6 +78,27 @@ interface RawStravaActivity {
   distance?: unknown;
   moving_time?: unknown;
   start_date?: unknown;
+  sport_type?: unknown;
+  type?: unknown;
+}
+
+function normalizeGearId(raw: RawStravaActivity): string | null {
+  if (typeof raw.gear_id === "string" && raw.gear_id.length > 0) return raw.gear_id;
+  if (typeof raw.gear_id === "number") return String(raw.gear_id);
+  if (typeof raw.gear?.id === "string" && raw.gear.id.length > 0) return raw.gear.id;
+  if (typeof raw.gear?.id === "number") return String(raw.gear.id);
+  return null;
+}
+
+function isCyclingActivity(raw: RawStravaActivity): boolean {
+  const sport =
+    typeof raw.sport_type === "string"
+      ? raw.sport_type
+      : typeof raw.type === "string"
+        ? raw.type
+        : null;
+  if (!sport) return true;
+  return CYCLING_SPORT_TYPES.has(sport);
 }
 
 function requireStravaCredentials() {
@@ -75,6 +111,8 @@ function requireStravaCredentials() {
 }
 
 function normalizeActivity(raw: RawStravaActivity): StravaActivity | null {
+  if (!isCyclingActivity(raw)) return null;
+
   const activityId =
     typeof raw.id === "string" || typeof raw.id === "number" ? String(raw.id) : null;
   const startDate = typeof raw.start_date === "string" ? raw.start_date : null;
@@ -83,12 +121,7 @@ function normalizeActivity(raw: RawStravaActivity): StravaActivity | null {
   const movingTimeSeconds = Number(raw.moving_time ?? 0);
   if (!Number.isFinite(distance) || !Number.isFinite(movingTimeSeconds)) return null;
 
-  const gearId =
-    typeof raw.gear_id === "string"
-      ? raw.gear_id
-      : typeof raw.gear?.id === "string"
-        ? raw.gear.id
-        : null;
+  const gearId = normalizeGearId(raw);
   const gearName = typeof raw.gear?.name === "string" ? raw.gear.name : null;
 
   return {
@@ -117,7 +150,7 @@ function logStravaResponse(
   console.log(`[strava] ← ${method} ${label} ${status} (${durationMs}ms)${suffix}`);
 }
 
-async function fetchJson(url: URL | string, init: RequestInit): Promise<unknown> {
+async function fetchJson(url: URL | string, init: RequestInit, attempt = 0): Promise<unknown> {
   const method = init.method ?? "GET";
   const label = stravaRequestLabel(url);
   const startedAt = Date.now();
@@ -125,6 +158,11 @@ async function fetchJson(url: URL | string, init: RequestInit): Promise<unknown>
 
   const res = await fetch(url, init);
   const durationMs = Date.now() - startedAt;
+
+  if (res.status === 429 && attempt < 1) {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    return fetchJson(url, init, attempt + 1);
+  }
 
   if (!res.ok) {
     let detail = res.statusText;
@@ -144,7 +182,10 @@ async function fetchJson(url: URL | string, init: RequestInit): Promise<unknown>
   return data;
 }
 
-export async function fetchStravaActivities(accessToken: string): Promise<StravaActivity[]> {
+export async function fetchStravaActivities(
+  accessToken: string,
+  options: FetchStravaActivitiesOptions = {},
+): Promise<StravaActivity[]> {
   const activities: StravaActivity[] = [];
   let pagesFetched = 0;
 
@@ -152,6 +193,9 @@ export async function fetchStravaActivities(accessToken: string): Promise<Strava
     const url = new URL(`${STRAVA_API_BASE}/athlete/activities`);
     url.searchParams.set("per_page", String(ACTIVITIES_PER_PAGE));
     url.searchParams.set("page", String(page));
+    if (options.afterSeconds != null && page === 1) {
+      url.searchParams.set("after", String(options.afterSeconds));
+    }
 
     const raw = await fetchJson(url, {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -297,4 +341,21 @@ export async function refreshStravaAccessToken(
     }),
   });
   return parseTokenResponse(raw, scope ?? undefined);
+}
+
+export async function revokeStravaAccessToken(accessToken: string): Promise<void> {
+  const { clientId, clientSecret } = requireStravaCredentials();
+  const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+  try {
+    await fetch("https://www.strava.com/oauth/deauthorize", {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${credentials}`,
+        "content-type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({ access_token: accessToken }),
+    });
+  } catch {
+    // Still remove local tokens if Strava revoke fails.
+  }
 }

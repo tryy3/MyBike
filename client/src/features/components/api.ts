@@ -45,7 +45,7 @@ export function useActivateComponent(bikeId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api.activateComponent(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.bike(bikeId) }),
+    onSuccess: () => invalidateComponentQueries(qc, bikeId),
   });
 }
 

@@ -18,6 +18,7 @@ import type {
   StravaImportCommitResult,
   StravaImportPreview,
   StravaStatus,
+  StravaBackfillResult,
   StravaSyncResult,
 } from "shared";
 
@@ -119,6 +120,10 @@ export const api = {
   commitStravaImport: (data: StravaImportCommit) =>
     apiFetch<StravaImportCommitResult>("/api/strava/import/commit", json("POST", data)),
   syncStrava: () => apiFetch<StravaSyncResult>("/api/strava/sync", { method: "POST" }),
+  backfillStravaComponents: () =>
+    apiFetch<StravaBackfillResult>("/api/strava/backfill-components", { method: "POST" }),
+  disconnectStrava: () =>
+    apiFetch<{ disconnected: boolean }>("/api/strava/disconnect", { method: "POST" }),
   getStravaConfig: () => apiFetch<{ configured: boolean }>("/api/strava/config"),
 
   // --- Stats ---------------------------------------------------------------

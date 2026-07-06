@@ -8,6 +8,7 @@ import {
   Loader2Icon,
   RefreshCwIcon,
   RouteIcon,
+  UnplugIcon,
 } from "lucide-react";
 import type { StravaImportItem } from "shared";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
   Dialog,
   DialogContent,
@@ -36,8 +38,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useBikes } from "@/features/bikes/api";
 import {
+  useBackfillStravaComponents,
   useCommitStravaImport,
+  useDisconnectStrava,
   usePreviewStravaImport,
   useStravaConnect,
   useStravaStatus,
@@ -46,12 +51,6 @@ import {
 import { formatDistance, formatMovingTime } from "@/lib/format-stats";
 
 type ImportAction = "link" | "create" | "skip";
-
-function actionLabel(action: ImportAction, item: StravaImportItem): string {
-  if (action === "skip") return "Skip";
-  if (action === "create") return "Create bike";
-  return item.matchedBikeName ? `Link to ${item.matchedBikeName}` : "Link matched bike";
-}
 
 function matchBadge(item: StravaImportItem) {
   if (item.matchReason === "strava_link" && item.matchedBikeName) {
@@ -65,21 +64,37 @@ function matchBadge(item: StravaImportItem) {
 
 export function IntegrationsPage() {
   const navigate = useNavigate();
+  const bikes = useBikes();
   const status = useStravaStatus();
   const connect = useStravaConnect();
   const preview = usePreviewStravaImport();
   const commit = useCommitStravaImport();
   const sync = useSyncStrava();
+  const backfill = useBackfillStravaComponents();
+  const disconnect = useDisconnectStrava();
 
   const [importOpen, setImportOpen] = useState(false);
   const [actions, setActions] = useState<Record<string, ImportAction>>({});
+  const [linkBikeIds, setLinkBikeIds] = useState<Record<string, string>>({});
   const [creditHistoricalComponents, setCreditHistoricalComponents] = useState(false);
+  const [disconnectOpen, setDisconnectOpen] = useState(false);
 
   useEffect(() => {
     document.title = "Integrations | MyBike";
     return () => {
       document.title = "MyBike";
     };
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("strava") === "denied") {
+      toast.message("Strava connection cancelled");
+      params.delete("strava");
+      const next = params.toString();
+      const path = `${window.location.pathname}${next ? `?${next}` : ""}`;
+      window.history.replaceState(null, "", path);
+    }
   }, []);
 
   async function connectStrava(): Promise<void> {
@@ -98,10 +113,15 @@ export function IntegrationsPage() {
     try {
       const result = await preview.mutateAsync();
       const nextActions: Record<string, ImportAction> = {};
+      const nextLinkBikeIds: Record<string, string> = {};
       for (const item of result.items) {
         nextActions[item.gearId] = item.recommendedAction;
+        if (item.matchedBikeId) {
+          nextLinkBikeIds[item.gearId] = item.matchedBikeId;
+        }
       }
       setActions(nextActions);
+      setLinkBikeIds(nextLinkBikeIds);
     } catch (err) {
       setImportOpen(false);
       toast.error("Could not load Strava bikes", {
@@ -114,8 +134,12 @@ export function IntegrationsPage() {
     const items = preview.data?.items ?? [];
     const decisions = items.map((item) => {
       const action = actions[item.gearId] ?? item.recommendedAction;
-      if (action === "link" && item.matchedBikeId) {
-        return { gearId: item.gearId, action, bikeId: item.matchedBikeId } as const;
+      if (action === "link") {
+        const bikeId = linkBikeIds[item.gearId] ?? item.matchedBikeId;
+        if (!bikeId) {
+          throw new Error(`Choose a bike to link for ${item.stravaBikeName}`);
+        }
+        return { gearId: item.gearId, action, bikeId } as const;
       }
       if (action === "create") {
         return { gearId: item.gearId, action } as const;
@@ -124,10 +148,24 @@ export function IntegrationsPage() {
     });
 
     try {
-      const result = await commit.mutateAsync({ decisions, creditHistoricalComponents });
+      const result = await commit.mutateAsync({
+        decisions,
+        creditHistoricalComponents,
+        previewSnapshot: items.map((item) => ({
+          gearId: item.gearId,
+          activityCount: item.activityCount,
+          distanceMeters: item.distanceMeters,
+          movingTimeMinutes: item.movingTimeMinutes,
+        })),
+      });
       toast.success("Strava import applied", {
         description: `${result.linked} linked, ${result.created} created, ${result.creditedComponents} component credits applied.`,
       });
+      if (result.warnings?.length) {
+        toast.message("Strava data changed since preview", {
+          description: result.warnings.join(" "),
+        });
+      }
       setImportOpen(false);
       await navigate({ to: "/" });
     } catch (err) {
@@ -150,7 +188,32 @@ export function IntegrationsPage() {
     }
   }
 
+  async function backfillComponents(): Promise<void> {
+    try {
+      const result = await backfill.mutateAsync();
+      toast.success("Component credits backfilled", {
+        description: `${result.creditedActivities} ride${result.creditedActivities === 1 ? "" : "s"} linked to active components.`,
+      });
+    } catch (err) {
+      toast.error("Could not backfill component credits", {
+        description: err instanceof Error ? err.message : "Try again after syncing Strava.",
+      });
+    }
+  }
+
+  async function disconnectStrava(): Promise<void> {
+    try {
+      await disconnect.mutateAsync();
+      toast.success("Strava disconnected");
+    } catch (err) {
+      toast.error("Could not disconnect Strava", {
+        description: err instanceof Error ? err.message : "Try again.",
+      });
+    }
+  }
+
   const connected = status.data?.connected ?? false;
+  const userBikes = bikes.data ?? [];
   const importItems = preview.data?.items ?? [];
   const actionableCount = importItems.filter((item) => actions[item.gearId] !== "skip").length;
 
@@ -242,6 +305,28 @@ export function IntegrationsPage() {
               </>
             )}
           </Button>
+          {connected && (status.data?.linkedBikes ?? 0) > 0 ? (
+            <Button variant="outline" onClick={backfillComponents} disabled={backfill.isPending}>
+              {backfill.isPending ? (
+                <>
+                  <Loader2Icon data-icon="inline-start" className="animate-spin" />
+                  Backfilling…
+                </>
+              ) : (
+                "Backfill component credits"
+              )}
+            </Button>
+          ) : null}
+          {connected ? (
+            <Button
+              variant="outline"
+              onClick={() => setDisconnectOpen(true)}
+              disabled={disconnect.isPending}
+            >
+              <UnplugIcon data-icon="inline-start" />
+              Disconnect
+            </Button>
+          ) : null}
           {connected && status.data ? (
             <span className="text-sm text-muted-foreground">
               {status.data.linkedBikes} linked bike{status.data.linkedBikes === 1 ? "" : "s"}
@@ -249,6 +334,15 @@ export function IntegrationsPage() {
           ) : null}
         </CardFooter>
       </Card>
+
+      <ConfirmDialog
+        open={disconnectOpen}
+        onOpenChange={setDisconnectOpen}
+        title="Disconnect Strava?"
+        description="MyBike will stop syncing new rides. Your imported activities and component wear data stay in the app."
+        confirmLabel="Disconnect"
+        onConfirm={disconnectStrava}
+      />
 
       <Dialog
         open={importOpen}
@@ -339,15 +433,39 @@ export function IntegrationsPage() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
-                            {item.matchedBikeId ? (
-                              <SelectItem value="link">{actionLabel("link", item)}</SelectItem>
-                            ) : null}
+                            <SelectItem value="link">Link to existing bike</SelectItem>
                             <SelectItem value="create">Create bike</SelectItem>
                             <SelectItem value="skip">Skip</SelectItem>
                           </SelectGroup>
                         </SelectContent>
                       </Select>
                     </div>
+                    {currentAction === "link" ? (
+                      <Select
+                        value={linkBikeIds[item.gearId] ?? item.matchedBikeId ?? ""}
+                        disabled={commit.isPending || userBikes.length === 0}
+                        onValueChange={(value) =>
+                          setLinkBikeIds((prev) => ({ ...prev, [item.gearId]: value }))
+                        }
+                      >
+                        <SelectTrigger
+                          size="sm"
+                          className="w-full sm:max-w-xs"
+                          aria-label={`MyBike bike for ${item.stravaBikeName}`}
+                        >
+                          <SelectValue placeholder="Choose a bike" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            {userBikes.map((bike) => (
+                              <SelectItem key={bike.id} value={bike.id}>
+                                {bike.name}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    ) : null}
                   </div>
                 );
               })
@@ -365,8 +483,9 @@ export function IntegrationsPage() {
             <span className="flex flex-col gap-1">
               <span className="font-medium">Credit past rides to current components</span>
               <span className="text-muted-foreground">
-                Off by default. When unchecked, only rides from today forward are linked to your
-                active components; older rides still count toward bike totals.
+                Off by default. Rides are always saved for bike totals. When unchecked, only rides
+                from today forward are linked to active components. Use &quot;Backfill component
+                credits&quot; later to link stored rides after you add components.
               </span>
             </span>
           </label>

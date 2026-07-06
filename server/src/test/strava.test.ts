@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import { eq } from "drizzle-orm";
 import { account, user } from "../db/auth-schema.js";
 import { db } from "../db/index.js";
+import { stravaSyncState } from "../db/schema.js";
 import { createApp } from "../app.js";
 import { createAuthenticatedAgent } from "./auth-helper.js";
 
@@ -17,6 +18,7 @@ interface MockBike {
 interface MockActivity {
   id: number;
   gear_id: string | null;
+  sport_type?: string;
   gear?: {
     id: string;
     name: string;
@@ -62,8 +64,15 @@ function stravaFetchMock(input: RequestInfo | URL): Response | Promise<Response>
   if (url.pathname.endsWith("/athlete/activities")) {
     const page = Number(url.searchParams.get("page") ?? "1");
     const perPage = Number(url.searchParams.get("per_page") ?? "200");
+    const after = Number(url.searchParams.get("after") ?? "0");
+    let filtered = mockActivities;
+    if (after > 0) {
+      filtered = mockActivities.filter(
+        (activity) => Math.floor(Date.parse(activity.start_date) / 1000) > after,
+      );
+    }
     const start = (page - 1) * perPage;
-    const body = mockActivities.slice(start, start + perPage);
+    const body = filtered.slice(start, start + perPage);
     return new Response(JSON.stringify(body), {
       status: 200,
       headers: { "content-type": "application/json" },
@@ -95,7 +104,7 @@ async function connectStravaAccount(email: string) {
   db.insert(account)
     .values({
       id: crypto.randomUUID(),
-      accountId: "strava-athlete-1",
+      accountId: `strava-athlete-${currentUser!.id}`,
       providerId: "strava",
       userId: currentUser!.id,
       accessToken: "access-token",
@@ -282,6 +291,35 @@ describe("Strava import", () => {
     );
     expect(activityPages).toHaveLength(2);
   });
+
+  it("ignores activities that are not cycling sport types", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    await connectStravaAccount(testUser.email);
+
+    mockActivities = [
+      {
+        id: 1,
+        gear_id: "b1",
+        sport_type: "Run",
+        distance: 5000,
+        moving_time: 1800,
+        start_date: todayRideDate(),
+      },
+      {
+        id: 2,
+        gear_id: "b1",
+        sport_type: "Ride",
+        distance: 10000,
+        moving_time: 3600,
+        start_date: todayRideDate(),
+      },
+    ];
+    mockAthleteBikes = [{ id: "b1", name: "Test Bike" }];
+
+    const preview = await agent.get("/api/strava/import/preview").expect(200);
+    expect(preview.body.items).toHaveLength(1);
+    expect(preview.body.items[0].distanceMeters).toBe(10000);
+  });
 });
 
 describe("Strava sync", () => {
@@ -315,6 +353,13 @@ describe("Strava sync", () => {
     mockAthleteBikes = [{ id: "gravel-1", name: "Gravel Bike" }];
 
     const first = await agent.post("/api/strava/sync").expect(200);
+
+    const dbUser = db.select().from(user).where(eq(user.email, testUser.email)).get();
+    db.update(stravaSyncState)
+      .set({ lastSyncedAt: 0 })
+      .where(eq(stravaSyncState.userId, dbUser!.id))
+      .run();
+
     const second = await agent.post("/api/strava/sync").expect(200);
 
     expect(first.body).toMatchObject({
@@ -335,5 +380,104 @@ describe("Strava sync", () => {
     const stats = await agent.get(`/api/stats/bikes/${bike.body.id}`).expect(200);
     expect(stats.body.components[0].distanceMeters).toBe(2000);
     expect(stats.body.components[0].movingTimeMinutes).toBe(20);
+  });
+
+  it("passes after timestamp to Strava when incremental sync is configured", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    await connectStravaAccount(testUser.email);
+
+    const dbUser = db.select().from(user).where(eq(user.email, testUser.email)).get();
+    db.insert(stravaSyncState)
+      .values({
+        userId: dbUser!.id,
+        lastSyncedAt: Date.parse("2026-07-01T00:00:00Z"),
+      })
+      .run();
+
+    mockActivities = [];
+    await agent.post("/api/strava/sync").expect(200);
+
+    expect(stravaRequestPaths.some((path) => path.includes("after="))).toBe(true);
+  });
+});
+
+describe("Strava backfill", () => {
+  it("backfills component links for activities imported without historical credit", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    await connectStravaAccount(testUser.email);
+
+    const bike = await agent.post("/api/bikes").send({ name: "Backfill Bike" }).expect(201);
+    await agent.post(`/api/bikes/${bike.body.id}/components`).send(componentPayload()).expect(201);
+
+    mockActivities = [
+      {
+        id: 200,
+        gear_id: "bf-1",
+        sport_type: "Ride",
+        distance: 3000,
+        moving_time: 900,
+        start_date: "2020-06-01T10:00:00Z",
+      },
+    ];
+    mockAthleteBikes = [{ id: "bf-1", name: "Backfill Bike" }];
+
+    await agent
+      .post("/api/strava/import/commit")
+      .send({
+        decisions: [{ gearId: "bf-1", action: "link", bikeId: bike.body.id }],
+        creditHistoricalComponents: false,
+      })
+      .expect(200);
+
+    let stats = await agent.get(`/api/stats/bikes/${bike.body.id}`).expect(200);
+    expect(stats.body.components[0].distanceMeters ?? 0).toBe(0);
+
+    const backfill = await agent.post("/api/strava/backfill-components").expect(200);
+    expect(backfill.body.creditedActivities).toBe(1);
+
+    stats = await agent.get(`/api/stats/bikes/${bike.body.id}`).expect(200);
+    expect(stats.body.components[0].distanceMeters).toBe(3000);
+  });
+});
+
+describe("Strava import drift", () => {
+  it("returns warnings when Strava data drifted since preview snapshot", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    await connectStravaAccount(testUser.email);
+
+    const bike = await agent.post("/api/bikes").send({ name: "Drift Bike" }).expect(201);
+    await agent.post(`/api/bikes/${bike.body.id}/components`).send(componentPayload()).expect(201);
+
+    mockActivities = [
+      {
+        id: 301,
+        gear_id: "drift-1",
+        sport_type: "Ride",
+        distance: 5000,
+        moving_time: 1800,
+        start_date: todayRideDate(),
+      },
+    ];
+    mockAthleteBikes = [{ id: "drift-1", name: "Drift Bike" }];
+
+    const committed = await agent
+      .post("/api/strava/import/commit")
+      .send({
+        decisions: [{ gearId: "drift-1", action: "link", bikeId: bike.body.id }],
+        previewSnapshot: [
+          {
+            gearId: "drift-1",
+            activityCount: 2,
+            distanceMeters: 10_000,
+            movingTimeMinutes: 120,
+          },
+        ],
+      })
+      .expect(200);
+
+    expect(committed.body.warnings).toEqual(
+      expect.arrayContaining([expect.stringMatching(/ride totals changed/i)]),
+    );
+    expect(committed.body.linked).toBe(1);
   });
 });
