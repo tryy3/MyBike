@@ -5,7 +5,7 @@ import { child } from "./logging/index.js";
 const log = child({ component: "strava-proxy-client" });
 
 export interface StravaEventSource {
-  fetchEvents(options: { afterId: number; limit?: number }): Promise<{
+  fetchEvents(options: { afterId: number; limit?: number; requestId?: string }): Promise<{
     events: StravaWebhookEnvelope[];
     nextAfterId: number | null;
   }>;
@@ -20,9 +20,10 @@ export class ProxyStravaEventSource implements StravaEventSource {
   async fetchEvents(options: {
     afterId: number;
     limit?: number;
+    requestId?: string;
   }): Promise<{ events: StravaWebhookEnvelope[]; nextAfterId: number | null }> {
-    const { afterId, limit } = options;
-    log.debug({ afterId, limit }, "Fetching webhook events from proxy");
+    const { afterId, limit, requestId } = options;
+    log.debug({ afterId, limit, requestId }, "Fetching webhook events from proxy");
 
     const url = new URL("/api/events", this.baseUrl.replace(/\/$/, ""));
     url.searchParams.set("after_id", String(afterId));
@@ -30,10 +31,13 @@ export class ProxyStravaEventSource implements StravaEventSource {
       url.searchParams.set("limit", String(limit));
     }
 
+    const headers: Record<string, string> = { Authorization: `Bearer ${this.apiKey}` };
+    if (requestId) {
+      headers["X-Request-Id"] = requestId;
+    }
+
     const startedAt = Date.now();
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${this.apiKey}` },
-    });
+    const res = await fetch(url, { headers });
     const durationMs = Date.now() - startedAt;
 
     if (!res.ok) {
@@ -49,6 +53,7 @@ export class ProxyStravaEventSource implements StravaEventSource {
         eventCount: parsed.events.length,
         nextAfterId: parsed.nextAfterId,
         durationMs,
+        requestId,
       },
       "Fetched webhook events from proxy",
     );

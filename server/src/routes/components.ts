@@ -406,6 +406,10 @@ componentsRouter.post("/import", (req, res) => {
   }
 
   if (errors.length > 0) {
+    req.log.debug(
+      { errorCount: errors.length, bikeId, userId },
+      "Component CSV import validation failed",
+    );
     throw new HttpError(400, "Import validation failed", errors);
   }
 
@@ -415,6 +419,10 @@ componentsRouter.post("/import", (req, res) => {
   // Dry-run: report what would happen without committing. The pre-pass above
   // already validated every row, so these counts are final.
   if (dryRun) {
+    req.log.debug(
+      { bikeId, userId, inserted, updated, dryRun: true },
+      "Component CSV import dry-run",
+    );
     res.status(200).json({ dryRun: true, inserted, updated });
     return;
   }
@@ -493,6 +501,7 @@ componentsRouter.post("/import", (req, res) => {
     }
   });
 
+  req.log.info({ bikeId, userId, inserted, updated }, "Component CSV import complete");
   res.status(201).json({ bikeId, inserted, updated });
 });
 

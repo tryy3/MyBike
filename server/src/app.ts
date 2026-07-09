@@ -11,7 +11,7 @@ import stravaRouter from "./routes/strava.js";
 import { activityRouter, bikeActivitiesRouter } from "./routes/activities.js";
 import { errorHandler } from "./lib/errors.js";
 import { auth } from "./lib/auth.js";
-import { httpLogger } from "./lib/logging/index.js";
+import { httpLogger, logger } from "./lib/logging/index.js";
 import { sqlite } from "./db/index.js";
 
 const IMPORT_MAX_BYTES = 256 * 1024;
@@ -60,6 +60,8 @@ export function createApp() {
 
         res.sendFile(clientIndexPath);
       });
+    } else {
+      logger.warn({ clientDistPath }, "Client static assets not found; API-only mode");
     }
   }
 

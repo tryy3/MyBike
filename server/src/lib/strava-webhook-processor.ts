@@ -105,11 +105,22 @@ export async function processWebhookEvent(
         athleteId,
         stravaObjectId: payload.object_id,
         outcome: "imported",
+        skipReasons: result.skipReasons,
       },
       "Webhook event processed",
     );
     return "imported";
   }
+
+  log.debug(
+    {
+      proxyEventId: event.id,
+      athleteId,
+      stravaObjectId: payload.object_id,
+      skipReasons: result.skipReasons,
+    },
+    "Webhook activity sync skipped",
+  );
 
   return "skipped";
 }

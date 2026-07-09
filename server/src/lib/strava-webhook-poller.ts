@@ -1,5 +1,6 @@
+import { randomUUID } from "node:crypto";
 import type { StravaWebhookProcessResult } from "shared";
-import { child } from "./logging/index.js";
+import { child, withLogContext } from "./logging/index.js";
 import { createStravaEventSource } from "./strava-event-source.js";
 import { getLastProxyEventId, setLastProxyEventId } from "./strava-webhook-cursor.js";
 import { processWebhookEvent } from "./strava-webhook-processor.js";
@@ -24,77 +25,82 @@ export function setStravaEventSourceForTests(
 }
 
 async function runPoll(): Promise<StravaWebhookProcessResult> {
-  if (!eventSource) {
-    return { eventsProcessed: 0, activitiesImported: 0, skipped: 0 };
-  }
+  const pollId = randomUUID();
 
-  const result: StravaWebhookProcessResult = {
-    eventsProcessed: 0,
-    activitiesImported: 0,
-    skipped: 0,
-    errors: [],
-  };
-
-  let afterId = getLastProxyEventId();
-
-  while (true) {
-    let batch;
-    try {
-      batch = await eventSource.fetchEvents({ afterId, limit: BATCH_LIMIT });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      result.errors ??= [];
-      result.errors.push(`fetch: ${message}`);
-      log.error({ err, afterId }, "Webhook proxy fetch failed");
-      break;
+  return withLogContext({ pollId, operation: "webhook-poll" }, async () => {
+    if (!eventSource) {
+      return { eventsProcessed: 0, activitiesImported: 0, skipped: 0 };
     }
 
-    if (batch.events.length === 0) break;
+    const result: StravaWebhookProcessResult = {
+      eventsProcessed: 0,
+      activitiesImported: 0,
+      skipped: 0,
+      errors: [],
+    };
 
-    let batchFailed = false;
-    for (const event of batch.events) {
+    let afterId = getLastProxyEventId();
+
+    while (true) {
+      let batch;
       try {
-        const outcome = await processWebhookEvent(event);
-        result.eventsProcessed += 1;
-        if (outcome === "imported") {
-          result.activitiesImported += 1;
-        } else {
-          result.skipped += 1;
-        }
-        setLastProxyEventId(event.id);
-        afterId = event.id;
+        batch = await eventSource.fetchEvents({ afterId, limit: BATCH_LIMIT, requestId: pollId });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         result.errors ??= [];
-        result.errors.push(`event ${event.id}: ${message}`);
-        log.error({ err, proxyEventId: event.id }, "Failed to process webhook event");
-        batchFailed = true;
+        result.errors.push(`fetch: ${message}`);
+        log.error({ err, afterId, pollId }, "Webhook proxy fetch failed");
         break;
       }
+
+      if (batch.events.length === 0) break;
+
+      let batchFailed = false;
+      for (const event of batch.events) {
+        try {
+          const outcome = await processWebhookEvent(event);
+          result.eventsProcessed += 1;
+          if (outcome === "imported") {
+            result.activitiesImported += 1;
+          } else {
+            result.skipped += 1;
+          }
+          setLastProxyEventId(event.id);
+          afterId = event.id;
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          result.errors ??= [];
+          result.errors.push(`event ${event.id}: ${message}`);
+          log.error({ err, proxyEventId: event.id, pollId }, "Failed to process webhook event");
+          batchFailed = true;
+          break;
+        }
+      }
+
+      if (batchFailed) break;
+      if (batch.events.length < BATCH_LIMIT) break;
     }
 
-    if (batchFailed) break;
-    if (batch.events.length < BATCH_LIMIT) break;
-  }
+    if (result.errors?.length === 0) {
+      delete result.errors;
+    }
 
-  if (result.errors?.length === 0) {
-    delete result.errors;
-  }
+    const errorCount = result.errors?.length ?? 0;
+    if (result.eventsProcessed > 0 || errorCount > 0) {
+      log.info(
+        {
+          pollId,
+          eventsProcessed: result.eventsProcessed,
+          activitiesImported: result.activitiesImported,
+          skipped: result.skipped,
+          errorCount,
+        },
+        "Webhook poll complete",
+      );
+    }
 
-  const errorCount = result.errors?.length ?? 0;
-  if (result.eventsProcessed > 0 || errorCount > 0) {
-    log.info(
-      {
-        eventsProcessed: result.eventsProcessed,
-        activitiesImported: result.activitiesImported,
-        skipped: result.skipped,
-        errorCount,
-      },
-      "Webhook poll complete",
-    );
-  }
-
-  return result;
+    return result;
+  });
 }
 
 export function processPendingWebhookEvents(): Promise<StravaWebhookProcessResult> {

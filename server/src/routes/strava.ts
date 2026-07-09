@@ -21,6 +21,8 @@ import { detectImportDrift } from "../lib/strava-import-drift.js";
 import { findStravaAccount, getStravaAccessToken } from "../lib/strava-token.js";
 import {
   backfillComponentCredits,
+  emptySyncCounters,
+  mergeSyncCounters,
   processActivity,
   type SyncCounters,
 } from "../lib/strava-activity-sync.js";
@@ -234,9 +236,7 @@ function upsertStravaBikeLink(
 }
 
 function addCounters(target: SyncCounters, source: SyncCounters): void {
-  target.processedActivities += source.processedActivities;
-  target.skippedActivities += source.skippedActivities;
-  target.creditedComponents += source.creditedComponents;
+  mergeSyncCounters(target, source);
 }
 
 async function loadAggregates(userId: string): Promise<Map<string, GearAggregate>> {
@@ -365,9 +365,7 @@ stravaRouter.post("/import/commit", async (req, res) => {
       linked: 0,
       created: 0,
       skipped: 0,
-      processedActivities: 0,
-      skippedActivities: 0,
-      creditedComponents: 0,
+      ...emptySyncCounters(),
     };
 
     for (const decision of data.decisions) {
@@ -463,11 +461,7 @@ stravaRouter.post("/sync", async (req, res) => {
   const afterSeconds = getSyncAfterSeconds(userId);
   const activities = await fetchStravaActivities(token, { afterSeconds });
   const result = db.transaction((tx) => {
-    const counters: SyncCounters = {
-      processedActivities: 0,
-      skippedActivities: 0,
-      creditedComponents: 0,
-    };
+    const counters = emptySyncCounters();
     for (const activity of activities) {
       addCounters(counters, processActivity(tx, userId, activity));
     }
@@ -481,6 +475,7 @@ stravaRouter.post("/sync", async (req, res) => {
       processedActivities: result.processedActivities,
       skippedActivities: result.skippedActivities,
       creditedComponents: result.creditedComponents,
+      skipReasons: result.skipReasons,
       webhook,
     },
     "Strava sync complete",

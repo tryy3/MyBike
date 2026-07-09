@@ -2,7 +2,10 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { migrate } from "drizzle-orm/node-sqlite/migrator";
+import { child } from "../lib/logging/index.js";
 import { db, sqlite } from "./index.js";
+
+const log = child({ component: "db" });
 
 const COMPONENT_FIELDS_MIGRATION = "20260704053807_handy_sersi";
 
@@ -32,13 +35,13 @@ function hasTable(tableName: string): boolean {
 }
 
 /** If a failed run added all component columns but never recorded the migration, mark it applied. */
-function recoverPartialComponentFieldsMigration(migrationsFolder: string) {
-  if (!hasTable("__drizzle_migrations") || !hasTable("components")) return;
+function recoverPartialComponentFieldsMigration(migrationsFolder: string): boolean {
+  if (!hasTable("__drizzle_migrations") || !hasTable("components")) return false;
 
   const applied = sqlite
     .prepare("SELECT name FROM __drizzle_migrations WHERE name = ?")
     .get(COMPONENT_FIELDS_MIGRATION) as { name: string } | undefined;
-  if (applied) return;
+  if (applied) return false;
 
   const columnNames = new Set(
     (sqlite.prepare("PRAGMA table_info(components)").all() as { name: string }[]).map(
@@ -46,7 +49,7 @@ function recoverPartialComponentFieldsMigration(migrationsFolder: string) {
     ),
   );
   const hasAllColumns = COMPONENT_FIELDS_COLUMNS.every((name) => columnNames.has(name));
-  if (!hasAllColumns) return;
+  if (!hasAllColumns) return false;
 
   const migrationPath = join(migrationsFolder, COMPONENT_FIELDS_MIGRATION, "migration.sql");
   const query = readFileSync(migrationPath, "utf8");
@@ -58,10 +61,16 @@ function recoverPartialComponentFieldsMigration(migrationsFolder: string) {
       'INSERT INTO __drizzle_migrations ("hash", "created_at", "name", "applied_at") VALUES (?, ?, ?, ?)',
     )
     .run(hash, createdAt, COMPONENT_FIELDS_MIGRATION, new Date().toISOString());
+  return true;
 }
 
 export function applyMigrations() {
   const migrationsFolder = process.env.DRIZZLE_MIGRATIONS_FOLDER ?? "./drizzle";
-  recoverPartialComponentFieldsMigration(migrationsFolder);
+  if (recoverPartialComponentFieldsMigration(migrationsFolder)) {
+    log.warn(
+      { migration: COMPONENT_FIELDS_MIGRATION },
+      "Recovered partial component-fields migration",
+    );
+  }
   migrate(db, { migrationsFolder });
 }

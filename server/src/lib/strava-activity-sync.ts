@@ -10,13 +10,34 @@ import { db } from "../db/index.js";
 import { activityDateOnOrAfterCreditFrom } from "./wear-baseline.js";
 import type { StravaActivity } from "./strava-client.js";
 
+export interface SyncSkipReasons {
+  noGear: number;
+  duplicate: number;
+  noLinkedBike: number;
+  beforeCreditDate: number;
+}
+
 export interface SyncCounters {
   processedActivities: number;
   skippedActivities: number;
   creditedComponents: number;
+  skipReasons: SyncSkipReasons;
 }
 
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+function emptySkipReasons(): SyncSkipReasons {
+  return { noGear: 0, duplicate: 0, noLinkedBike: 0, beforeCreditDate: 0 };
+}
+
+export function emptySyncCounters(): SyncCounters {
+  return {
+    processedActivities: 0,
+    skippedActivities: 0,
+    creditedComponents: 0,
+    skipReasons: emptySkipReasons(),
+  };
+}
 
 function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
@@ -79,7 +100,12 @@ export function processActivity(
   activity: StravaActivity,
 ): SyncCounters {
   if (!activity.gearId) {
-    return { processedActivities: 0, skippedActivities: 1, creditedComponents: 0 };
+    return {
+      processedActivities: 0,
+      skippedActivities: 1,
+      creditedComponents: 0,
+      skipReasons: { noGear: 1, duplicate: 0, noLinkedBike: 0, beforeCreditDate: 0 },
+    };
   }
 
   const existing = tx
@@ -93,12 +119,22 @@ export function processActivity(
     )
     .get();
   if (existing) {
-    return { processedActivities: 0, skippedActivities: 1, creditedComponents: 0 };
+    return {
+      processedActivities: 0,
+      skippedActivities: 1,
+      creditedComponents: 0,
+      skipReasons: { noGear: 0, duplicate: 1, noLinkedBike: 0, beforeCreditDate: 0 },
+    };
   }
 
   const linked = resolveLinkedBike(tx, userId, activity.gearId);
   if (!linked) {
-    return { processedActivities: 0, skippedActivities: 1, creditedComponents: 0 };
+    return {
+      processedActivities: 0,
+      skippedActivities: 1,
+      creditedComponents: 0,
+      skipReasons: { noGear: 0, duplicate: 0, noLinkedBike: 1, beforeCreditDate: 0 },
+    };
   }
 
   const createdActivity = tx
@@ -120,6 +156,7 @@ export function processActivity(
       processedActivities: 1,
       skippedActivities: 0,
       creditedComponents: 0,
+      skipReasons: { noGear: 0, duplicate: 0, noLinkedBike: 0, beforeCreditDate: 1 },
     };
   }
 
@@ -134,24 +171,25 @@ export function processActivity(
     processedActivities: 1,
     skippedActivities: 0,
     creditedComponents,
+    skipReasons: emptySkipReasons(),
   };
 }
 
-function addCounters(target: SyncCounters, source: SyncCounters): void {
+export function mergeSyncCounters(target: SyncCounters, source: SyncCounters): void {
   target.processedActivities += source.processedActivities;
   target.skippedActivities += source.skippedActivities;
   target.creditedComponents += source.creditedComponents;
+  target.skipReasons.noGear += source.skipReasons.noGear;
+  target.skipReasons.duplicate += source.skipReasons.duplicate;
+  target.skipReasons.noLinkedBike += source.skipReasons.noLinkedBike;
+  target.skipReasons.beforeCreditDate += source.skipReasons.beforeCreditDate;
 }
 
 export function syncActivitiesForUser(userId: string, activities: StravaActivity[]): SyncCounters {
   return db.transaction((tx) => {
-    const counters: SyncCounters = {
-      processedActivities: 0,
-      skippedActivities: 0,
-      creditedComponents: 0,
-    };
+    const counters = emptySyncCounters();
     for (const activity of activities) {
-      addCounters(counters, processActivity(tx, userId, activity));
+      mergeSyncCounters(counters, processActivity(tx, userId, activity));
     }
     return counters;
   });

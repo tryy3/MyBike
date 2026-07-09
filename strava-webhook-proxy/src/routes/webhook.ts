@@ -25,6 +25,7 @@ function queryString(value: unknown): string | undefined {
 }
 
 webhookRouter.get("/strava", (req, res) => {
+  const log = req.log.child({ component: "webhook" });
   const mode = queryString(req.query["hub.mode"]);
   const challenge = queryString(req.query["hub.challenge"]);
   const token = queryString(req.query["hub.verify_token"]);
@@ -35,6 +36,7 @@ webhookRouter.get("/strava", (req, res) => {
     return;
   }
 
+  log.warn({ mode, hasChallenge: !!challenge }, "Strava webhook subscription challenge rejected");
   res.status(403).json({ error: "Forbidden" });
 });
 
