@@ -31,15 +31,19 @@ If unset in development, the server falls back to built-in defaults (not suitabl
 
 ## Logging
 
-The server uses [Pino](https://getpino.io) for structured JSON logging. In development you get colorized console output plus a JSON log file; in production logs go to stdout (JSON) and optionally to a file. Docker deployments should rely on stdout for log aggregation.
+The server and Strava webhook proxy use [Pino](https://getpino.io) via the shared [`logging`](logging/) workspace package. Each service calls `createLogging({ service, defaultLogFilePath })` so they share transports, redaction, and context helpers while keeping separate log files and service names.
+
+In development you get colorized console output plus a JSON log file; in production logs go to stdout (JSON) and optionally to a file. Docker deployments should rely on stdout for log aggregation.
 
 | Variable        | Default (dev)                | Purpose                                                                        |
 | --------------- | ---------------------------- | ------------------------------------------------------------------------------ |
 | `LOG_LEVEL`     | `debug` (dev), `info` (prod) | Minimum level: `trace`, `debug`, `info`, `warn`, `error`, `fatal`, or `silent` |
-| `LOG_FILE_PATH` | `server/data/mybike.log`     | Path for JSON log file (parent dirs created automatically)                     |
+| `LOG_FILE_PATH` | per-service (see below)      | Override log file path (parent dirs created automatically)                     |
 | `LOG_TO_FILE`   | `true`                       | Set `false` to disable file output (stdout only)                               |
 
-**Adding logs in server code:**
+Default log files when `LOG_FILE_PATH` is unset: `server/data/mybike.log` (API) and `strava-webhook-proxy/data/proxy.log` (webhook proxy).
+
+**Adding logs in server or proxy code:**
 
 ```ts
 import { child, getLog, withLogContext } from "./lib/logging/index.js";

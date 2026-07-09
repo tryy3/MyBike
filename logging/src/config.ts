@@ -1,5 +1,4 @@
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 import pino, { type LoggerOptions } from "pino";
 
 const PINO_LEVELS = ["trace", "debug", "info", "warn", "error", "fatal", "silent"] as const;
@@ -8,7 +7,10 @@ export type PinoLevel = (typeof PINO_LEVELS)[number];
 
 export const LOG_LEVELS = PINO_LEVELS;
 
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
+export interface LoggingPackageOptions {
+  service: string;
+  defaultLogFilePath: string;
+}
 
 function parseLogLevel(value: string | undefined, fallback: PinoLevel): PinoLevel {
   if (!value) return fallback;
@@ -19,10 +21,10 @@ function parseLogLevel(value: string | undefined, fallback: PinoLevel): PinoLeve
   return fallback;
 }
 
-function resolveLogFilePath(): string {
+function resolveLogFilePath(defaultLogFilePath: string): string {
   const configured = process.env.LOG_FILE_PATH;
   if (!configured) {
-    return resolve(repoRoot, "server/data/mybike.log");
+    return resolve(defaultLogFilePath);
   }
   return resolve(configured);
 }
@@ -44,17 +46,17 @@ export interface LoggingConfig {
   loggerOptions: LoggerOptions;
 }
 
-export function getLoggingConfig(): LoggingConfig {
+export function getLoggingConfig(packageOptions: LoggingPackageOptions): LoggingConfig {
   const isTest = isTestLogging();
   const isDev = isDevelopment();
   const level = parseLogLevel(process.env.LOG_LEVEL, isTest ? "silent" : isDev ? "debug" : "info");
-  const logFilePath = resolveLogFilePath();
+  const logFilePath = resolveLogFilePath(packageOptions.defaultLogFilePath);
   const logToFile = process.env.LOG_TO_FILE !== "false";
 
   const loggerOptions: LoggerOptions = {
     level,
     base: {
-      service: "mybike-server",
+      service: packageOptions.service,
       env: process.env.NODE_ENV ?? "development",
     },
     redact: {

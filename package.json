@@ -5,12 +5,15 @@
     "server",
     "client",
     "shared",
+    "logging",
     "strava-webhook-proxy"
   ],
   "scripts": {
     "build:shared": "npm run -w shared build",
+    "build:logging": "npm run -w logging build",
+    "build:packages": "npm run -w shared build && npm run -w logging build",
     "test": "vp run -r test",
-    "verify": "npm run build:shared && vp check && npm test",
+    "verify": "npm run build:packages && vp check && npm test",
     "prepare": "vp config"
   },
   "dependencies": {

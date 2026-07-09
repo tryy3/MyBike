@@ -1,15 +1,13 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import pino, { type Logger } from "pino";
-import { getLoggingConfig } from "./config.js";
+import { getLoggingConfig, type LoggingConfig, type LoggingPackageOptions } from "./config.js";
 
 function ensureLogDirectory(logFilePath: string): void {
   mkdirSync(dirname(logFilePath), { recursive: true });
 }
 
-function createLoggerInstance(): Logger {
-  const config = getLoggingConfig();
-
+function createLoggerFromConfig(config: LoggingConfig): Logger {
   if (config.isTest) {
     return pino(config.loggerOptions);
   }
@@ -53,4 +51,6 @@ function createLoggerInstance(): Logger {
   return pino(config.loggerOptions, pino.transport({ targets }));
 }
 
-export const logger: Logger = createLoggerInstance();
+export function createLogger(packageOptions: LoggingPackageOptions): Logger {
+  return createLoggerFromConfig(getLoggingConfig(packageOptions));
+}
