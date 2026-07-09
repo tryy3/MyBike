@@ -30,6 +30,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     const authed = req as AuthenticatedRequest;
     authed.user = session.user;
     authed.userId = session.user.id;
+    req.log = req.log.child({ userId: session.user.id });
     next();
   } catch (err) {
     next(err);

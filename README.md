@@ -29,6 +29,37 @@ Set these environment variables for the server (see `.env.example`):
 
 If unset in development, the server falls back to built-in defaults (not suitable for production).
 
+## Logging
+
+The server uses [Pino](https://getpino.io) for structured JSON logging. In development you get colorized console output plus a JSON log file; in production logs go to stdout (JSON) and optionally to a file. Docker deployments should rely on stdout for log aggregation.
+
+| Variable        | Default (dev)                | Purpose                                                                        |
+| --------------- | ---------------------------- | ------------------------------------------------------------------------------ |
+| `LOG_LEVEL`     | `debug` (dev), `info` (prod) | Minimum level: `trace`, `debug`, `info`, `warn`, `error`, `fatal`, or `silent` |
+| `LOG_FILE_PATH` | `server/data/mybike.log`     | Path for JSON log file (parent dirs created automatically)                     |
+| `LOG_TO_FILE`   | `true`                       | Set `false` to disable file output (stdout only)                               |
+
+**Adding logs in server code:**
+
+```ts
+import { child, getLog, withLogContext } from "./lib/logging/index.js";
+
+// Module-level component logger (simple, static context)
+const log = child({ component: "strava" });
+log.info({ athleteId, durationMs }, "Strava sync complete");
+
+// Dynamic context for a call chain (Serilog-style)
+await withLogContext({ athleteId, operation: "fetchActivities" }, async () => {
+  getLog().info({ status: 200 }, "Strava API response");
+});
+```
+
+- Use **`child()`** for fixed component context (e.g. `component: "strava"`).
+- Use **`withLogContext()`** when context applies only to a function or async flow.
+- Inside HTTP handlers, prefer **`req.log`** (includes `requestId`; authenticated routes also get `userId`).
+
+Sensitive fields (`authorization`, `accessToken`, `refreshToken`, cookies, passwords) are redacted automatically. Do not log OAuth payloads, session tokens, or Strava credentials explicitly.
+
 **Migrating an existing database:** migration `0003` creates auth tables and adds `user_id` to `bikes`. Any bikes created before auth had no owner, so that migration clears existing bikes and components before adding the column. Back up `server/data/mybike.db` first if you need to preserve data.
 
 Register at `/register`, then sign in at `/login`. Email/password and Strava OAuth are both supported when `STRAVA_CLIENT_ID` and `STRAVA_CLIENT_SECRET` are set (see `.env.example`). Strava login and the integrations connect flow share the same stored tokens — signing in with Strava counts as connected for sync and import.
@@ -55,10 +86,10 @@ SQLite via Drizzle ORM. The DB lives at `DB_PATH` (default `server/data/mybike.d
 
 GitHub Actions publishes container images to [GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry) on pushes to `master` and on `v*.*.*` tags:
 
-| Image | Use |
-| ----- | --- |
-| `ghcr.io/<owner>/mybike` | Full MyBike app (see root `compose.yaml`) |
-| `ghcr.io/<owner>/mybike-strava-webhook-proxy` | Public Strava webhook relay |
+| Image                                         | Use                                       |
+| --------------------------------------------- | ----------------------------------------- |
+| `ghcr.io/<owner>/mybike`                      | Full MyBike app (see root `compose.yaml`) |
+| `ghcr.io/<owner>/mybike-strava-webhook-proxy` | Public Strava webhook relay               |
 
 ## Strava webhook proxy
 
