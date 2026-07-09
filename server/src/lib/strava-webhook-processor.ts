@@ -1,8 +1,11 @@
 import type { StravaWebhookEnvelope } from "shared";
+import { child } from "./logging/index.js";
 import { disconnectStravaUser, findStravaAccountByAthleteId } from "./strava-account.js";
 import { syncActivitiesForUser } from "./strava-activity-sync.js";
 import { fetchStravaActivity, probeStravaAccessToken } from "./strava-client.js";
 import { getStravaAccessToken } from "./strava-token.js";
+
+const log = child({ component: "strava-webhook" });
 
 export type WebhookProcessOutcome = "imported" | "skipped" | "disconnected";
 
@@ -25,8 +28,9 @@ export async function processWebhookEvent(
   const { payload } = event;
 
   if (rejectUnexpectedSubscription(payload)) {
-    console.warn(
-      `[strava-webhook] ignoring event ${event.id} with subscription_id ${payload.subscription_id}`,
+    log.warn(
+      { proxyEventId: event.id, subscriptionId: payload.subscription_id },
+      "Ignoring webhook event with unexpected subscription",
     );
     return "skipped";
   }
@@ -44,13 +48,18 @@ export async function processWebhookEvent(
         throw new Error(`unable to verify Strava token for athlete ${athleteId}`);
       }
       if (probe === "valid") {
-        console.warn(
-          `[strava-webhook] ignoring deauth event ${event.id} — Strava token still valid`,
+        log.warn(
+          { proxyEventId: event.id, athleteId },
+          "Ignoring deauth event — Strava token still valid",
         );
         return "skipped";
       }
 
       await disconnectStravaUser(account.userId);
+      log.info(
+        { proxyEventId: event.id, athleteId, outcome: "disconnected" },
+        "Webhook event processed",
+      );
       return "disconnected";
     }
     return "skipped";
@@ -61,29 +70,44 @@ export async function processWebhookEvent(
   }
 
   if (payload.aspect_type !== "create") {
-    console.log(
-      `[strava-webhook] skipping ${payload.object_type}.${payload.aspect_type} for activity ${payload.object_id}`,
+    log.debug(
+      {
+        aspectType: payload.aspect_type,
+        objectType: payload.object_type,
+        stravaObjectId: payload.object_id,
+      },
+      "Skipping non-create activity webhook",
     );
     return "skipped";
   }
 
   const account = findStravaAccountByAthleteId(athleteId);
   if (!account) {
-    console.log(`[strava-webhook] no MyBike user for Strava athlete ${athleteId}`);
+    log.debug({ athleteId }, "No MyBike user for Strava athlete");
     return "skipped";
   }
 
   const token = await getStravaAccessToken(account.userId);
   const activity = await fetchStravaActivity(token, payload.object_id);
   if (!activity) {
-    console.log(
-      `[strava-webhook] activity ${payload.object_id} not imported (missing, non-cycling, or invalid)`,
+    log.debug(
+      { stravaObjectId: payload.object_id },
+      "Activity not imported (missing, non-cycling, or invalid)",
     );
     return "skipped";
   }
 
   const result = syncActivitiesForUser(account.userId, [activity]);
   if (result.processedActivities > 0) {
+    log.info(
+      {
+        proxyEventId: event.id,
+        athleteId,
+        stravaObjectId: payload.object_id,
+        outcome: "imported",
+      },
+      "Webhook event processed",
+    );
     return "imported";
   }
 

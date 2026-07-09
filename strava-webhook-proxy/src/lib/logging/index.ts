@@ -7,4 +7,5 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..")
 export const { logger, httpLogger, child, getLog, withLogContext, flushLogs } = createLogging({
   service: "mybike-strava-webhook-proxy",
   defaultLogFilePath: resolve(repoRoot, "strava-webhook-proxy/data/proxy.log"),
+  healthCheckPaths: ["/api/health"],
 });

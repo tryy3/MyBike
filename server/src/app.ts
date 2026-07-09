@@ -27,11 +27,12 @@ export function createApp() {
 
   app.use(express.json({ limit: `${IMPORT_MAX_BYTES + 64 * 1024}b` }));
 
-  app.get("/api/health", (_req, res) => {
+  app.get("/api/health", (req, res) => {
     try {
       sqlite.prepare("SELECT 1").get();
       res.json({ status: "ok" });
-    } catch {
+    } catch (err) {
+      req.log.warn({ err }, "Health check failed");
       res.status(503).json({ status: "error", error: "Database unavailable" });
     }
   });

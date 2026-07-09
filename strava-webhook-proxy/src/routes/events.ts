@@ -13,16 +13,18 @@ function queryString(value: unknown, fallback: string): string {
   return fallback;
 }
 
-eventsRouter.get("/health", (_req, res) => {
+eventsRouter.get("/health", (req, res) => {
   try {
     sqlite.prepare("SELECT 1").get();
     res.json({ status: "ok" });
-  } catch {
+  } catch (err) {
+    req.log.warn({ err }, "Health check failed");
     res.status(503).json({ status: "error", error: "Database unavailable" });
   }
 });
 
 eventsRouter.get("/events", requireApiKey, (req, res) => {
+  const log = req.log.child({ component: "events" });
   const afterId = parseInt(queryString(req.query.after_id, "0"), 10);
   if (!Number.isFinite(afterId) || afterId < 0) {
     res.status(400).json({ error: "Invalid after_id" });
@@ -74,8 +76,8 @@ eventsRouter.get("/events", requireApiKey, (req, res) => {
     if (row.updatesJson) {
       try {
         payload.updates = JSON.parse(row.updatesJson) as Record<string, unknown>;
-      } catch {
-        console.error(`[events] corrupt updates_json for webhook event ${row.id}`);
+      } catch (err) {
+        log.error({ err, webhookEventId: row.id }, "Corrupt updates_json for webhook event");
       }
     }
     return {
@@ -86,6 +88,8 @@ eventsRouter.get("/events", requireApiKey, (req, res) => {
   });
 
   const nextAfterId = events.length > 0 ? events[events.length - 1]!.id : null;
+
+  log.debug({ afterId, limit, resultCount: events.length }, "Webhook events fetched");
 
   res.json({ events, nextAfterId });
 });
