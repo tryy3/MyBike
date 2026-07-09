@@ -1,9 +1,9 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2";
 import { genericOAuth } from "better-auth/plugins";
-import { createAuthMiddleware } from "better-auth/api";
 import { db } from "../db/index.js";
 import { account, session, user, verification } from "../db/auth-schema.js";
+import { resolveAuthMethod } from "./auth-events.js";
 import { resolveAuthConfig } from "./auth-config.js";
 import { child } from "./logging/index.js";
 import { buildStravaOAuthConfig, isStravaOAuthConfigured } from "./strava-oauth.js";
@@ -29,32 +29,36 @@ export const auth = betterAuth({
     enabled: true,
   },
   plugins: stravaOAuthPlugins,
-  hooks: {
-    after: createAuthMiddleware(async (ctx) => {
-      const path = ctx.path;
-      const newSession = ctx.context.newSession;
-
-      if (newSession?.user?.id) {
-        if (path === "/sign-up/email") {
-          log.info({ userId: newSession.user.id, event: "sign-up" }, "User authenticated");
-        } else if (path === "/sign-in/email") {
-          log.info({ userId: newSession.user.id, event: "sign-in" }, "User authenticated");
-        } else if (path.startsWith("/callback/")) {
-          const provider = path.split("/").pop() ?? "unknown";
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (createdUser) => {
+          log.info({ userId: createdUser.id, event: "sign-up" }, "User registered");
+        },
+      },
+    },
+    session: {
+      create: {
+        after: async (createdSession, ctx) => {
           log.info(
-            { userId: newSession.user.id, provider, event: "oauth-sign-in" },
-            "User authenticated",
+            {
+              userId: createdSession.userId,
+              event: "sign-in",
+              method: resolveAuthMethod(ctx),
+            },
+            "User signed in",
           );
-        }
-      }
-
-      if (path === "/sign-out") {
-        const userId = ctx.context.session?.user?.id;
-        if (userId) {
-          log.info({ userId, event: "sign-out" }, "User signed out");
-        }
-      }
-    }),
+        },
+      },
+      delete: {
+        after: async (deletedSession, ctx) => {
+          if (ctx?.path !== "/sign-out") {
+            return;
+          }
+          log.info({ userId: deletedSession.userId, event: "sign-out" }, "User signed out");
+        },
+      },
+    },
   },
   onAPIError: {
     onError: (error) => {
