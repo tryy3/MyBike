@@ -1,0 +1,29 @@
+# Copy to your VPS (e.g. ~/strava-proxy/compose.yaml) and adjust image + secrets.
+#
+#   mkdir -p ~/strava-proxy && cd ~/strava-proxy
+#   curl -fsSL https://raw.githubusercontent.com/tryy3/MyBike/master/strava-webhook-proxy/compose.example.yaml -o compose.yaml
+#   curl -fsSL https://raw.githubusercontent.com/tryy3/MyBike/master/strava-webhook-proxy/.env.example -o .env
+#   # edit .env, then:
+#   docker compose up -d
+#
+# Put HTTPS in front (Caddy, nginx, Traefik) and expose only /webhook/strava publicly.
+# Bind to 127.0.0.1 below when a reverse proxy on the same host terminates TLS.
+
+services:
+  strava-webhook-proxy:
+    image: ghcr.io/tryy3/mybike-strava-webhook-proxy:master
+    container_name: strava-webhook-proxy
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3002:3002"
+    env_file:
+      - .env
+    environment:
+      STRAVA_WEBHOOK_PROXY_PORT: "3002"
+      STRAVA_WEBHOOK_PROXY_DB_PATH: /data/strava-webhook-proxy.db
+      RUN_MIGRATIONS: "true"
+    volumes:
+      - strava-proxy-data:/data
+
+volumes:
+  strava-proxy-data:

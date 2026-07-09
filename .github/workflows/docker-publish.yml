@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   docker:
-    name: Build and publish
+    name: Build and publish MyBike
     uses: docker/github-builder/.github/workflows/build.yml@v1
     permissions:
       contents: read
@@ -37,6 +37,38 @@ jobs:
       cache-mode: min
       set-meta-labels: true
       meta-images: ghcr.io/${{ github.repository_owner }}/mybike
+      meta-tags: |
+        type=ref,event=branch
+        type=ref,event=pr
+        type=semver,pattern={{version}}
+        type=semver,pattern={{major}}.{{minor}}
+        type=sha
+    secrets:
+      registry-auths: |
+        - registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+  docker-proxy:
+    name: Build and publish Strava webhook proxy
+    uses: docker/github-builder/.github/workflows/build.yml@v1
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    with:
+      job-name-prefix: strava-proxy
+      output: image
+      push: ${{ github.event_name != 'pull_request' }}
+      platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+      distribute: true
+      cache: true
+      cache-mode: min
+      cache-scope: strava-webhook-proxy
+      context: .
+      file: strava-webhook-proxy/Dockerfile
+      set-meta-labels: true
+      meta-images: ghcr.io/${{ github.repository_owner }}/mybike-strava-webhook-proxy
       meta-tags: |
         type=ref,event=branch
         type=ref,event=pr

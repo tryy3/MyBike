@@ -50,3 +50,18 @@ SQLite via Drizzle ORM. The DB lives at `DB_PATH` (default `server/data/mybike.d
 | Apply pending migrations                 | `npm run -w server db:migrate`  |
 | Push schema directly (interactive)       | `npm run -w server db:push`     |
 | Inspect data                             | `npm run -w server db:studio`   |
+
+## Docker images
+
+GitHub Actions publishes container images to [GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry) on pushes to `master` and on `v*.*.*` tags:
+
+| Image | Use |
+| ----- | --- |
+| `ghcr.io/<owner>/mybike` | Full MyBike app (see root `compose.yaml`) |
+| `ghcr.io/<owner>/mybike-strava-webhook-proxy` | Public Strava webhook relay |
+
+## Strava webhook proxy
+
+If MyBike runs on a private network (e.g. Tailscale), deploy the **strava-webhook-proxy** on a small public VPS so Strava can deliver webhooks. MyBike polls the proxy with an API key.
+
+Full deployment steps, compose template, and MyBike configuration: **[strava-webhook-proxy/README.md](strava-webhook-proxy/README.md)**.
