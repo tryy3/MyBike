@@ -1,12 +1,12 @@
-import { GraphQLClient, type RequestDocument, type Variables } from "graphql-request";
+import { type RequestDocument, type Variables } from "graphql-request";
 import { ApiError } from "./api.js";
 
-const endpoint = "/graphql";
-
-const client = new GraphQLClient(endpoint, {
-  credentials: "include",
-  headers: { "content-type": "application/json" },
-});
+function graphqlEndpoint(): string {
+  if (typeof window !== "undefined") {
+    return new URL("/graphql", window.location.origin).href;
+  }
+  return "/graphql";
+}
 
 interface GraphQLErrorBody {
   message: string;
@@ -26,30 +26,15 @@ export async function graphqlFetch<T, V extends Variables = Variables>(
   document: RequestDocument,
   variables?: V,
 ): Promise<T> {
-  try {
-    const result = (await client.request(document, variables)) as T;
-    return result;
-  } catch (error: unknown) {
-    if (error && typeof error === "object" && "response" in error) {
-      const response = (error as { response?: { errors?: GraphQLErrorBody[]; status?: number } })
-        .response;
-      const first = response?.errors?.[0];
-      const status = first?.extensions?.http?.status ?? response?.status ?? 500;
-      throw new ApiError(
-        status,
-        first?.message ?? "GraphQL request failed",
-        first?.extensions?.details,
-      );
-    }
-    throw error;
-  }
+  const body = await graphqlFetchRaw<T, V>(document, variables);
+  return body.data as T;
 }
 
 export async function graphqlFetchRaw<T, V extends Variables = Variables>(
   document: RequestDocument,
   variables?: V,
 ): Promise<GraphQLResponse<T>> {
-  const res = await fetch(endpoint, {
+  const res = await fetch(graphqlEndpoint(), {
     method: "POST",
     credentials: "include",
     headers: { "content-type": "application/json" },
@@ -59,7 +44,7 @@ export async function graphqlFetchRaw<T, V extends Variables = Variables>(
   const body = (await res.json()) as GraphQLResponse<T>;
   if (body.errors?.length) {
     const first = body.errors[0]!;
-    const status = first.extensions?.http?.status ?? 400;
+    const status = first.extensions?.http?.status ?? res.status ?? 400;
     throw new ApiError(status, first.message, first.extensions?.details);
   }
   if (!body.data) {
