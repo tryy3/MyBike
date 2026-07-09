@@ -78,9 +78,9 @@
           fi
           export PATH="$PWD/node_modules/.bin:$PATH"
 
-          if [ ! -f shared/dist/index.d.ts ]; then
-            echo "Building shared package..."
-            npm run build:shared --no-fund --no-audit
+          if [ ! -f shared/dist/index.d.ts ] || [ ! -f logging/dist/index.d.ts ]; then
+            echo "Building workspace packages..."
+            npm run build:packages --no-fund --no-audit
           fi
 
           export NIX_LD_LIBRARY_PATH="${chromeLdPath}''${NIX_LD_LIBRARY_PATH:+:$NIX_LD_LIBRARY_PATH}"
