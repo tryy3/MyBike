@@ -11,7 +11,7 @@ import stravaRouter from "./routes/strava.js";
 import { activityRouter, bikeActivitiesRouter } from "./routes/activities.js";
 import { errorHandler } from "./lib/errors.js";
 import { auth } from "./lib/auth.js";
-import { httpLogger } from "./lib/logging/index.js";
+import { httpLogger, logger } from "./lib/logging/index.js";
 import { sqlite } from "./db/index.js";
 
 const IMPORT_MAX_BYTES = 256 * 1024;
@@ -27,11 +27,12 @@ export function createApp() {
 
   app.use(express.json({ limit: `${IMPORT_MAX_BYTES + 64 * 1024}b` }));
 
-  app.get("/api/health", (_req, res) => {
+  app.get("/api/health", (req, res) => {
     try {
       sqlite.prepare("SELECT 1").get();
       res.json({ status: "ok" });
-    } catch {
+    } catch (err) {
+      req.log.warn({ err }, "Health check failed");
       res.status(503).json({ status: "error", error: "Database unavailable" });
     }
   });
@@ -59,6 +60,8 @@ export function createApp() {
 
         res.sendFile(clientIndexPath);
       });
+    } else {
+      logger.warn({ clientDistPath }, "Client static assets not found; API-only mode");
     }
   }
 

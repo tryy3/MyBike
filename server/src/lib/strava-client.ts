@@ -1,4 +1,7 @@
 import { HttpError } from "./errors.js";
+import { child } from "./logging/index.js";
+
+const log = child({ component: "strava" });
 
 const STRAVA_API_BASE = "https://www.strava.com/api/v3";
 const STRAVA_OAUTH_URL = "https://www.strava.com/oauth/token";
@@ -139,27 +142,17 @@ function stravaRequestLabel(url: URL | string): string {
   return `${parsed.pathname}${parsed.search}`;
 }
 
-function logStravaResponse(
-  method: string,
-  label: string,
-  status: number,
-  durationMs: number,
-  detail?: string,
-): void {
-  const suffix = detail ? ` — ${detail}` : "";
-  console.log(`[strava] ← ${method} ${label} ${status} (${durationMs}ms)${suffix}`);
-}
-
 async function fetchJson(url: URL | string, init: RequestInit, attempt = 0): Promise<unknown> {
   const method = init.method ?? "GET";
-  const label = stravaRequestLabel(url);
+  const path = stravaRequestLabel(url);
   const startedAt = Date.now();
-  console.log(`[strava] → ${method} ${label}`);
+  log.debug({ method, path, attempt }, "Strava API request");
 
   const res = await fetch(url, init);
   const durationMs = Date.now() - startedAt;
 
   if (res.status === 429 && attempt < 1) {
+    log.warn({ method, path, attempt }, "Strava rate limited, retrying");
     await new Promise((resolve) => setTimeout(resolve, 2000));
     return fetchJson(url, init, attempt + 1);
   }
@@ -172,13 +165,13 @@ async function fetchJson(url: URL | string, init: RequestInit, attempt = 0): Pro
     } catch {
       // Keep status text if Strava did not return JSON.
     }
-    logStravaResponse(method, label, res.status, durationMs, detail);
+    log.warn({ method, path, status: res.status, durationMs, detail }, "Strava API error");
     throw new HttpError(res.status === 401 ? 401 : 502, `Strava request failed: ${detail}`);
   }
 
   const data = await res.json();
-  const responseDetail = Array.isArray(data) ? `items=${data.length}` : undefined;
-  logStravaResponse(method, label, res.status, durationMs, responseDetail);
+  const itemCount = Array.isArray(data) ? data.length : undefined;
+  log.debug({ method, path, status: res.status, durationMs, itemCount }, "Strava API response");
   return data;
 }
 
@@ -211,9 +204,7 @@ export async function fetchStravaActivities(
     if (raw.length < ACTIVITIES_PER_PAGE) break;
   }
 
-  console.log(
-    `[strava] activities summary: ${activities.length} normalized across ${pagesFetched} page${pagesFetched === 1 ? "" : "s"}`,
-  );
+  log.info({ activityCount: activities.length, pagesFetched }, "Strava activities fetched");
   return activities;
 }
 
@@ -235,10 +226,18 @@ export async function probeStravaAccessToken(accessToken: string): Promise<Strav
     const res = await fetch(`${STRAVA_API_BASE}/athlete`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
-    if (res.status === 401) return "revoked";
-    if (!res.ok) return "error";
+    if (res.status === 401) {
+      log.debug({ result: "revoked" }, "Strava token probe");
+      return "revoked";
+    }
+    if (!res.ok) {
+      log.warn({ result: "error", status: res.status }, "Strava token probe failed");
+      return "error";
+    }
+    log.debug({ result: "valid" }, "Strava token probe");
     return "valid";
-  } catch {
+  } catch (err) {
+    log.warn({ err, result: "error" }, "Strava token probe failed");
     return "error";
   }
 }
@@ -267,7 +266,7 @@ export async function fetchStravaAthleteBikes(accessToken: string): Promise<Stra
   });
   const data = raw as { bikes?: unknown };
   const bikes = normalizeGearSummaries(data.bikes);
-  console.log(`[strava] athlete bikes: ${bikes.length} registered`);
+  log.debug({ bikeCount: bikes.length }, "Strava athlete bikes fetched");
   return bikes;
 }
 
@@ -384,7 +383,7 @@ export async function revokeStravaAccessToken(accessToken: string): Promise<void
       },
       body: new URLSearchParams({ access_token: accessToken }),
     });
-  } catch {
-    // Still remove local tokens if Strava revoke fails.
+  } catch (err) {
+    log.warn({ err }, "Strava remote revoke failed; continuing with local disconnect");
   }
 }

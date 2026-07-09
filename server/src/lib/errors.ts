@@ -25,10 +25,16 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
   const log = req.log ?? getLog();
 
   if (err instanceof HttpError) {
+    if (err.status >= 500) {
+      log.error({ err, status: err.status }, err.message);
+    } else if (err.status === 409 && err.message.includes("Strava session expired")) {
+      log.warn({ err, status: err.status }, err.message);
+    }
     res.status(err.status).json({ error: err.message, details: err.details });
     return;
   }
   if (err instanceof ZodError) {
+    log.debug({ issueCount: err.issues.length }, "Validation failed");
     res.status(400).json({ error: "Validation failed", details: err.issues });
     return;
   }

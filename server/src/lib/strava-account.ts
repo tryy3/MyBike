@@ -2,12 +2,15 @@ import { and, eq } from "drizzle-orm";
 import { account } from "../db/auth-schema.js";
 import { db } from "../db/index.js";
 import { HttpError } from "./errors.js";
+import { child } from "./logging/index.js";
 import {
   STRAVA_PROVIDER_ID,
   revokeStravaAccessToken,
   type StravaTokenResponse,
 } from "./strava-client.js";
 import { findStravaAccount } from "./strava-token.js";
+
+const log = child({ component: "strava" });
 
 export function findStravaAccountByAthleteId(athleteId: string) {
   return db
@@ -20,6 +23,10 @@ export function findStravaAccountByAthleteId(athleteId: string) {
 export function assertStravaAthleteAvailable(athleteId: string, userId: string): void {
   const existing = findStravaAccountByAthleteId(athleteId);
   if (existing && existing.userId !== userId) {
+    log.warn(
+      { athleteId, userId, existingUserId: existing.userId },
+      "Strava athlete already linked to another user",
+    );
     throw new HttpError(
       409,
       "This Strava account is already linked to another MyBike user. Sign in with that account instead.",

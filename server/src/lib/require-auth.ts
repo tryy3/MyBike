@@ -33,6 +33,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     req.log = req.log.child({ userId: session.user.id });
     next();
   } catch (err) {
+    req.log.error({ err }, "Session lookup failed");
     next(err);
   }
 }

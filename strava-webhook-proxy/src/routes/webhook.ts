@@ -25,6 +25,7 @@ function queryString(value: unknown): string | undefined {
 }
 
 webhookRouter.get("/strava", (req, res) => {
+  const log = req.log.child({ component: "webhook" });
   const mode = queryString(req.query["hub.mode"]);
   const challenge = queryString(req.query["hub.challenge"]);
   const token = queryString(req.query["hub.verify_token"]);
@@ -35,12 +36,15 @@ webhookRouter.get("/strava", (req, res) => {
     return;
   }
 
+  log.warn({ mode, hasChallenge: !!challenge }, "Strava webhook subscription challenge rejected");
   res.status(403).json({ error: "Forbidden" });
 });
 
 webhookRouter.post("/strava", rateLimitWebhook, (req, res) => {
+  const log = req.log.child({ component: "webhook" });
   const parsed = stravaWebhookEventSchema.safeParse(req.body);
   if (!parsed.success) {
+    log.warn("Invalid Strava webhook payload");
     res.status(400).json({ error: "Invalid webhook payload" });
     return;
   }
@@ -48,8 +52,9 @@ webhookRouter.post("/strava", rateLimitWebhook, (req, res) => {
   const event = parsed.data;
   const subscriptionId = expectedSubscriptionId();
   if (subscriptionId !== undefined && event.subscription_id !== subscriptionId) {
-    console.warn(
-      `[webhook] ignoring event with subscription_id ${event.subscription_id} (expected ${subscriptionId})`,
+    log.warn(
+      { subscriptionId: event.subscription_id, expectedSubscriptionId: subscriptionId },
+      "Ignoring webhook event with unexpected subscription",
     );
     res.sendStatus(200);
     return;
@@ -69,6 +74,17 @@ webhookRouter.post("/strava", rateLimitWebhook, (req, res) => {
       rawBody,
     })
     .run();
+
+  log.info(
+    {
+      objectType: event.object_type,
+      aspectType: event.aspect_type,
+      objectId: event.object_id,
+      ownerId: event.owner_id,
+      eventTime: event.event_time,
+    },
+    "Strava webhook event stored",
+  );
 
   res.sendStatus(200);
 });
