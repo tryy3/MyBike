@@ -97,6 +97,18 @@ export function ApiKeysPage() {
     }
   }
 
+  async function handleRevoke(): Promise<void> {
+    if (!revokeTarget) return;
+    try {
+      await deleteKey.mutateAsync(revokeTarget.id);
+      toast.success("API key revoked");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Something went wrong";
+      toast.error("Could not revoke API key", { description: msg });
+      throw e;
+    }
+  }
+
   const graphqlUrl =
     typeof window !== "undefined" ? `${window.location.origin}/graphql` : "/graphql";
 
@@ -289,11 +301,7 @@ export function ApiKeysPage() {
         confirmLabel="Revoke key"
         loading={deleteKey.isPending}
         loadingLabel="Revoking…"
-        onConfirm={async () => {
-          if (!revokeTarget) return;
-          await deleteKey.mutateAsync(revokeTarget.id);
-          toast.success("API key revoked");
-        }}
+        onConfirm={handleRevoke}
       />
     </div>
   );
