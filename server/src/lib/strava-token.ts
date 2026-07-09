@@ -2,7 +2,10 @@ import { and, eq } from "drizzle-orm";
 import { account } from "../db/auth-schema.js";
 import { db } from "../db/index.js";
 import { HttpError } from "./errors.js";
+import { child, withLogContext } from "./logging/index.js";
 import { refreshStravaAccessToken, STRAVA_PROVIDER_ID } from "./strava-client.js";
+
+const log = child({ component: "strava" });
 
 const refreshLocks = new Map<string, Promise<string>>();
 
@@ -29,29 +32,33 @@ async function refreshAndPersist(
   refreshToken: string,
   scope: string | null,
 ): Promise<string> {
-  try {
-    const refreshed = await refreshStravaAccessToken(refreshToken, scope);
-    const row = findStravaAccount(userId);
-    if (!row) {
-      throw new HttpError(409, "Connect Strava before importing rides");
+  return withLogContext({ userId, operation: "refreshToken" }, async () => {
+    log.debug({ userId }, "Refreshing Strava access token");
+    try {
+      const refreshed = await refreshStravaAccessToken(refreshToken, scope);
+      const row = findStravaAccount(userId);
+      if (!row) {
+        throw new HttpError(409, "Connect Strava before importing rides");
+      }
+      db.update(account)
+        .set({
+          accountId: refreshed.athleteId,
+          accessToken: refreshed.accessToken,
+          refreshToken: refreshed.refreshToken,
+          accessTokenExpiresAt: new Date(refreshed.expiresAtMs),
+          scope: refreshed.scope ?? row.scope,
+        })
+        .where(eq(account.id, row.id))
+        .run();
+      return refreshed.accessToken;
+    } catch (err) {
+      if (err instanceof HttpError && err.status === 401) {
+        log.warn({ userId, err }, "Strava refresh failed — session expired");
+        throw new HttpError(409, "Strava session expired — reconnect in Integrations");
+      }
+      throw err;
     }
-    db.update(account)
-      .set({
-        accountId: refreshed.athleteId,
-        accessToken: refreshed.accessToken,
-        refreshToken: refreshed.refreshToken,
-        accessTokenExpiresAt: new Date(refreshed.expiresAtMs),
-        scope: refreshed.scope ?? row.scope,
-      })
-      .where(eq(account.id, row.id))
-      .run();
-    return refreshed.accessToken;
-  } catch (err) {
-    if (err instanceof HttpError && err.status === 401) {
-      throw new HttpError(409, "Strava session expired — reconnect in Integrations");
-    }
-    throw err;
-  }
+  });
 }
 
 export async function getStravaAccessToken(userId: string): Promise<string> {

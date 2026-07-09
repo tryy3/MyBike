@@ -85,13 +85,13 @@ In GitHub **Settings → Branches** for `master`, require the **CI / Check and t
 
 **Default for bike/component/stats reads and mutations:** GraphQL at `POST /graphql` (Yoga). Schema lives in `server/src/graphql/`. Business logic lives in `server/src/services/`.
 
-| GraphQL | Replaces (removed REST) |
-| ------- | ----------------------- |
-| `Query.bikes`, `Query.bike` | `GET /api/bikes`, `GET /api/bikes/:id` |
-| `Mutation.createBike`, `updateBike`, `deleteBike` | `POST/PUT/DELETE /api/bikes` |
+| GraphQL                                                    | Replaces (removed REST)                                   |
+| ---------------------------------------------------------- | --------------------------------------------------------- |
+| `Query.bikes`, `Query.bike`                                | `GET /api/bikes`, `GET /api/bikes/:id`                    |
+| `Mutation.createBike`, `updateBike`, `deleteBike`          | `POST/PUT/DELETE /api/bikes`                              |
 | Component CRUD + `activateComponent` + `reorderComponents` | `POST/PATCH/DELETE /api/components`, `PATCH .../activate` |
-| `Query.garageStats`, `Bike.rideStats`, `Component.wear` | `GET /api/stats/garage`, `GET /api/stats/bikes/:id` |
-| `Query.fieldSuggestions` | `GET /api/field-suggestions` |
+| `Query.garageStats`, `Bike.rideStats`, `Component.wear`    | `GET /api/stats/garage`, `GET /api/stats/bikes/:id`       |
+| `Query.fieldSuggestions`                                   | `GET /api/field-suggestions`                              |
 
 **Stay on REST when:**
 
@@ -103,9 +103,9 @@ In GitHub **Settings → Branches** for `master`, require the **CI / Check and t
 
 **When touching legacy REST routes, decide:**
 
-- *Small fix* (bugfix, copy change, validation tweak) → patch the REST route or underlying service directly
-- *New field or behavior* in the bike/component/stats domain → add to GraphQL schema + service; only touch REST if the feature is in the "stays on REST" list above
-- *Migrating activities/Strava later* → follow the same pattern: extract service → Pothos types → client hooks → remove REST
+- _Small fix_ (bugfix, copy change, validation tweak) → patch the REST route or underlying service directly
+- _New field or behavior_ in the bike/component/stats domain → add to GraphQL schema + service; only touch REST if the feature is in the "stays on REST" list above
+- _Migrating activities/Strava later_ → follow the same pattern: extract service → Pothos types → client hooks → remove REST
 
 **Validation:** continue using Zod schemas in `shared/`; GraphQL mutation resolvers call `.parse()` on the same schemas.
 

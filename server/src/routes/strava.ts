@@ -21,6 +21,8 @@ import { detectImportDrift } from "../lib/strava-import-drift.js";
 import { findStravaAccount, getStravaAccessToken } from "../lib/strava-token.js";
 import {
   backfillComponentCredits,
+  emptySyncCounters,
+  mergeSyncCounters,
   processActivity,
   type SyncCounters,
 } from "../lib/strava-activity-sync.js";
@@ -234,9 +236,7 @@ function upsertStravaBikeLink(
 }
 
 function addCounters(target: SyncCounters, source: SyncCounters): void {
-  target.processedActivities += source.processedActivities;
-  target.skippedActivities += source.skippedActivities;
-  target.creditedComponents += source.creditedComponents;
+  mergeSyncCounters(target, source);
 }
 
 async function loadAggregates(userId: string): Promise<Map<string, GearAggregate>> {
@@ -286,6 +286,7 @@ stravaRouter.get("/connect", (req, res) => {
 
 stravaRouter.get("/callback", async (req, res) => {
   if (req.query.error === "access_denied") {
+    req.log.info("Strava OAuth denied by user");
     res.redirect(`${clientUrl()}/settings/integrations?strava=denied`);
     return;
   }
@@ -296,11 +297,18 @@ stravaRouter.get("/callback", async (req, res) => {
   const expectedState = parseCookies(req.headers.cookie)[OAUTH_STATE_COOKIE];
 
   if (!code || !state || !expectedState || state !== expectedState) {
+    const reason = !code
+      ? "missing_code"
+      : !state || !expectedState
+        ? "missing_state"
+        : "state_mismatch";
+    req.log.warn({ reason, userId }, "Invalid Strava OAuth callback");
     throw badRequest("Invalid Strava OAuth callback");
   }
 
   const token = await exchangeStravaCode(code);
   upsertStravaAccount(userId, token);
+  req.log.info({ athleteId: token.athleteId, userId }, "Strava OAuth connected");
   res.setHeader(
     "Set-Cookie",
     `${OAUTH_STATE_COOKIE}=; HttpOnly; SameSite=Lax; Path=/api/strava; Max-Age=0${oauthCookieSuffix()}`,
@@ -311,6 +319,7 @@ stravaRouter.get("/callback", async (req, res) => {
 stravaRouter.post("/disconnect", async (req, res) => {
   const { userId } = getAuthContext(req);
   await disconnectStravaUser(userId);
+  req.log.info({ userId }, "Strava disconnected");
   res.json({ disconnected: true });
 });
 
@@ -356,9 +365,7 @@ stravaRouter.post("/import/commit", async (req, res) => {
       linked: 0,
       created: 0,
       skipped: 0,
-      processedActivities: 0,
-      skippedActivities: 0,
-      creditedComponents: 0,
+      ...emptySyncCounters(),
     };
 
     for (const decision of data.decisions) {
@@ -428,6 +435,22 @@ stravaRouter.post("/import/commit", async (req, res) => {
     return counters;
   });
 
+  req.log.info(
+    {
+      userId,
+      linked: result.linked,
+      created: result.created,
+      skipped: result.skipped,
+      processedActivities: result.processedActivities,
+      skippedActivities: result.skippedActivities,
+      creditedComponents: result.creditedComponents,
+    },
+    "Strava import committed",
+  );
+  if (warnings.length > 0) {
+    req.log.warn({ warnings, userId }, "Strava import drift detected");
+  }
+
   res.json({ ...result, warnings: warnings.length > 0 ? warnings : undefined });
 });
 
@@ -438,17 +461,25 @@ stravaRouter.post("/sync", async (req, res) => {
   const afterSeconds = getSyncAfterSeconds(userId);
   const activities = await fetchStravaActivities(token, { afterSeconds });
   const result = db.transaction((tx) => {
-    const counters: SyncCounters = {
-      processedActivities: 0,
-      skippedActivities: 0,
-      creditedComponents: 0,
-    };
+    const counters = emptySyncCounters();
     for (const activity of activities) {
       addCounters(counters, processActivity(tx, userId, activity));
     }
     return counters;
   });
   markSyncedNow(userId);
+
+  req.log.info(
+    {
+      userId,
+      processedActivities: result.processedActivities,
+      skippedActivities: result.skippedActivities,
+      creditedComponents: result.creditedComponents,
+      skipReasons: result.skipReasons,
+      webhook,
+    },
+    "Strava sync complete",
+  );
 
   res.json({ ...result, webhook });
 });

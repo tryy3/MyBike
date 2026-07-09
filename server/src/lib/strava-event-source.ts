@@ -1,8 +1,11 @@
 import type { StravaWebhookEnvelope } from "shared";
 import { stravaWebhookProxyEventsSchema } from "shared";
+import { child } from "./logging/index.js";
+
+const log = child({ component: "strava-proxy-client" });
 
 export interface StravaEventSource {
-  fetchEvents(options: { afterId: number; limit?: number }): Promise<{
+  fetchEvents(options: { afterId: number; limit?: number; requestId?: string }): Promise<{
     events: StravaWebhookEnvelope[];
     nextAfterId: number | null;
   }>;
@@ -17,16 +20,25 @@ export class ProxyStravaEventSource implements StravaEventSource {
   async fetchEvents(options: {
     afterId: number;
     limit?: number;
+    requestId?: string;
   }): Promise<{ events: StravaWebhookEnvelope[]; nextAfterId: number | null }> {
+    const { afterId, limit, requestId } = options;
+    log.debug({ afterId, limit, requestId }, "Fetching webhook events from proxy");
+
     const url = new URL("/api/events", this.baseUrl.replace(/\/$/, ""));
-    url.searchParams.set("after_id", String(options.afterId));
-    if (options.limit != null) {
-      url.searchParams.set("limit", String(options.limit));
+    url.searchParams.set("after_id", String(afterId));
+    if (limit != null) {
+      url.searchParams.set("limit", String(limit));
     }
 
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${this.apiKey}` },
-    });
+    const headers: Record<string, string> = { Authorization: `Bearer ${this.apiKey}` };
+    if (requestId) {
+      headers["X-Request-Id"] = requestId;
+    }
+
+    const startedAt = Date.now();
+    const res = await fetch(url, { headers });
+    const durationMs = Date.now() - startedAt;
 
     if (!res.ok) {
       const detail = await res.text();
@@ -35,6 +47,16 @@ export class ProxyStravaEventSource implements StravaEventSource {
 
     const raw: unknown = await res.json();
     const parsed = stravaWebhookProxyEventsSchema.parse(raw);
+    log.info(
+      {
+        afterId,
+        eventCount: parsed.events.length,
+        nextAfterId: parsed.nextAfterId,
+        durationMs,
+        requestId,
+      },
+      "Fetched webhook events from proxy",
+    );
     return parsed;
   }
 }
