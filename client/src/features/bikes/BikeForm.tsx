@@ -2,7 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { useEffect } from "react";
 import { toast } from "sonner";
-import { bikeInsertSchema, type Bike, type BikeInsert } from "shared";
+import { bikeInsertSchema, type BikeInsert } from "shared";
 
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -11,7 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCreateBike, useUpdateBike } from "./api";
 
 interface BikeFormProps {
-  bike?: Bike;
+  bike?: Pick<BikeInsert, "name" | "brand" | "model" | "year" | "notes"> & {
+    name: string;
+  };
   bikeId?: string;
   onDone: () => void;
 }

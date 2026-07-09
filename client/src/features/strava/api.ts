@@ -5,8 +5,6 @@ import { api, queryKeys } from "@/lib/api";
 function invalidateStravaDerivedQueries(qc: QueryClient) {
   void qc.invalidateQueries({ queryKey: queryKeys.stravaStatus });
   void qc.invalidateQueries({ queryKey: queryKeys.bikes });
-  void qc.invalidateQueries({ queryKey: queryKeys.garageStats });
-  void qc.invalidateQueries({ queryKey: ["stats", "bike"] });
   void qc.invalidateQueries({ queryKey: ["activities", "bike"] });
 }
 

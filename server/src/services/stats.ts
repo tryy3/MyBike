@@ -1,18 +1,15 @@
-import { Router } from "express";
 import { and, eq, inArray, sql } from "drizzle-orm";
-import type { BikeStats, GarageStats } from "shared";
+import type { BikeStats, GarageStats, RideStats } from "shared";
 import { displayWear, getStravaWearByComponentId } from "../lib/component-wear.js";
 import { db } from "../db/index.js";
 import { bikes, components, stravaActivities } from "../db/schema.js";
-import { notFound } from "../lib/errors.js";
-import { getAuthContext, requireAuth } from "../lib/require-auth.js";
-import { parseParams } from "../lib/validation.js";
+import { requireBike } from "./bikes.js";
 
-const statsRouter = Router();
-statsRouter.use(requireAuth);
-
-function aggregateRideStats(userId: string, bikeIds: string[]) {
-  if (bikeIds.length === 0) return new Map<string, GarageStats["bikes"][number]["rideStats"]>();
+export function aggregateRideStats(
+  userId: string,
+  bikeIds: string[],
+): Map<string, RideStats | null> {
+  if (bikeIds.length === 0) return new Map();
 
   const rows = db
     .select({
@@ -42,39 +39,43 @@ function aggregateRideStats(userId: string, bikeIds: string[]) {
   );
 }
 
-statsRouter.get("/garage", (req, res) => {
-  const { userId } = getAuthContext(req);
+export function getGarageStats(userId: string): GarageStats {
   const userBikes = db.select({ id: bikes.id }).from(bikes).where(eq(bikes.userId, userId)).all();
   const bikeIds = userBikes.map((b) => b.id);
   const statsByBike = aggregateRideStats(userId, bikeIds);
 
-  const payload: GarageStats = {
+  return {
     bikes: bikeIds.map((bikeId) => ({
       bikeId,
       rideStats: statsByBike.get(bikeId) ?? null,
     })),
   };
-
-  res.json(payload);
-});
-
-function requireBike(bikeId: string, userId: string) {
-  const bike = db
-    .select({ id: bikes.id })
-    .from(bikes)
-    .where(and(eq(bikes.id, bikeId), eq(bikes.userId, userId)))
-    .get();
-  if (!bike) throw notFound("Bike");
-  return bike;
 }
 
-statsRouter.get("/bikes/:bikeId", (req, res) => {
-  const { userId } = getAuthContext(req);
-  const { bikeId } = parseParams(req, ["bikeId"]);
+export function getRideStatsForBike(userId: string, bikeId: string): RideStats | null {
+  const map = aggregateRideStats(userId, [bikeId]);
+  return map.get(bikeId) ?? null;
+}
+
+export function getWearForComponent(
+  bikeId: string,
+  componentId: string,
+  baselineDistance: number | null,
+  baselineTime: number | null,
+  stravaWearByComponent?: Map<string, { distanceMeters: number; movingTimeMinutes: number }>,
+) {
+  const wearMap = stravaWearByComponent ?? getStravaWearByComponentId(bikeId);
+  const wear = displayWear(baselineDistance, baselineTime, wearMap.get(componentId));
+  return {
+    distanceMeters: wear.distanceMeters > 0 ? wear.distanceMeters : null,
+    movingTimeMinutes: wear.movingTimeMinutes > 0 ? wear.movingTimeMinutes : null,
+  };
+}
+
+export function getBikeStats(userId: string, bikeId: string): BikeStats {
   requireBike(bikeId, userId);
 
-  const rideStatsMap = aggregateRideStats(userId, [bikeId]);
-  const rideStats = rideStatsMap.get(bikeId) ?? null;
+  const rideStats = getRideStatsForBike(userId, bikeId);
   const stravaWearByComponent = getStravaWearByComponentId(bikeId);
 
   const componentRows = db
@@ -93,10 +94,12 @@ statsRouter.get("/bikes/:bikeId", (req, res) => {
     .where(eq(components.bikeId, bikeId))
     .all()
     .map((row) => {
-      const wear = displayWear(
+      const wear = getWearForComponent(
+        bikeId,
+        row.id,
         row.baselineDistanceMeters,
         row.baselineMovingTimeMinutes,
-        stravaWearByComponent.get(row.id),
+        stravaWearByComponent,
       );
       return {
         id: row.id,
@@ -104,8 +107,8 @@ statsRouter.get("/bikes/:bikeId", (req, res) => {
         name: row.name,
         brand: row.brand,
         model: row.model,
-        distanceMeters: wear.distanceMeters > 0 ? wear.distanceMeters : null,
-        movingTimeMinutes: wear.movingTimeMinutes > 0 ? wear.movingTimeMinutes : null,
+        distanceMeters: wear.distanceMeters,
+        movingTimeMinutes: wear.movingTimeMinutes,
         isActive: row.isActive,
         sortOrder: row.sortOrder,
       };
@@ -118,13 +121,9 @@ statsRouter.get("/bikes/:bikeId", (req, res) => {
     })
     .map(({ sortOrder: _sortOrder, ...component }) => component);
 
-  const payload: BikeStats = {
+  return {
     bikeId,
     rideStats,
     components: componentRows,
   };
-
-  res.json(payload);
-});
-
-export default statsRouter;
+}

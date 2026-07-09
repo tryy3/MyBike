@@ -11,8 +11,10 @@ MyBike/
 ├── server/          # Express + TypeScript API
 │   ├── src/
 │   │   ├── db/      # Drizzle schema + SQLite client
+│   │   ├── graphql/ # Yoga + Pothos schema (bike/component/stats domain)
 │   │   ├── lib/     # errors, validation helpers
-│   │   ├── routes/  # bikes, components
+│   │   ├── routes/  # REST legacy (CSV, Strava, activities)
+│   │   ├── services/ # Business logic shared by GraphQL + REST
 │   │   └── index.ts # Express app entry point
 │   ├── drizzle/     # Generated SQL migrations
 │   ├── scripts/     # migrate.ts runner
@@ -22,7 +24,7 @@ MyBike/
 │       ├── routes/        # TanStack Router route components
 │       ├── features/      # bikes & components (api + forms + cards)
 │       ├── components/ui/ # shadcn primitives
-│       └── lib/          # api client, query client, utils
+│       └── lib/          # api client, graphql client, query client, utils
 ├── strava-webhook-proxy/  # Public Strava webhook relay + pull API (separate deploy)
 │   └── src/
 ├── flake.nix        # Nix devShell
@@ -72,12 +74,42 @@ In GitHub **Settings → Branches** for `master`, require the **CI / Check and t
 - ESM modules everywhere
 - Server listens on `PORT` env var (default 3001)
 - SQLite database file at `DB_PATH` env var (default `server/data/mybike.db`)
-- Client dev server proxies `/api` to `http://localhost:3001`
+- Client dev server proxies `/api` and `/graphql` to `http://localhost:3001`
 - Validation schemas live in `shared/` and are reused by both server and client (zod); client forms use react-hook-form + `@hookform/resolvers/zod`
 - Component categories are a fixed, hardcoded set in `shared/src/categories.ts` (`CATEGORIES` — frame, fork, crankset, … plus an `other` catchall). They are always visible and cannot be created/deleted/edited.
-- Components live under a bike + category (`components` table). One active component per (bike, category) is enforced server-side (transaction + unique partial index); clients set it via `PATCH /api/components/:id/activate`.
+- Components live under a bike + category (`components` table). One active component per (bike, category) is enforced server-side (transaction + unique partial index); clients set it via the `activateComponent` GraphQL mutation.
 - After mutations the client invalidates the affected TanStack Query keys and refetches from the server
 - **Strava webhooks (private hosting):** deploy `strava-webhook-proxy` on a public URL; MyBike pulls events via `STRAVA_WEBHOOK_PROXY_URL` + API key. One-time: set `STRAVA_WEBHOOK_CALLBACK_URL`, `STRAVA_VERIFY_TOKEN`, run `subscribe`. Main server polls on an interval and on manual sync.
+
+## API layers (GraphQL vs REST)
+
+**Default for bike/component/stats reads and mutations:** GraphQL at `POST /graphql` (Yoga). Schema lives in `server/src/graphql/`. Business logic lives in `server/src/services/`.
+
+| GraphQL | Replaces (removed REST) |
+| ------- | ----------------------- |
+| `Query.bikes`, `Query.bike` | `GET /api/bikes`, `GET /api/bikes/:id` |
+| `Mutation.createBike`, `updateBike`, `deleteBike` | `POST/PUT/DELETE /api/bikes` |
+| Component CRUD + `activateComponent` + `reorderComponents` | `POST/PATCH/DELETE /api/components`, `PATCH .../activate` |
+| `Query.garageStats`, `Bike.rideStats`, `Component.wear` | `GET /api/stats/garage`, `GET /api/stats/bikes/:id` |
+| `Query.fieldSuggestions` | `GET /api/field-suggestions` |
+
+**Stay on REST when:**
+
+- CSV file import/export (`/api/bikes/:bikeId/components/export.csv`, `.../import`)
+- Strava OAuth, sync, webhooks (`/api/strava/*`)
+- Activities list/detail (`/api/bikes/:bikeId/activities`, `/api/activities/:id`)
+- Better Auth (`/api/auth/*`)
+- Health check (`GET /api/health`)
+
+**When touching legacy REST routes, decide:**
+
+- *Small fix* (bugfix, copy change, validation tweak) → patch the REST route or underlying service directly
+- *New field or behavior* in the bike/component/stats domain → add to GraphQL schema + service; only touch REST if the feature is in the "stays on REST" list above
+- *Migrating activities/Strava later* → follow the same pattern: extract service → Pothos types → client hooks → remove REST
+
+**Validation:** continue using Zod schemas in `shared/`; GraphQL mutation resolvers call `.parse()` on the same schemas.
+
+**After GraphQL changes:** run `npm run verify`; add or update tests in `server/src/test/graphql.test.ts`. Tests that need bike/component setup should use helpers in `server/src/test/graphql-helper.ts`.
 
 **After making changes, run `vp check` for the affected area (or `npm run verify` before pushing). Include `shared` when you touch schemas.**
 

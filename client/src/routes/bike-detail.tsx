@@ -33,7 +33,6 @@ import {
 } from "@/features/components/ComponentsSplitView";
 import { ImportComponentsDialog } from "@/features/components/ImportComponentsDialog";
 import { buildTemplateCsv, downloadCsv } from "@/features/components/csv";
-import { useBikeStats } from "@/features/stats/api";
 import { ActivityList } from "@/features/activities/ActivityList";
 import { ComponentStats } from "@/features/stats/ComponentStats";
 import { formatDistance, formatMovingTime, hasStats } from "@/lib/format-stats";
@@ -56,7 +55,6 @@ function groupByCategory(components: Component[]): Map<string, Component[]> {
 export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
   const navigate = useNavigate();
   const { data, isPending, isError, error, refetch } = useBike(bikeId);
-  const bikeStats = useBikeStats(bikeId);
   const deleteBike = useDeleteBike();
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -74,14 +72,14 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
 
   const wearByComponentId = useMemo((): WearByComponentId => {
     const map: WearByComponentId = new Map();
-    for (const c of bikeStats.data?.components ?? []) {
+    for (const c of data?.components ?? []) {
       map.set(c.id, {
         distanceMeters: c.distanceMeters,
         movingTimeMinutes: c.movingTimeMinutes,
       });
     }
     return map;
-  }, [bikeStats.data?.components]);
+  }, [data?.components]);
 
   function handleDownloadTemplate(): void {
     downloadCsv("mybike-components-template.csv", buildTemplateCsv());
@@ -124,9 +122,8 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
   const categoriesUsed = grouped.size;
   const emptyCategoryCount = CATEGORIES.length - categoriesUsed;
   const wearComponents =
-    bikeStats.data?.components.filter(
-      (c) => c.isActive && hasStats(c.distanceMeters, c.movingTimeMinutes),
-    ) ?? [];
+    data.components.filter((c) => c.isActive && hasStats(c.distanceMeters, c.movingTimeMinutes)) ??
+    [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -184,9 +181,9 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="activities">
             Activities
-            {bikeStats.data?.rideStats?.activityCount ? (
+            {data.rideStats?.activityCount ? (
               <Badge variant="secondary" className="ml-2">
-                {bikeStats.data.rideStats.activityCount}
+                {data.rideStats.activityCount}
               </Badge>
             ) : null}
           </TabsTrigger>
@@ -245,18 +242,12 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
             </CardHeader>
             <CardContent className="flex flex-col gap-3 text-sm">
               <OverviewRow label="Total distance">
-                {bikeStats.data?.rideStats
-                  ? formatDistance(bikeStats.data.rideStats.distanceMeters)
-                  : "—"}
+                {data.rideStats ? formatDistance(data.rideStats.distanceMeters) : "—"}
               </OverviewRow>
               <OverviewRow label="Moving time">
-                {bikeStats.data?.rideStats
-                  ? formatMovingTime(bikeStats.data.rideStats.movingTimeMinutes)
-                  : "—"}
+                {data.rideStats ? formatMovingTime(data.rideStats.movingTimeMinutes) : "—"}
               </OverviewRow>
-              <OverviewRow label="Rides synced">
-                {bikeStats.data?.rideStats?.activityCount ?? "—"}
-              </OverviewRow>
+              <OverviewRow label="Rides synced">{data.rideStats?.activityCount ?? "—"}</OverviewRow>
             </CardContent>
           </Card>
 
@@ -266,9 +257,7 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
               <CardDescription>Active components with recorded mileage.</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-3 text-sm">
-              {bikeStats.isPending ? (
-                <p className="text-muted-foreground">Loading stats…</p>
-              ) : wearComponents.length === 0 ? (
+              {wearComponents.length === 0 ? (
                 <p className="text-muted-foreground">
                   No component mileage yet — sync Strava or enter usage in a component's edit form.
                 </p>

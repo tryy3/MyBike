@@ -1,10 +1,6 @@
-import { Router } from "express";
-import { and, asc, eq, ne, sql } from "drizzle-orm";
 import { parse } from "csv-parse/sync";
 import { stringify } from "csv-stringify/sync";
-import { db } from "../db/index.js";
-import { bikes, components } from "../db/schema.js";
-import type { ComponentRow } from "../db/schema.js";
+import { and, eq, ne, sql } from "drizzle-orm";
 import {
   CATEGORIES,
   COMPONENT_CSV_COLUMNS,
@@ -12,45 +8,16 @@ import {
   COMPONENT_IMPORT_MAX_BYTES,
   categoryLabel,
   componentInsertSchema,
-  componentImportSchema,
-  componentReorderSchema,
   componentUpdateSchema,
 } from "shared";
-import { HttpError, badRequest, notFound } from "../lib/errors.js";
-import { requireAuth, getAuthContext } from "../lib/require-auth.js";
-import { parseBody, parseParams } from "../lib/validation.js";
+import { db } from "../db/index.js";
+import { bikes, components } from "../db/schema.js";
+import type { ComponentRow } from "../db/schema.js";
+import { HttpError, badRequest } from "../lib/errors.js";
+import { requireBike } from "./bikes.js";
 
-export const componentsRouter = Router({ mergeParams: true });
-
-componentsRouter.use(requireAuth);
-
-// Order categories by their predefined `order` for CSV export. Any unknown id
-// (shouldn't happen since the enum is enforced) sorts last.
 const CATEGORY_ORDER = new Map(CATEGORIES.map((c, i) => [c.id, i]));
-
-// Max rows (data rows, excluding the header) accepted by the import endpoint.
 const IMPORT_MAX_ROWS = 1000;
-
-function requireBikeExists(bikeId: string, userId: string) {
-  const bike = db
-    .select()
-    .from(bikes)
-    .where(and(eq(bikes.id, bikeId), eq(bikes.userId, userId)))
-    .get();
-  if (!bike) throw notFound("Bike");
-  return bike;
-}
-
-function requireComponentExists(componentId: string, userId: string) {
-  const row = db
-    .select({ component: components })
-    .from(components)
-    .innerJoin(bikes, eq(components.bikeId, bikes.id))
-    .where(and(eq(components.id, componentId), eq(bikes.userId, userId)))
-    .get();
-  if (!row) throw notFound("Component");
-  return row.component;
-}
 
 function escapeCsvCell(value: string): string {
   if (/^[=+\-@\t\r]/.test(value)) {
@@ -94,27 +61,13 @@ function parseOptionalCost(raw: string): number | null | "invalid" {
   return n;
 }
 
-function optionalComponentFields(data: {
-  distanceMeters?: number | null;
-  movingTimeMinutes?: number | null;
-  purchaseDate?: string | null;
-  purchaseCost?: number | null;
-  purchaseStore?: string | null;
-}) {
-  return {
-    distanceMeters: data.distanceMeters ?? null,
-    movingTimeMinutes: data.movingTimeMinutes ?? null,
-    purchaseDate: data.purchaseDate ?? null,
-    purchaseCost: data.purchaseCost ?? null,
-    purchaseStore: data.purchaseStore ?? null,
-  };
+export interface ComponentExportResult {
+  csv: string;
+  filename: string;
 }
 
-// GET /api/bikes/:bikeId/components/export.csv
-componentsRouter.get("/export.csv", (req, res) => {
-  const { userId } = getAuthContext(req);
-  const { bikeId } = parseParams(req, ["bikeId"]);
-  const bike = requireBikeExists(bikeId, userId);
+export function exportComponentsCsv(bikeId: string, userId: string): ComponentExportResult {
+  const bike = requireBike(bikeId, userId);
   const rows = db.select().from(components).where(eq(components.bikeId, bikeId)).all();
   rows.sort((a, b) => {
     const oa = CATEGORY_ORDER.get(a.category) ?? Number.MAX_SAFE_INTEGER;
@@ -147,22 +100,58 @@ componentsRouter.get("/export.csv", (req, res) => {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "") || "bike";
-  res.setHeader("Content-Type", "text/csv; charset=utf-8");
-  res.setHeader("Content-Disposition", `attachment; filename="${slug}-components.csv"`);
-  res.send(csv);
-});
+  return { csv, filename: `${slug}-components.csv` };
+}
 
-// POST /api/bikes/:bikeId/components/import — upsert components from a CSV
-// string sent in the JSON body as `{ csv: string }`. Rows with an empty `id`
-// insert new components; rows with an `id` update the matching component. The
-// entire import runs in one transaction: if any row fails validation the whole
-// import is rejected and nothing is saved.
-componentsRouter.post("/import", (req, res) => {
-  const { userId } = getAuthContext(req);
-  const { bikeId } = parseParams(req, ["bikeId"]);
-  requireBikeExists(bikeId, userId);
+interface InsertOp {
+  kind: "insert";
+  row: number;
+  category: string;
+  name: string;
+  brand: string | null;
+  model: string | null;
+  notes: string | null;
+  isActive: boolean;
+  distanceMeters: number | null;
+  movingTimeMinutes: number | null;
+  purchaseDate: string | null;
+  purchaseCost: number | null;
+  purchaseStore: string | null;
+}
 
-  const { csv: csvText, dryRun = false } = parseBody(req, componentImportSchema);
+interface UpdateOp {
+  kind: "update";
+  row: number;
+  id: string;
+  existing: ComponentRow;
+  name: string;
+  brand: string | null;
+  model: string | null;
+  notes: string | null;
+  isActiveExplicit: boolean;
+  isActive: boolean;
+  distanceMeters: number | null;
+  movingTimeMinutes: number | null;
+  purchaseDate: string | null;
+  purchaseCost: number | null;
+  purchaseStore: string | null;
+}
+
+export interface ImportComponentsResult {
+  bikeId: string;
+  inserted: number;
+  updated: number;
+  dryRun?: boolean;
+}
+
+export function importComponentsFromCsv(
+  bikeId: string,
+  userId: string,
+  csvText: string,
+  dryRun = false,
+): ImportComponentsResult {
+  requireBike(bikeId, userId);
+
   if (csvText.length > COMPONENT_IMPORT_MAX_BYTES) {
     throw badRequest(`CSV is too large (max ${COMPONENT_IMPORT_MAX_BYTES} bytes)`);
   }
@@ -194,46 +183,12 @@ componentsRouter.post("/import", (req, res) => {
     throw badRequest(`Too many rows (max ${IMPORT_MAX_ROWS})`);
   }
 
-  interface InsertOp {
-    kind: "insert";
-    row: number;
-    category: string;
-    name: string;
-    brand: string | null;
-    model: string | null;
-    notes: string | null;
-    isActive: boolean;
-    distanceMeters: number | null;
-    movingTimeMinutes: number | null;
-    purchaseDate: string | null;
-    purchaseCost: number | null;
-    purchaseStore: string | null;
-  }
-  interface UpdateOp {
-    kind: "update";
-    row: number;
-    id: string;
-    existing: ComponentRow;
-    name: string;
-    brand: string | null;
-    model: string | null;
-    notes: string | null;
-    isActiveExplicit: boolean;
-    isActive: boolean;
-    distanceMeters: number | null;
-    movingTimeMinutes: number | null;
-    purchaseDate: string | null;
-    purchaseCost: number | null;
-    purchaseStore: string | null;
-  }
-
   const errors: { row: number; message: string }[] = [];
   const ops: (InsertOp | UpdateOp)[] = [];
   const addError = (row: number, message: string) => errors.push({ row, message });
 
   for (let i = 0; i < dataRows.length; i++) {
     const raw = padCsvRow(dataRows[i], headerMode);
-    // +2: 1-indexed, and the header is row 1.
     const row = i + 2;
     if (raw.length !== COMPONENT_CSV_COLUMNS.length) {
       addError(row, `Expected ${COMPONENT_CSV_COLUMNS.length} columns, got ${raw.length}`);
@@ -293,7 +248,6 @@ componentsRouter.post("/import", (req, res) => {
     }
 
     if (id === "") {
-      // Insert.
       const parsed = componentInsertSchema.safeParse({
         category,
         name,
@@ -329,7 +283,6 @@ componentsRouter.post("/import", (req, res) => {
         purchaseStore: parsed.data.purchaseStore ?? null,
       });
     } else {
-      // Update.
       const rowForBike = db
         .select({ component: components })
         .from(components)
@@ -388,7 +341,6 @@ componentsRouter.post("/import", (req, res) => {
     }
   }
 
-  // Across the whole import, at most one row per category may be marked active.
   const activeByCategory = new Map<string, number>();
   for (const op of ops) {
     if (op.isActive) {
@@ -412,11 +364,8 @@ componentsRouter.post("/import", (req, res) => {
   const inserted = ops.filter((o) => o.kind === "insert").length;
   const updated = ops.filter((o) => o.kind === "update").length;
 
-  // Dry-run: report what would happen without committing. The pre-pass above
-  // already validated every row, so these counts are final.
   if (dryRun) {
-    res.status(200).json({ dryRun: true, inserted, updated });
-    return;
+    return { bikeId, dryRun: true, inserted, updated };
   }
 
   db.transaction((tx) => {
@@ -427,8 +376,6 @@ componentsRouter.post("/import", (req, res) => {
           .from(components)
           .where(and(eq(components.bikeId, bikeId), eq(components.category, op.category)))
           .all().length;
-        // Mirror POST: the first component in a (bike, category) is
-        // auto-activated so a category always has exactly one active part.
         const isActive = existingCount === 0 ? true : op.isActive;
         if (isActive) {
           tx.update(components)
@@ -493,169 +440,5 @@ componentsRouter.post("/import", (req, res) => {
     }
   });
 
-  res.status(201).json({ bikeId, inserted, updated });
-});
-
-// POST /api/bikes/:bikeId/components
-componentsRouter.post("/", (req, res) => {
-  const { userId } = getAuthContext(req);
-  const { bikeId } = parseParams(req, ["bikeId"]);
-  requireBikeExists(bikeId, userId);
-  const data = parseBody(req, componentInsertSchema);
-  const existingCount = db
-    .select({ c: components.id })
-    .from(components)
-    .where(and(eq(components.bikeId, bikeId), eq(components.category, data.category)))
-    .all().length;
-  // First component in a (bike, category) is auto-activated so a category
-  // always has exactly one active component once it has any at all.
-  const isActive = existingCount === 0 ? true : data.isActive;
-  const created = db.transaction((tx) => {
-    if (isActive && existingCount > 0) {
-      tx.update(components)
-        .set({ isActive: false })
-        .where(and(eq(components.bikeId, bikeId), eq(components.category, data.category)))
-        .run();
-    }
-    const maxOrder = tx
-      .select({
-        max: sql<number | null>`max(${components.sortOrder})`.as("max"),
-      })
-      .from(components)
-      .where(and(eq(components.bikeId, bikeId), eq(components.category, data.category)))
-      .get();
-    const sortOrder = (maxOrder?.max ?? -1) + 1;
-    return tx
-      .insert(components)
-      .values({
-        bikeId,
-        category: data.category,
-        name: data.name,
-        brand: data.brand ?? null,
-        model: data.model ?? null,
-        notes: data.notes ?? null,
-        ...optionalComponentFields(data),
-        isActive,
-        sortOrder,
-      })
-      .returning()
-      .get();
-  });
-  res.status(201).json(created);
-});
-
-// PUT /api/components/:id  (mounted at /api/components)
-componentsRouter.put("/:id", (req, res) => {
-  const { userId } = getAuthContext(req);
-  const { id } = parseParams(req, ["id"]);
-  requireComponentExists(id, userId);
-  const data = parseBody(req, componentUpdateSchema);
-  const updates: Record<string, unknown> = {};
-  if (data.name !== undefined) updates.name = data.name;
-  if (data.brand !== undefined) updates.brand = data.brand ?? null;
-  if (data.model !== undefined) updates.model = data.model ?? null;
-  if (data.notes !== undefined) updates.notes = data.notes ?? null;
-  if (data.distanceMeters !== undefined) updates.distanceMeters = data.distanceMeters ?? null;
-  if (data.movingTimeMinutes !== undefined)
-    updates.movingTimeMinutes = data.movingTimeMinutes ?? null;
-  if (data.purchaseDate !== undefined) updates.purchaseDate = data.purchaseDate ?? null;
-  if (data.purchaseCost !== undefined) updates.purchaseCost = data.purchaseCost ?? null;
-  if (data.purchaseStore !== undefined) updates.purchaseStore = data.purchaseStore ?? null;
-  // category and is_active are managed elsewhere; ignore them here.
-  if (Object.keys(updates).length === 0) {
-    const row = db.select().from(components).where(eq(components.id, id)).get();
-    res.json(row);
-    return;
-  }
-  const updated = db.update(components).set(updates).where(eq(components.id, id)).returning().get();
-  res.json(updated);
-});
-
-// DELETE /api/components/:id
-componentsRouter.delete("/:id", (req, res) => {
-  const { userId } = getAuthContext(req);
-  const { id } = parseParams(req, ["id"]);
-  const existing = requireComponentExists(id, userId);
-  // Delete within a transaction so we can reassign the active flag atomically.
-  db.transaction((tx) => {
-    const result = tx.delete(components).where(eq(components.id, id)).run();
-    if (result.changes === 0) throw notFound("Component");
-    if (existing.isActive) {
-      // Reassign active flag to the oldest remaining component in the same
-      // (bike, category), if any.
-      const oldest = tx
-        .select()
-        .from(components)
-        .where(
-          and(eq(components.bikeId, existing.bikeId), eq(components.category, existing.category)),
-        )
-        .orderBy(asc(components.createdAt))
-        .get();
-      if (oldest) {
-        tx.update(components).set({ isActive: true }).where(eq(components.id, oldest.id)).run();
-      }
-    }
-  });
-  res.status(204).end();
-});
-
-// PATCH /api/components/:id/activate — set this component active, others in the
-// same (bike, category) inactive.
-componentsRouter.patch("/:id/activate", (req, res) => {
-  const { userId } = getAuthContext(req);
-  const { id } = parseParams(req, ["id"]);
-  const component = requireComponentExists(id, userId);
-  db.transaction((tx) => {
-    // Deactivate all other components in the same (bike, category).
-    tx.update(components)
-      .set({ isActive: false })
-      .where(
-        and(
-          eq(components.bikeId, component.bikeId),
-          eq(components.category, component.category),
-          ne(components.id, id),
-        ),
-      )
-      .run();
-    // Activate the chosen one.
-    tx.update(components).set({ isActive: true }).where(eq(components.id, id)).run();
-  });
-  const updated = db.select().from(components).where(eq(components.id, id)).get();
-  res.json(updated);
-});
-
-// PATCH /api/bikes/:bikeId/components/reorder — rewrite sort_order within a
-// (bike, category). `orderedIds` must be the complete set of component ids for
-// that (bike, category) in the desired order.
-componentsRouter.patch("/reorder", (req, res) => {
-  const { userId } = getAuthContext(req);
-  const { bikeId } = parseParams(req, ["bikeId"]);
-  requireBikeExists(bikeId, userId);
-  const data = parseBody(req, componentReorderSchema);
-  const rows = db
-    .select({ id: components.id })
-    .from(components)
-    .where(and(eq(components.bikeId, bikeId), eq(components.category, data.category)))
-    .all();
-  const existingIds = new Set(rows.map((r) => r.id));
-  const orderedSet = new Set(data.orderedIds);
-  if (existingIds.size !== orderedSet.size || rows.length !== data.orderedIds.length) {
-    throw new HttpError(
-      400,
-      "orderedIds must contain each component of this (bike, category) exactly once",
-    );
-  }
-  for (const id of data.orderedIds) {
-    if (!existingIds.has(id)) {
-      throw new HttpError(400, `Component ${id} does not belong to this (bike, category)`);
-    }
-  }
-  db.transaction((tx) => {
-    data.orderedIds.forEach((id, index) => {
-      tx.update(components).set({ sortOrder: index }).where(eq(components.id, id)).run();
-    });
-  });
-  res.status(204).end();
-});
-
-export default componentsRouter;
+  return { bikeId, inserted, updated };
+}

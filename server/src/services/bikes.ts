@@ -1,17 +1,11 @@
-import { Router } from "express";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import type { BikeInsert, BikeUpdate, BikeDetail, BikeListItem } from "shared";
 import { db } from "../db/index.js";
-import { components, bikes } from "../db/schema.js";
-import { bikeInsertSchema, bikeUpdateSchema, type BikeDetail, type BikeListItem } from "shared";
+import { bikes, components } from "../db/schema.js";
+import type { BikeRow } from "../db/schema.js";
 import { HttpError, notFound } from "../lib/errors.js";
-import { requireAuth, getAuthContext } from "../lib/require-auth.js";
-import { parseBody, parseParams } from "../lib/validation.js";
 
-export const bikesRouter = Router();
-
-bikesRouter.use(requireAuth);
-
-function requireBike(bikeId: string, userId: string) {
+export function requireBike(bikeId: string, userId: string): BikeRow {
   const bike = db
     .select()
     .from(bikes)
@@ -21,20 +15,7 @@ function requireBike(bikeId: string, userId: string) {
   return bike;
 }
 
-function buildBikeDetail(bikeId: string, userId: string): BikeDetail {
-  const bike = requireBike(bikeId, userId);
-  const rows = db
-    .select()
-    .from(components)
-    .where(eq(components.bikeId, bikeId))
-    .orderBy(asc(components.sortOrder), asc(components.createdAt))
-    .all();
-  return { ...bike, components: rows };
-}
-
-// GET /api/bikes
-bikesRouter.get("/", (req, res) => {
-  const { userId } = getAuthContext(req);
+export function listBikes(userId: string): BikeListItem[] {
   const all = db
     .select()
     .from(bikes)
@@ -60,19 +41,43 @@ bikesRouter.get("/", (req, res) => {
             return acc;
           }, {});
 
-  const items: BikeListItem[] = all.map((b) => ({
+  return all.map((b) => ({
     ...b,
     componentCount: componentCounts[b.id] ?? 0,
   }));
+}
 
-  res.json(items);
-});
+export function getBikeDetail(bikeId: string, userId: string): BikeDetail {
+  const bike = requireBike(bikeId, userId);
+  const rows = db
+    .select()
+    .from(components)
+    .where(eq(components.bikeId, bikeId))
+    .orderBy(asc(components.sortOrder), asc(components.createdAt))
+    .all();
+  return { ...bike, components: rows };
+}
 
-// POST /api/bikes
-bikesRouter.post("/", (req, res) => {
-  const { userId } = getAuthContext(req);
-  const data = parseBody(req, bikeInsertSchema);
-  const created = db
+export function listComponentsForBike(
+  bikeId: string,
+  userId: string,
+  options?: { activeOnly?: boolean },
+) {
+  requireBike(bikeId, userId);
+  const rows = db
+    .select()
+    .from(components)
+    .where(eq(components.bikeId, bikeId))
+    .orderBy(asc(components.sortOrder), asc(components.createdAt))
+    .all();
+  if (options?.activeOnly) {
+    return rows.filter((c) => c.isActive);
+  }
+  return rows;
+}
+
+export function createBike(userId: string, data: BikeInsert): BikeRow {
+  return db
     .insert(bikes)
     .values({
       userId,
@@ -84,22 +89,10 @@ bikesRouter.post("/", (req, res) => {
     })
     .returning()
     .get();
-  res.status(201).json(created);
-});
+}
 
-// GET /api/bikes/:id
-bikesRouter.get("/:id", (req, res) => {
-  const { userId } = getAuthContext(req);
-  const { id } = parseParams(req, ["id"]);
-  res.json(buildBikeDetail(id, userId));
-});
-
-// PUT /api/bikes/:id
-bikesRouter.put("/:id", (req, res) => {
-  const { userId } = getAuthContext(req);
-  const { id } = parseParams(req, ["id"]);
-  requireBike(id, userId);
-  const data = parseBody(req, bikeUpdateSchema);
+export function updateBike(bikeId: string, userId: string, data: BikeUpdate): BikeRow {
+  requireBike(bikeId, userId);
   const updates = {
     ...(data.name !== undefined ? { name: data.name } : {}),
     ...(data.brand !== undefined ? { brand: data.brand ?? null } : {}),
@@ -110,25 +103,18 @@ bikesRouter.put("/:id", (req, res) => {
   if (Object.keys(updates).length === 0) {
     throw new HttpError(400, "No fields to update");
   }
-  const updated = db
+  return db
     .update(bikes)
     .set(updates)
-    .where(and(eq(bikes.id, id), eq(bikes.userId, userId)))
+    .where(and(eq(bikes.id, bikeId), eq(bikes.userId, userId)))
     .returning()
     .get();
-  res.json(updated);
-});
+}
 
-// DELETE /api/bikes/:id
-bikesRouter.delete("/:id", (req, res) => {
-  const { userId } = getAuthContext(req);
-  const { id } = parseParams(req, ["id"]);
+export function deleteBike(bikeId: string, userId: string): void {
   const result = db
     .delete(bikes)
-    .where(and(eq(bikes.id, id), eq(bikes.userId, userId)))
+    .where(and(eq(bikes.id, bikeId), eq(bikes.userId, userId)))
     .run();
   if (result.changes === 0) throw notFound("Bike");
-  res.status(204).end();
-});
-
-export default bikesRouter;
+}
