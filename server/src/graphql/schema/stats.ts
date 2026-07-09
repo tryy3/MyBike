@@ -2,7 +2,7 @@ import type { GarageStats, RideStats } from "shared";
 import type { WearTotals } from "../../lib/component-wear.js";
 import { builder } from "../builder.js";
 import { getGarageStats } from "../../services/stats.js";
-import { requireUserId } from "../context.js";
+import { requireGraphQLPermission } from "../context.js";
 
 const RideStatsRef = builder.objectRef<RideStats>("RideStats");
 builder.objectType(RideStatsRef, {
@@ -52,7 +52,7 @@ builder.queryField("garageStats", (t) =>
   t.field({
     type: GarageStatsRef,
     resolve: (_root, _args, context) => {
-      const userId = requireUserId(context);
+      const userId = requireGraphQLPermission(context, "read");
       return getGarageStats(userId);
     },
   }),

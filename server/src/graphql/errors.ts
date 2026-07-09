@@ -12,9 +12,11 @@ export const formatError: NonNullable<YogaServerOptions<{}, {}>["maskedErrors"]>
       const code =
         cause.status === 401
           ? "UNAUTHENTICATED"
-          : cause.status === 404
-            ? "NOT_FOUND"
-            : "BAD_USER_INPUT";
+          : cause.status === 403
+            ? "FORBIDDEN"
+            : cause.status === 404
+              ? "NOT_FOUND"
+              : "BAD_USER_INPUT";
       return new GraphQLError(cause.message, {
         extensions: {
           code,

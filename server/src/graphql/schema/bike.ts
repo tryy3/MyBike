@@ -24,7 +24,7 @@ import {
 } from "../../services/components.js";
 import { getRideStatsForBike } from "../../services/stats.js";
 import { builder } from "../builder.js";
-import { requireUserId } from "../context.js";
+import { requireGraphQLPermission } from "../context.js";
 import { ComponentRef } from "./component.js";
 import { RideStatsRef } from "./stats.js";
 
@@ -44,7 +44,7 @@ builder.objectType(BikeRef, {
     componentCount: t.int({
       resolve: (parent, _args, context) => {
         if ("componentCount" in parent) return parent.componentCount;
-        const userId = requireUserId(context);
+        const userId = requireGraphQLPermission(context, "read");
         return listComponentsForBike(parent.id, userId).length;
       },
     }),
@@ -52,7 +52,7 @@ builder.objectType(BikeRef, {
       type: RideStatsRef,
       nullable: true,
       resolve: (parent, _args, context) => {
-        const userId = requireUserId(context);
+        const userId = requireGraphQLPermission(context, "read");
         return getRideStatsForBike(userId, parent.id);
       },
     }),
@@ -62,7 +62,7 @@ builder.objectType(BikeRef, {
         activeOnly: t.arg.boolean({ required: false, defaultValue: false }),
       },
       resolve: (parent, args, context) => {
-        const userId = requireUserId(context);
+        const userId = requireGraphQLPermission(context, "read");
         return listComponentsForBike(parent.id, userId, { activeOnly: args.activeOnly ?? false });
       },
     }),
@@ -123,7 +123,7 @@ builder.queryField("bikes", (t) =>
   t.field({
     type: [BikeRef],
     resolve: (_root, _args, context) => {
-      const userId = requireUserId(context);
+      const userId = requireGraphQLPermission(context, "read");
       return listBikes(userId);
     },
   }),
@@ -137,7 +137,7 @@ builder.queryField("bike", (t) =>
       id: t.arg.id({ required: true }),
     },
     resolve: (_root, args, context) => {
-      const userId = requireUserId(context);
+      const userId = requireGraphQLPermission(context, "read");
       return requireBike(args.id, userId);
     },
   }),
@@ -150,7 +150,7 @@ builder.mutationField("createBike", (t) =>
       input: t.arg({ type: BikeInsertInput, required: true }),
     },
     resolve: (_root, args, context) => {
-      const userId = requireUserId(context);
+      const userId = requireGraphQLPermission(context, "write");
       const data = bikeInsertSchema.parse(args.input);
       return createBike(userId, data);
     },
@@ -165,7 +165,7 @@ builder.mutationField("updateBike", (t) =>
       input: t.arg({ type: BikeUpdateInput, required: true }),
     },
     resolve: (_root, args, context) => {
-      const userId = requireUserId(context);
+      const userId = requireGraphQLPermission(context, "write");
       const data = bikeUpdateSchema.parse(args.input);
       return updateBike(args.id, userId, data);
     },
@@ -178,7 +178,7 @@ builder.mutationField("deleteBike", (t) =>
       id: t.arg.id({ required: true }),
     },
     resolve: (_root, args, context) => {
-      const userId = requireUserId(context);
+      const userId = requireGraphQLPermission(context, "delete");
       deleteBike(args.id, userId);
       return true;
     },
@@ -193,7 +193,7 @@ builder.mutationField("createComponent", (t) =>
       input: t.arg({ type: ComponentInsertInput, required: true }),
     },
     resolve: (_root, args, context) => {
-      const userId = requireUserId(context);
+      const userId = requireGraphQLPermission(context, "write");
       const data = componentInsertSchema.parse(args.input);
       return createComponent(args.bikeId, userId, data);
     },
@@ -208,7 +208,7 @@ builder.mutationField("updateComponent", (t) =>
       input: t.arg({ type: ComponentUpdateInput, required: true }),
     },
     resolve: (_root, args, context) => {
-      const userId = requireUserId(context);
+      const userId = requireGraphQLPermission(context, "write");
       const data = componentUpdateSchema.parse(args.input);
       return updateComponent(args.id, userId, data);
     },
@@ -221,7 +221,7 @@ builder.mutationField("deleteComponent", (t) =>
       id: t.arg.id({ required: true }),
     },
     resolve: (_root, args, context) => {
-      const userId = requireUserId(context);
+      const userId = requireGraphQLPermission(context, "delete");
       deleteComponent(args.id, userId);
       return true;
     },
@@ -235,7 +235,7 @@ builder.mutationField("activateComponent", (t) =>
       id: t.arg.id({ required: true }),
     },
     resolve: (_root, args, context) => {
-      const userId = requireUserId(context);
+      const userId = requireGraphQLPermission(context, "write");
       return activateComponent(args.id, userId);
     },
   }),
@@ -249,7 +249,7 @@ builder.mutationField("reorderComponents", (t) =>
       orderedIds: t.arg.idList({ required: true }),
     },
     resolve: (_root, args, context) => {
-      const userId = requireUserId(context);
+      const userId = requireGraphQLPermission(context, "write");
       const data = componentReorderSchema.parse({
         category: args.category,
         orderedIds: args.orderedIds,

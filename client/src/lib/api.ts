@@ -117,5 +117,6 @@ export const queryKeys = {
   fieldSuggestions: ["field-suggestions"] as const,
   stravaStatus: ["strava", "status"] as const,
   stravaConfig: ["strava", "config"] as const,
+  apiKeys: ["api-keys"] as const,
   bikeActivities: (id: string) => ["activities", "bike", id] as const,
 };

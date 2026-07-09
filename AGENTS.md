@@ -109,7 +109,9 @@ In GitHub **Settings → Branches** for `master`, require the **CI / Check and t
 
 **Validation:** continue using Zod schemas in `shared/`; GraphQL mutation resolvers call `.parse()` on the same schemas.
 
-**After GraphQL changes:** run `npm run verify`; add or update tests in `server/src/test/graphql.test.ts`. Tests that need bike/component setup should use helpers in `server/src/test/graphql-helper.ts`.
+**GraphQL API keys (LLM / script access):** users create keys at `/settings/api-keys` while logged in (Better Auth `@better-auth/api-key` plugin). Keys authenticate **only** `POST /graphql` via `Authorization: Bearer mbk_…` or `x-api-key`; REST routes remain session-only. Default scope is read-only (`graphql: ["read"]`); write and delete scopes are available when creating a key. Permission constants live in `shared/src/schemas/api-key.ts`.
+
+**After GraphQL changes:** run `npm run verify`; add or update tests in `server/src/test/graphql.test.ts`. Tests that need bike/component setup should use helpers in `server/src/test/graphql-helper.ts`. API key tests live in `server/src/test/api-key-graphql.test.ts`.
 
 **After making changes, run `vp check` for the affected area (or `npm run verify` before pushing). Include `shared` when you touch schemas.**
 

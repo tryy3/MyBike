@@ -6,6 +6,7 @@ import { appLayoutRoute } from "./routes/app-layout";
 import { BikesListPage } from "./routes/bikes-list";
 import { BikeDetailPage } from "./routes/bike-detail";
 import { IntegrationsPage } from "./routes/integrations";
+import { ApiKeysPage } from "./routes/api-keys";
 import { LoginPage } from "./routes/login";
 import { RegisterPage } from "./routes/register";
 import { redirectIfAuthenticated } from "./lib/auth-guard";
@@ -26,6 +27,12 @@ const integrationsRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: "/settings/integrations",
   component: IntegrationsPage,
+});
+
+const apiKeysRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/settings/api-keys",
+  component: ApiKeysPage,
 });
 
 function BikeDetailWrapper() {
@@ -72,7 +79,7 @@ function NotFound() {
 }
 
 const routeTree = rootRoute.addChildren([
-  appLayoutRoute.addChildren([indexRoute, bikeRoute, integrationsRoute]),
+  appLayoutRoute.addChildren([indexRoute, bikeRoute, integrationsRoute, apiKeysRoute]),
   loginRoute,
   registerRoute,
 ]);

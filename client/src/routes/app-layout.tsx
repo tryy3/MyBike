@@ -24,9 +24,9 @@ function AppHeader() {
         </Link>
         <div className="ml-auto flex items-center gap-2">
           <Button asChild variant="ghost" size="sm">
-            <Link to="/settings/integrations">
+            <Link to="/settings/api-keys">
               <SettingsIcon data-icon="inline-start" />
-              <span className="sr-only sm:not-sr-only">Integrations</span>
+              <span className="sr-only sm:not-sr-only">Settings</span>
             </Link>
           </Button>
           {user ? (
