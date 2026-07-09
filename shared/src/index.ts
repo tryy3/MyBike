@@ -4,6 +4,7 @@ export * from "./schemas/api-key.js";
 export * from "./schemas/auth.js";
 export * from "./schemas/bike.js";
 export * from "./schemas/component.js";
+export * from "./schemas/component-filter.js";
 export * from "./schemas/strava.js";
 export * from "./schemas/strava-webhook.js";
 export * from "./schemas/stats.js";

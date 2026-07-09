@@ -111,6 +111,37 @@ In GitHub **Settings → Branches** for `master`, require the **CI / Check and t
 
 **GraphQL API keys (LLM / script access):** users create keys at `/settings/api-keys` while logged in (Better Auth `@better-auth/api-key` plugin). Keys authenticate **only** `POST /graphql` via `Authorization: Bearer mbk_…` or `x-api-key`; REST routes remain session-only. Default scope is read-only (`graphql: ["read"]`); write and delete scopes are available when creating a key. Permission constants live in `shared/src/schemas/api-key.ts`.
 
+**Token-efficient component reads:** use field selection plus `bike(id) { components(filter: { … }) }`. Filter by `categories` (GraphQL enum `ComponentCategory`, e.g. `crankset`, `rear_derailleur`), `activeOnly`, `isActive`, `brands`, `nameContains`, `brandContains`, or `modelContains`. Example for drivetrain compatibility on one bike:
+
+```graphql
+query ($id: ID!) {
+  bike(id: $id) {
+    name
+    components(
+      filter: {
+        categories: [
+          crankset
+          cassette
+          chain
+          bottom_bracket
+          front_derailleur
+          rear_derailleur
+          shift_levers
+        ]
+        activeOnly: true
+      }
+    ) {
+      category
+      name
+      brand
+      model
+    }
+  }
+}
+```
+
+Validation schema: `shared/src/schemas/component-filter.ts`.
+
 **After GraphQL changes:** run `npm run verify`; add or update tests in `server/src/test/graphql.test.ts`. Tests that need bike/component setup should use helpers in `server/src/test/graphql-helper.ts`. API key tests live in `server/src/test/api-key-graphql.test.ts`.
 
 **After making changes, run `vp check` for the affected area (or `npm run verify` before pushing). Include `shared` when you touch schemas.**

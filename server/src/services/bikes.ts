@@ -1,9 +1,51 @@
-import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
-import type { BikeInsert, BikeUpdate, BikeDetail, BikeListItem } from "shared";
+import { and, asc, desc, eq, inArray, or, sql, type SQL } from "drizzle-orm";
+import type { BikeInsert, BikeUpdate, BikeDetail, BikeListItem, ComponentFilter } from "shared";
 import { db } from "../db/index.js";
 import { bikes, components } from "../db/schema.js";
 import type { BikeRow } from "../db/schema.js";
 import { HttpError, notFound } from "../lib/errors.js";
+
+function containsInsensitive(
+  column: typeof components.name | typeof components.brand | typeof components.model,
+  term: string,
+): SQL {
+  return sql`instr(lower(${column}), lower(${term})) > 0`;
+}
+
+function buildComponentFilterConditions(filter: ComponentFilter): SQL[] {
+  const conditions: SQL[] = [];
+
+  if (filter.categories && filter.categories.length > 0) {
+    conditions.push(inArray(components.category, filter.categories));
+  }
+
+  if (filter.activeOnly) {
+    conditions.push(eq(components.isActive, true));
+  } else if (filter.isActive !== undefined) {
+    conditions.push(eq(components.isActive, filter.isActive));
+  }
+
+  if (filter.brands && filter.brands.length > 0) {
+    const brandMatches = filter.brands.map(
+      (brand) => sql`lower(${components.brand}) = lower(${brand})`,
+    );
+    conditions.push(or(...brandMatches)!);
+  }
+
+  if (filter.nameContains) {
+    conditions.push(containsInsensitive(components.name, filter.nameContains));
+  }
+
+  if (filter.brandContains) {
+    conditions.push(containsInsensitive(components.brand, filter.brandContains));
+  }
+
+  if (filter.modelContains) {
+    conditions.push(containsInsensitive(components.model, filter.modelContains));
+  }
+
+  return conditions;
+}
 
 export function requireBike(bikeId: string, userId: string): BikeRow {
   const bike = db
@@ -61,18 +103,16 @@ export function getBikeDetail(bikeId: string, userId: string): BikeDetail {
 export function listComponentsForBike(
   bikeId: string,
   userId: string,
-  options?: { activeOnly?: boolean },
+  options?: { filter?: ComponentFilter },
 ) {
   requireBike(bikeId, userId);
+  const filterConditions = options?.filter ? buildComponentFilterConditions(options.filter) : [];
   const rows = db
     .select()
     .from(components)
-    .where(eq(components.bikeId, bikeId))
+    .where(and(eq(components.bikeId, bikeId), ...filterConditions))
     .orderBy(asc(components.sortOrder), asc(components.createdAt))
     .all();
-  if (options?.activeOnly) {
-    return rows.filter((c) => c.isActive);
-  }
   return rows;
 }
 

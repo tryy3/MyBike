@@ -194,12 +194,19 @@ export function ApiKeysPage() {
           )}
         </CardContent>
         <CardFooter className="flex flex-col items-start gap-2 border-t bg-muted/30">
-          <p className="text-sm font-medium">Example request</p>
+          <p className="text-sm font-medium">Example requests</p>
           <pre className="w-full overflow-x-auto rounded-md bg-background p-3 text-xs leading-relaxed">
-            {`curl -s ${graphqlUrl} \\
+            {`# List bikes
+curl -s ${graphqlUrl} \\
   -H "Authorization: Bearer mbk_<your-key>" \\
   -H "Content-Type: application/json" \\
-  -d '{"query":"{ bikes { id name } }"}'`}
+  -d '{"query":"{ bikes { id name } }"}'
+
+# Active drivetrain parts on one bike (use introspection for ComponentCategory values)
+curl -s ${graphqlUrl} \\
+  -H "Authorization: Bearer mbk_<your-key>" \\
+  -H "Content-Type: application/json" \\
+  -d '{"query":"query($id: ID!) { bike(id: $id) { name components(filter: { categories: [crankset, cassette, chain], activeOnly: true }) { category brand model } } }","variables":{"id":"<bike-id>"}}'`}
           </pre>
         </CardFooter>
       </Card>
