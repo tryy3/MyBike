@@ -1,7 +1,7 @@
 import type { FieldSuggestions } from "shared";
 import { getFieldSuggestions } from "../../services/field-suggestions.js";
 import { builder } from "../builder.js";
-import { requireUserId } from "../context.js";
+import { requireGraphQLPermission } from "../context.js";
 
 const FieldSuggestionsRef = builder.objectRef<FieldSuggestions>("FieldSuggestions");
 
@@ -18,7 +18,7 @@ builder.queryField("fieldSuggestions", (t) =>
   t.field({
     type: FieldSuggestionsRef,
     resolve: (_root, _args, context) => {
-      const userId = requireUserId(context);
+      const userId = requireGraphQLPermission(context, "read");
       return getFieldSuggestions(userId);
     },
   }),

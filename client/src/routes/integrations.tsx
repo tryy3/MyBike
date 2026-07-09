@@ -11,6 +11,7 @@ import {
   UnplugIcon,
 } from "lucide-react";
 import type { StravaImportItem } from "shared";
+import { SettingsNav } from "@/components/SettingsNav";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -220,7 +221,16 @@ export function IntegrationsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Integrations</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+        <p className="text-sm text-muted-foreground">
+          Manage integrations and programmatic access to your bike data.
+        </p>
+      </div>
+
+      <SettingsNav active="/settings/integrations" />
+
+      <div className="flex flex-col gap-1">
+        <h2 className="text-lg font-semibold tracking-tight">Integrations</h2>
         <p className="text-sm text-muted-foreground">
           Connect services that can keep your bike and component usage up to date.
         </p>

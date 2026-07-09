@@ -1,5 +1,6 @@
 export * from "./categories.js";
 export * from "./system-groups.js";
+export * from "./schemas/api-key.js";
 export * from "./schemas/auth.js";
 export * from "./schemas/bike.js";
 export * from "./schemas/component.js";
