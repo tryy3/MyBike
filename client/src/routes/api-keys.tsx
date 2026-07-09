@@ -230,21 +230,31 @@ export function ApiKeysPage() {
                 onValueChange={(value) => setScope(value as GraphQLApiKeyScopeId)}
               >
                 <SelectTrigger id="api-key-scope" className="w-full">
-                  <SelectValue />
+                  <SelectValue placeholder="Select permissions">
+                    {GRAPHQL_API_KEY_SCOPE_LABELS[scope]}
+                  </SelectValue>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent position="popper" className="w-[var(--radix-select-trigger-width)]">
                   {scopeOptions.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      <span className="flex flex-col items-start gap-0.5">
-                        <span>{GRAPHQL_API_KEY_SCOPE_LABELS[option]}</span>
-                        <span className="text-xs text-muted-foreground">
+                    <SelectItem
+                      key={option}
+                      value={option}
+                      textValue={GRAPHQL_API_KEY_SCOPE_LABELS[option]}
+                      className="items-start py-2.5"
+                    >
+                      <div className="flex flex-col items-start gap-0.5 pr-6">
+                        <span className="font-medium">{GRAPHQL_API_KEY_SCOPE_LABELS[option]}</span>
+                        <span className="text-xs leading-snug text-muted-foreground">
                           {GRAPHQL_API_KEY_SCOPE_DESCRIPTIONS[option]}
                         </span>
-                      </span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                {GRAPHQL_API_KEY_SCOPE_DESCRIPTIONS[scope]}
+              </p>
             </div>
           </div>
           <DialogFooter>
