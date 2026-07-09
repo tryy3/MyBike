@@ -2,9 +2,14 @@ import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import { eq } from "drizzle-orm";
 import { account, user } from "../db/auth-schema.js";
 import { db } from "../db/index.js";
-import { stravaSyncState } from "../db/schema.js";
+import { components, stravaSyncState } from "../db/schema.js";
 import { createApp } from "../app.js";
 import { createAuthenticatedAgent } from "./auth-helper.js";
+import {
+  createBikeViaGraphql,
+  createComponentViaGraphql,
+  getBikeViaGraphql,
+} from "./graphql-helper.js";
 
 const app = createApp();
 
@@ -119,16 +124,23 @@ function todayRideDate(time = "10:00:00Z"): string {
   return `${new Date().toISOString().slice(0, 10)}T${time}`;
 }
 
+function getComponentBaseline(componentId: string) {
+  const row = db.select().from(components).where(eq(components.id, componentId)).get();
+  expect(row).toBeDefined();
+  return row!;
+}
+
 describe("Strava import", () => {
   it("previews and commits a matched Strava bike with historical component credit", async () => {
     const { agent, user: testUser } = await createAuthenticatedAgent(app);
     await connectStravaAccount(testUser.email);
 
-    const bike = await agent.post("/api/bikes").send({ name: "Road Bike" }).expect(201);
-    const component = await agent
-      .post(`/api/bikes/${bike.body.id}/components`)
-      .send(componentPayload({ distanceMeters: 1000, movingTimeMinutes: 10 }))
-      .expect(201);
+    const bike = await createBikeViaGraphql(agent, "Road Bike");
+    const component = await createComponentViaGraphql(agent, bike.id, {
+      ...componentPayload(),
+      distanceMeters: 1000,
+      movingTimeMinutes: 10,
+    });
 
     mockActivities = [
       {
@@ -148,7 +160,7 @@ describe("Strava import", () => {
         stravaBikeName: "Road Bike",
         distanceMeters: 1235,
         movingTimeMinutes: 60,
-        matchedBikeId: bike.body.id,
+        matchedBikeId: bike.id,
         matchReason: "name",
         recommendedAction: "link",
       }),
@@ -157,7 +169,7 @@ describe("Strava import", () => {
     const committed = await agent
       .post("/api/strava/import/commit")
       .send({
-        decisions: [{ gearId: "b123", action: "link", bikeId: bike.body.id }],
+        decisions: [{ gearId: "b123", action: "link", bikeId: bike.id }],
         creditHistoricalComponents: true,
       })
       .expect(200);
@@ -170,26 +182,26 @@ describe("Strava import", () => {
       creditedComponents: 1,
     });
 
-    const detail = await agent.get(`/api/bikes/${bike.body.id}`).expect(200);
-    const updated = detail.body.components.find((c: { id: string }) => c.id === component.body.id);
-    expect(updated.distanceMeters).toBe(1000);
-    expect(updated.movingTimeMinutes).toBe(10);
+    const baseline = getComponentBaseline(component.id);
+    expect(baseline.distanceMeters).toBe(1000);
+    expect(baseline.movingTimeMinutes).toBe(10);
 
-    const stats = await agent.get(`/api/stats/bikes/${bike.body.id}`).expect(200);
-    const wear = stats.body.components.find((c: { id: string }) => c.id === component.body.id);
-    expect(wear.distanceMeters).toBe(2235);
-    expect(wear.movingTimeMinutes).toBe(70);
+    const detail = await getBikeViaGraphql(agent, bike.id);
+    const updated = detail.components.find((c) => c.id === component.id);
+    expect(updated?.wear.distanceMeters).toBe(2235);
+    expect(updated?.wear.movingTimeMinutes).toBe(70);
   });
 
   it("skips component links for rides before credit cutoff unless historical opt-in", async () => {
     const { agent, user: testUser } = await createAuthenticatedAgent(app);
     await connectStravaAccount(testUser.email);
 
-    const bike = await agent.post("/api/bikes").send({ name: "Old Rides Bike" }).expect(201);
-    await agent
-      .post(`/api/bikes/${bike.body.id}/components`)
-      .send(componentPayload({ distanceMeters: 500, movingTimeMinutes: 5 }))
-      .expect(201);
+    const bike = await createBikeViaGraphql(agent, "Old Rides Bike");
+    await createComponentViaGraphql(agent, bike.id, {
+      ...componentPayload(),
+      distanceMeters: 500,
+      movingTimeMinutes: 5,
+    });
 
     mockActivities = [
       {
@@ -205,7 +217,7 @@ describe("Strava import", () => {
     const committed = await agent
       .post("/api/strava/import/commit")
       .send({
-        decisions: [{ gearId: "b124", action: "link", bikeId: bike.body.id }],
+        decisions: [{ gearId: "b124", action: "link", bikeId: bike.id }],
         creditHistoricalComponents: false,
       })
       .expect(200);
@@ -215,12 +227,12 @@ describe("Strava import", () => {
       creditedComponents: 0,
     });
 
-    const stats = await agent.get(`/api/stats/bikes/${bike.body.id}`).expect(200);
-    expect(stats.body.rideStats).toMatchObject({
+    const stats = await getBikeViaGraphql(agent, bike.id);
+    expect(stats.rideStats).toMatchObject({
       distanceMeters: 5000,
       activityCount: 1,
     });
-    expect(stats.body.components[0].distanceMeters).toBe(500);
+    expect(stats.components[0]?.wear.distanceMeters).toBe(500);
   });
 
   it("resolves bike names from athlete gear when activities only include gear_id", async () => {
@@ -327,17 +339,18 @@ describe("Strava sync", () => {
     const { agent, user: testUser } = await createAuthenticatedAgent(app);
     await connectStravaAccount(testUser.email);
 
-    const bike = await agent.post("/api/bikes").send({ name: "Gravel Bike" }).expect(201);
-    await agent
-      .post(`/api/bikes/${bike.body.id}/components`)
-      .send(componentPayload({ category: "chain", distanceMeters: 0, movingTimeMinutes: 0 }))
-      .expect(201);
+    const bike = await createBikeViaGraphql(agent, "Gravel Bike");
+    const component = await createComponentViaGraphql(agent, bike.id, {
+      ...componentPayload({ category: "chain" }),
+      distanceMeters: 0,
+      movingTimeMinutes: 0,
+    });
 
     mockActivities = [];
     await agent
       .post("/api/strava/import/commit")
       .send({
-        decisions: [{ gearId: "gravel-1", action: "link", bikeId: bike.body.id }],
+        decisions: [{ gearId: "gravel-1", action: "link", bikeId: bike.id }],
       })
       .expect(200);
 
@@ -373,13 +386,13 @@ describe("Strava sync", () => {
       creditedComponents: 0,
     });
 
-    const detail = await agent.get(`/api/bikes/${bike.body.id}`).expect(200);
-    expect(detail.body.components[0].distanceMeters).toBe(0);
-    expect(detail.body.components[0].movingTimeMinutes).toBe(0);
+    const baseline = getComponentBaseline(component.id);
+    expect(baseline.distanceMeters).toBe(0);
+    expect(baseline.movingTimeMinutes).toBe(0);
 
-    const stats = await agent.get(`/api/stats/bikes/${bike.body.id}`).expect(200);
-    expect(stats.body.components[0].distanceMeters).toBe(2000);
-    expect(stats.body.components[0].movingTimeMinutes).toBe(20);
+    const stats = await getBikeViaGraphql(agent, bike.id);
+    expect(stats.components[0]?.wear.distanceMeters).toBe(2000);
+    expect(stats.components[0]?.wear.movingTimeMinutes).toBe(20);
   });
 
   it("passes after timestamp to Strava when incremental sync is configured", async () => {
@@ -406,8 +419,8 @@ describe("Strava backfill", () => {
     const { agent, user: testUser } = await createAuthenticatedAgent(app);
     await connectStravaAccount(testUser.email);
 
-    const bike = await agent.post("/api/bikes").send({ name: "Backfill Bike" }).expect(201);
-    await agent.post(`/api/bikes/${bike.body.id}/components`).send(componentPayload()).expect(201);
+    const bike = await createBikeViaGraphql(agent, "Backfill Bike");
+    await createComponentViaGraphql(agent, bike.id, componentPayload());
 
     mockActivities = [
       {
@@ -424,19 +437,19 @@ describe("Strava backfill", () => {
     await agent
       .post("/api/strava/import/commit")
       .send({
-        decisions: [{ gearId: "bf-1", action: "link", bikeId: bike.body.id }],
+        decisions: [{ gearId: "bf-1", action: "link", bikeId: bike.id }],
         creditHistoricalComponents: false,
       })
       .expect(200);
 
-    let stats = await agent.get(`/api/stats/bikes/${bike.body.id}`).expect(200);
-    expect(stats.body.components[0].distanceMeters ?? 0).toBe(0);
+    let stats = await getBikeViaGraphql(agent, bike.id);
+    expect(stats.components[0]?.wear.distanceMeters ?? 0).toBe(0);
 
     const backfill = await agent.post("/api/strava/backfill-components").expect(200);
     expect(backfill.body.creditedActivities).toBe(1);
 
-    stats = await agent.get(`/api/stats/bikes/${bike.body.id}`).expect(200);
-    expect(stats.body.components[0].distanceMeters).toBe(3000);
+    stats = await getBikeViaGraphql(agent, bike.id);
+    expect(stats.components[0]?.wear.distanceMeters).toBe(3000);
   });
 });
 
@@ -445,8 +458,8 @@ describe("Strava import drift", () => {
     const { agent, user: testUser } = await createAuthenticatedAgent(app);
     await connectStravaAccount(testUser.email);
 
-    const bike = await agent.post("/api/bikes").send({ name: "Drift Bike" }).expect(201);
-    await agent.post(`/api/bikes/${bike.body.id}/components`).send(componentPayload()).expect(201);
+    const bike = await createBikeViaGraphql(agent, "Drift Bike");
+    await createComponentViaGraphql(agent, bike.id, componentPayload());
 
     mockActivities = [
       {
@@ -463,7 +476,7 @@ describe("Strava import drift", () => {
     const committed = await agent
       .post("/api/strava/import/commit")
       .send({
-        decisions: [{ gearId: "drift-1", action: "link", bikeId: bike.body.id }],
+        decisions: [{ gearId: "drift-1", action: "link", bikeId: bike.id }],
         previewSnapshot: [
           {
             gearId: "drift-1",

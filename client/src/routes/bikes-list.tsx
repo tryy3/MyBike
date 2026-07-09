@@ -9,7 +9,12 @@ import {
   PlusIcon,
   Trash2Icon,
 } from "lucide-react";
-import type { Bike } from "shared";
+import type { BikeListItemGql } from "@/lib/graphql/operations";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { BikeForm } from "@/features/bikes/BikeForm";
+import { useBikes, useDeleteBike } from "@/features/bikes/api";
+import { formatStatsLine } from "@/lib/format-stats";
+import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,33 +41,26 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { BikeForm } from "@/features/bikes/BikeForm";
-import { useBikes, useDeleteBike } from "@/features/bikes/api";
-import { useGarageStats } from "@/features/stats/api";
-import { formatStatsLine } from "@/lib/format-stats";
-import { cn } from "@/lib/utils";
 
 export function BikesListPage() {
   const { data, isPending, isError, error, refetch, isFetching } = useBikes();
-  const garageStats = useGarageStats();
   const deleteBike = useDeleteBike();
   const [creating, setCreating] = useState(false);
-  const [editing, setEditing] = useState<Bike | null>(null);
-  const [deleting, setDeleting] = useState<Bike | null>(null);
+  const [editing, setEditing] = useState<BikeListItemGql | null>(null);
+  const [deleting, setDeleting] = useState<BikeListItemGql | null>(null);
 
   const statsByBikeId = useMemo(() => {
     const map = new Map<string, string>();
-    for (const entry of garageStats.data?.bikes ?? []) {
+    for (const bike of data ?? []) {
       map.set(
-        entry.bikeId,
-        entry.rideStats
-          ? formatStatsLine(entry.rideStats.distanceMeters, entry.rideStats.movingTimeMinutes)
+        bike.id,
+        bike.rideStats
+          ? formatStatsLine(bike.rideStats.distanceMeters, bike.rideStats.movingTimeMinutes)
           : "—",
       );
     }
     return map;
-  }, [garageStats.data]);
+  }, [data]);
 
   useEffect(() => {
     document.title = "Bikes | MyBike";

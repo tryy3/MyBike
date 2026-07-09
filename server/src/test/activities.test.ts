@@ -3,6 +3,11 @@ import request from "supertest";
 import { eq } from "drizzle-orm";
 import { createApp } from "../app.js";
 import { createAuthenticatedAgent } from "./auth-helper.js";
+import {
+  createBikeViaGraphql,
+  createComponentViaGraphql,
+  graphqlRequest,
+} from "./graphql-helper.js";
 import { db } from "../db/index.js";
 import { user } from "../db/auth-schema.js";
 import { stravaActivities, stravaActivityComponents } from "../db/schema.js";
@@ -13,15 +18,19 @@ async function seedActivitySetup(
   agent: Awaited<ReturnType<typeof createAuthenticatedAgent>>["agent"],
   email: string,
 ) {
-  const bike = await agent.post("/api/bikes").send({ name: "Road" }).expect(201);
-  const chain = await agent
-    .post(`/api/bikes/${bike.body.id}/components`)
-    .send({ category: "chain", name: "Chain A", brand: "Shimano", model: "105" })
-    .expect(201);
-  const cassette = await agent
-    .post(`/api/bikes/${bike.body.id}/components`)
-    .send({ category: "cassette", name: "Cassette", brand: "Shimano", model: "11-28" })
-    .expect(201);
+  const bike = await createBikeViaGraphql(agent, "Road");
+  const chain = await createComponentViaGraphql(agent, bike.id, {
+    category: "chain",
+    name: "Chain A",
+    brand: "Shimano",
+    model: "105",
+  });
+  const cassette = await createComponentViaGraphql(agent, bike.id, {
+    category: "cassette",
+    name: "Cassette",
+    brand: "Shimano",
+    model: "11-28",
+  });
 
   const testUser = db.select({ id: user.id }).from(user).where(eq(user.email, email)).get();
   expect(testUser).toBeDefined();
@@ -30,7 +39,7 @@ async function seedActivitySetup(
     .insert(stravaActivities)
     .values({
       userId: testUser!.id,
-      bikeId: bike.body.id,
+      bikeId: bike.id,
       stravaActivityId: `act-${crypto.randomUUID()}`,
       stravaGearId: "gear-1",
       distanceMeters: 25000,
@@ -43,7 +52,7 @@ async function seedActivitySetup(
   db.insert(stravaActivityComponents)
     .values({
       activityId: activity!.id,
-      componentId: chain.body.id,
+      componentId: chain.id,
       distanceMeters: 25000,
       movingTimeMinutes: 75,
     })
@@ -63,7 +72,7 @@ describe("GET /api/bikes/:bikeId/activities", () => {
     const { agent, user: testUser } = await createAuthenticatedAgent(app);
     const { bike, chain, activity } = await seedActivitySetup(agent, testUser.email);
 
-    const res = await agent.get(`/api/bikes/${bike.body.id}/activities`).expect(200);
+    const res = await agent.get(`/api/bikes/${bike.id}/activities`).expect(200);
 
     expect(res.body.items).toHaveLength(1);
     expect(res.body.items[0]).toMatchObject({
@@ -71,7 +80,7 @@ describe("GET /api/bikes/:bikeId/activities", () => {
       startDate: "2026-07-03T08:00:00Z",
       distanceMeters: 25000,
       movingTimeMinutes: 75,
-      componentIds: [chain.body.id],
+      componentIds: [chain.id],
       componentNames: ["Chain A"],
       editedAt: null,
     });
@@ -83,7 +92,7 @@ describe("GET /api/bikes/:bikeId/activities", () => {
     const { bike } = await seedActivitySetup(agent, testUser.email);
 
     const other = await createAuthenticatedAgent(app);
-    await other.agent.get(`/api/bikes/${bike.body.id}/activities`).expect(404);
+    await other.agent.get(`/api/bikes/${bike.id}/activities`).expect(404);
   });
 });
 
@@ -94,7 +103,7 @@ describe("GET /api/activities/:id", () => {
 
     const res = await agent.get(`/api/activities/${activity.id}`).expect(200);
 
-    expect(res.body.bikeId).toBe(bike.body.id);
+    expect(res.body.bikeId).toBe(bike.id);
     expect(res.body.distanceMeters).toBe(25000);
   });
 });
@@ -109,13 +118,13 @@ describe("PATCH /api/activities/:id", () => {
       .send({
         distanceMeters: 20000,
         movingTimeMinutes: 60,
-        componentIds: [cassette.body.id],
+        componentIds: [cassette.id],
       })
       .expect(200);
 
     expect(res.body.distanceMeters).toBe(20000);
     expect(res.body.movingTimeMinutes).toBe(60);
-    expect(res.body.componentIds).toEqual([cassette.body.id]);
+    expect(res.body.componentIds).toEqual([cassette.id]);
     expect(res.body.componentNames).toEqual(["Cassette"]);
     expect(res.body.editedAt).toBeTypeOf("number");
 
@@ -127,36 +136,46 @@ describe("PATCH /api/activities/:id", () => {
 
     expect(junction).toHaveLength(1);
     expect(junction[0]).toMatchObject({
-      componentId: cassette.body.id,
+      componentId: cassette.id,
       distanceMeters: 20000,
       movingTimeMinutes: 60,
     });
 
-    const stats = await agent.get(`/api/stats/bikes/${activity.bikeId}`).expect(200);
-    const chainWear = stats.body.components.find((c: { id: string }) => c.id === chain.body.id);
-    const cassetteWear = stats.body.components.find(
-      (c: { id: string }) => c.id === cassette.body.id,
+    const stats = await graphqlRequest<{
+      bike: { components: { id: string; wear: { distanceMeters: number | null } }[] };
+    }>(
+      agent,
+      `query($id: ID!) {
+        bike(id: $id) {
+          components { id wear { distanceMeters } }
+        }
+      }`,
+      { id: activity.bikeId },
     );
-    expect(chainWear?.distanceMeters ?? 0).toBe(0);
-    expect(cassetteWear?.distanceMeters).toBe(20000);
+    const chainWear = stats.body.data?.bike.components.find((c) => c.id === chain.id);
+    const cassetteWear = stats.body.data?.bike.components.find((c) => c.id === cassette.id);
+    expect(chainWear?.wear.distanceMeters ?? 0).toBe(0);
+    expect(cassetteWear?.wear.distanceMeters).toBe(20000);
   });
 
   it("returns 400 when component belongs to another bike", async () => {
     const { agent, user: testUser } = await createAuthenticatedAgent(app);
     const { activity } = await seedActivitySetup(agent, testUser.email);
 
-    const otherBike = await agent.post("/api/bikes").send({ name: "Gravel" }).expect(201);
-    const otherPart = await agent
-      .post(`/api/bikes/${otherBike.body.id}/components`)
-      .send({ category: "chain", name: "Other chain", brand: "SRAM", model: "Force" })
-      .expect(201);
+    const otherBike = await createBikeViaGraphql(agent, "Gravel");
+    const otherPart = await createComponentViaGraphql(agent, otherBike.id, {
+      category: "chain",
+      name: "Other chain",
+      brand: "SRAM",
+      model: "Force",
+    });
 
     await agent
       .patch(`/api/activities/${activity.id}`)
       .send({
         distanceMeters: 20000,
         movingTimeMinutes: 60,
-        componentIds: [otherPart.body.id],
+        componentIds: [otherPart.id],
       })
       .expect(400);
   });

@@ -1,13 +1,7 @@
-import { Router } from "express";
 import { eq } from "drizzle-orm";
+import { fieldSuggestionsSchema, type FieldSuggestions } from "shared";
 import { db } from "../db/index.js";
 import { bikes, components } from "../db/schema.js";
-import { fieldSuggestionsSchema } from "shared";
-import { requireAuth, getAuthContext } from "../lib/require-auth.js";
-
-export const fieldSuggestionsRouter = Router();
-
-fieldSuggestionsRouter.use(requireAuth);
 
 function dedupeSorted(values: (string | null)[]): string[] {
   const seen = new Map<string, string>();
@@ -21,9 +15,7 @@ function dedupeSorted(values: (string | null)[]): string[] {
   return [...seen.values()].sort((a, b) => a.localeCompare(b));
 }
 
-// GET /api/field-suggestions — distinct string values across the user's garage.
-fieldSuggestionsRouter.get("/", (req, res) => {
-  const { userId } = getAuthContext(req);
+export function getFieldSuggestions(userId: string): FieldSuggestions {
   const rows = db
     .select({
       name: components.name,
@@ -36,14 +28,10 @@ fieldSuggestionsRouter.get("/", (req, res) => {
     .where(eq(bikes.userId, userId))
     .all();
 
-  const payload = fieldSuggestionsSchema.parse({
+  return fieldSuggestionsSchema.parse({
     name: dedupeSorted(rows.map((r) => r.name)),
     brand: dedupeSorted(rows.map((r) => r.brand)),
     model: dedupeSorted(rows.map((r) => r.model)),
     purchaseStore: dedupeSorted(rows.map((r) => r.purchaseStore)),
   });
-
-  res.json(payload);
-});
-
-export default fieldSuggestionsRouter;
+}

@@ -19,7 +19,7 @@ export function useUpdateActivity(bikeId: string) {
       api.updateActivity(id, data),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.bikeActivities(bikeId) });
-      void qc.invalidateQueries({ queryKey: queryKeys.bikeStats(bikeId) });
+      void qc.invalidateQueries({ queryKey: queryKeys.bike(bikeId) });
     },
   });
 }

@@ -14,12 +14,16 @@
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "1.7.0-rc.0",
+    "@pothos/core": "^4.13.1",
+    "@pothos/plugin-errors": "^4.9.1",
     "better-auth": "1.7.0-rc.0",
     "csv-parse": "^7.0.0",
     "csv-stringify": "^6.8.0",
     "dotenv": "^17.4.2",
     "drizzle-orm": "1.0.0-rc.4",
     "express": "^5.2.1",
+    "graphql": "^16.14.2",
+    "graphql-yoga": "^5.21.2",
     "logging": "^0.0.1",
     "shared": "^0.0.1",
     "zod": "^3.25.76"
