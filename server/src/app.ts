@@ -11,6 +11,7 @@ import stravaRouter from "./routes/strava.js";
 import { activityRouter, bikeActivitiesRouter } from "./routes/activities.js";
 import { errorHandler } from "./lib/errors.js";
 import { auth } from "./lib/auth.js";
+import { httpLogger } from "./lib/logging/index.js";
 import { sqlite } from "./db/index.js";
 
 const IMPORT_MAX_BYTES = 256 * 1024;
@@ -18,6 +19,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export function createApp() {
   const app = express();
+
+  app.use(httpLogger);
 
   // Better Auth must be mounted before express.json() (it parses its own body).
   app.all("/api/auth/{*any}", toNodeHandler(auth));

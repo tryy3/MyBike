@@ -6,6 +6,8 @@
 MyBike/
 ├── shared/          # Zod schemas + inferred types (imported by server & client)
 │   └── src/
+├── logging/         # Shared Pino logging (server + strava-webhook-proxy)
+│   └── src/
 ├── server/          # Express + TypeScript API
 │   ├── src/
 │   │   ├── db/      # Drizzle schema + SQLite client

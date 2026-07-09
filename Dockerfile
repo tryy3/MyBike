@@ -6,6 +6,7 @@ ENV npm_config_update_notifier=false
 
 COPY package.json package-lock.json ./
 COPY shared/package.json ./shared/package.json
+COPY logging/package.json ./logging/package.json
 COPY server/package.json ./server/package.json
 COPY client/package.json ./client/package.json
 
@@ -20,6 +21,7 @@ RUN npm ci --ignore-scripts
 COPY . .
 
 RUN npm run -w shared build \
+  && npm run -w logging build \
   && sh -c 'npm exec -w client -- vite build & npm exec -w server -- tsc & wait'
 
 FROM node:26-bookworm-slim AS runtime
@@ -37,6 +39,8 @@ COPY --from=prod-deps --chown=node:node /app/node_modules /app/node_modules
 COPY --from=build --chown=node:node /app/package.json /app/package-lock.json /app/
 COPY --from=build --chown=node:node /app/shared/package.json /app/shared/package.json
 COPY --from=build --chown=node:node /app/shared/dist /app/shared/dist
+COPY --from=build --chown=node:node /app/logging/package.json /app/logging/package.json
+COPY --from=build --chown=node:node /app/logging/dist /app/logging/dist
 COPY --from=build --chown=node:node /app/server/package.json /app/server/package.json
 COPY --from=build --chown=node:node /app/server/dist /app/server/dist
 COPY --from=build --chown=node:node /app/server/drizzle /app/server/drizzle

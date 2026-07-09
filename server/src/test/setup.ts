@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 import { migrate } from "drizzle-orm/node-sqlite/migrator";
 
 const testDir = mkdtempSync(join(tmpdir(), "mybike-test-"));
+process.env.NODE_ENV = "test";
+process.env.LOG_LEVEL = "silent";
 process.env.DB_PATH = join(testDir, "test.db");
 process.env.BETTER_AUTH_SECRET = "test-better-auth-secret-long-enough-for-dev-32";
 process.env.BETTER_AUTH_URL = "http://localhost:3001";

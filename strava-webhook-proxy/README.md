@@ -11,12 +11,12 @@ Strava  --POST /webhook/strava-->  proxy (public HTTPS)  --SQLite-->
 MyBike  --GET /api/events-------->  proxy (API key)       --poll-->
 ```
 
-| Endpoint | Auth | Purpose |
-| -------- | ---- | ------- |
-| `GET /webhook/strava` | `STRAVA_VERIFY_TOKEN` | Strava subscription validation |
-| `POST /webhook/strava` | — | Receives and stores events |
-| `GET /api/events` | `Authorization: Bearer <API_KEY>` | MyBike pulls new events |
-| `GET /api/health` | — | Health check |
+| Endpoint               | Auth                              | Purpose                        |
+| ---------------------- | --------------------------------- | ------------------------------ |
+| `GET /webhook/strava`  | `STRAVA_VERIFY_TOKEN`             | Strava subscription validation |
+| `POST /webhook/strava` | —                                 | Receives and stores events     |
+| `GET /api/events`      | `Authorization: Bearer <API_KEY>` | MyBike pulls new events        |
+| `GET /api/health`      | —                                 | Health check                   |
 
 ## Container image
 
@@ -172,24 +172,24 @@ Upload a Strava activity; within about one poll interval it should appear in MyB
 
 ## Operations
 
-| Task | Command |
-| ---- | ------- |
-| View logs | `docker compose logs -f` |
-| Restart | `docker compose restart` |
-| Update image | `docker compose pull && docker compose up -d` |
-| Backup DB | Copy the `strava-proxy-data` Docker volume (SQLite at `/data/strava-webhook-proxy.db`) |
+| Task         | Command                                                                                |
+| ------------ | -------------------------------------------------------------------------------------- |
+| View logs    | `docker compose logs -f`                                                               |
+| Restart      | `docker compose restart`                                                               |
+| Update image | `docker compose pull && docker compose up -d`                                          |
+| Backup DB    | Copy the `strava-proxy-data` Docker volume (SQLite at `/data/strava-webhook-proxy.db`) |
 
 Migrations run automatically on container start (`RUN_MIGRATIONS=true`).
 
 ## Troubleshooting
 
-| Symptom | Likely cause |
-| ------- | ------------- |
-| `subscribe` fails with 403 | Proxy not reachable on HTTPS, or `STRAVA_VERIFY_TOKEN` mismatch |
+| Symptom                       | Likely cause                                                            |
+| ----------------------------- | ----------------------------------------------------------------------- |
+| `subscribe` fails with 403    | Proxy not reachable on HTTPS, or `STRAVA_VERIFY_TOKEN` mismatch         |
 | MyBike never imports webhooks | Missing `STRAVA_WEBHOOK_PROXY_URL` / `API_KEY` on the **MyBike** server |
-| Events ignored | Wrong `STRAVA_SUBSCRIPTION_ID` on the proxy |
-| `401` on `/api/events` | API key mismatch between proxy and MyBike |
-| Data lost after redeploy | Volume not mounted; ensure `strava-proxy-data` volume exists |
+| Events ignored                | Wrong `STRAVA_SUBSCRIPTION_ID` on the proxy                             |
+| `401` on `/api/events`        | API key mismatch between proxy and MyBike                               |
+| Data lost after redeploy      | Volume not mounted; ensure `strava-proxy-data` volume exists            |
 
 ## Local development
 

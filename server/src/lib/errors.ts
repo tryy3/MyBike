@@ -1,3 +1,7 @@
+import type { Request, Response, NextFunction } from "express";
+import { ZodError } from "zod";
+import { getLog } from "./logging/index.js";
+
 export class HttpError extends Error {
   constructor(
     public status: number,
@@ -17,15 +21,9 @@ export function badRequest(message: string, details?: unknown): HttpError {
   return new HttpError(400, message, details);
 }
 
-import type { Request, Response, NextFunction } from "express";
-import { ZodError } from "zod";
+export function errorHandler(err: unknown, req: Request, res: Response, _next: NextFunction): void {
+  const log = req.log ?? getLog();
 
-export function errorHandler(
-  err: unknown,
-  _req: Request,
-  res: Response,
-  _next: NextFunction,
-): void {
   if (err instanceof HttpError) {
     res.status(err.status).json({ error: err.message, details: err.details });
     return;
@@ -34,6 +32,6 @@ export function errorHandler(
     res.status(400).json({ error: "Validation failed", details: err.issues });
     return;
   }
-  console.error("Unhandled error:", err);
+  log.error({ err }, "Unhandled error");
   res.status(500).json({ error: "Internal server error" });
 }
