@@ -10,6 +10,15 @@ export type GraphQLApiKeyScopeId = keyof typeof GRAPHQL_API_KEY_SCOPES;
 
 export const graphQLApiKeyScopeIdSchema = z.enum(["read", "write", "full"]);
 
+export const apiKeyCreateMetadataSchema = z.object({
+  scope: graphQLApiKeyScopeIdSchema.default("read"),
+});
+
+export function scopeFromApiKeyMetadata(metadata: unknown): GraphQLApiKeyScopeId {
+  const parsed = apiKeyCreateMetadataSchema.safeParse(metadata);
+  return parsed.success ? parsed.data.scope : "read";
+}
+
 export const GRAPHQL_API_KEY_SCOPE_LABELS: Record<GraphQLApiKeyScopeId, string> = {
   read: "Read-only",
   write: "Read + write",

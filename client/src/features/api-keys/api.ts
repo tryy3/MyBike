@@ -1,9 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  GRAPHQL_API_KEY_SCOPE_LABELS,
-  permissionsForScope,
-  type GraphQLApiKeyScopeId,
-} from "shared";
+import { GRAPHQL_API_KEY_SCOPE_LABELS, type GraphQLApiKeyScopeId } from "shared";
 import { authClient } from "@/lib/auth-client";
 import { queryKeys } from "@/lib/api";
 
@@ -40,7 +36,7 @@ export function useCreateApiKey() {
       const result = await authClient.apiKey.create({
         configId: API_KEY_CONFIG_ID,
         name: input.name,
-        permissions: permissionsForScope(input.scope),
+        metadata: { scope: input.scope },
       });
       if (result.error) {
         throw new Error(result.error.message ?? "Failed to create API key");

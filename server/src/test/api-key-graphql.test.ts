@@ -110,4 +110,33 @@ describe("GraphQL API key authentication", () => {
     expect(res.body.errors).toBeUndefined();
     expect(res.body.data?.createBike.name).toBe("Write Key Bike");
   });
+
+  it("applies scope from create metadata when permissions are omitted", async () => {
+    const { user: testUser } = await createAuthenticatedAgent(app);
+    const userId = await userIdForEmail(testUser.email);
+    const { auth } = await import("../lib/auth.js");
+    const created = await auth.api.createApiKey({
+      body: {
+        configId: "graphql",
+        name: "Metadata write key",
+        userId,
+        metadata: { scope: "write" },
+      },
+    });
+    if (!created.key) {
+      throw new Error("Failed to create API key from metadata");
+    }
+
+    const res = await graphqlRequestWithApiKey<{ createBike: { name: string } }>(
+      app,
+      created.key,
+      `mutation($input: BikeInsertInput!) {
+        createBike(input: $input) { name }
+      }`,
+      { input: { name: "Metadata Scope Bike" } },
+    );
+
+    expect(res.body.errors).toBeUndefined();
+    expect(res.body.data?.createBike.name).toBe("Metadata Scope Bike");
+  });
 });

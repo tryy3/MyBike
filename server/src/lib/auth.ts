@@ -2,9 +2,9 @@ import { apiKey } from "@better-auth/api-key";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2";
 import { genericOAuth } from "better-auth/plugins";
-import { GRAPHQL_API_KEY_SCOPES } from "shared";
 import { db } from "../db/index.js";
 import { account, apikey, session, user, verification } from "../db/auth-schema.js";
+import { resolveDefaultApiKeyPermissions } from "./api-key-permissions.js";
 import { resolveAuthMethod } from "./auth-events.js";
 import { resolveAuthConfig } from "./auth-config.js";
 import { child } from "./logging/index.js";
@@ -36,9 +36,10 @@ export const auth = betterAuth({
       configId: "graphql",
       defaultPrefix: "mbk_",
       requireName: true,
+      enableMetadata: true,
       enableSessionForAPIKeys: false,
       permissions: {
-        defaultPermissions: GRAPHQL_API_KEY_SCOPES.read,
+        defaultPermissions: resolveDefaultApiKeyPermissions,
       },
       rateLimit: { enabled: true, timeWindow: 60_000, maxRequests: 120 },
     }),
