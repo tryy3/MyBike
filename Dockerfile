@@ -18,12 +18,25 @@ FROM base AS build
 
 RUN npm ci --ignore-scripts
 
+# npm ci --ignore-scripts skips optional platform bindings (npm/cli#4828).
+RUN set -eux; \
+  arch="$(uname -m)"; \
+  case "${arch}" in \
+    aarch64|arm64) native=linux-arm64-gnu ;; \
+    *) native=linux-x64-gnu ;; \
+  esac; \
+  oxide_ver="$(node -p "require('@tailwindcss/oxide/package.json').version")"; \
+  lightning_ver="$(node -e "console.log(JSON.parse(require('node:fs').readFileSync('node_modules/lightningcss/package.json','utf8')).version)")"; \
+  npm install --no-save \
+    "@tailwindcss/oxide-${native}@${oxide_ver}" \
+    "lightningcss-${native}@${lightning_ver}"
+
 COPY . .
 
 RUN npm run -w shared build \
   && npm run -w logging build \
   && npm exec -w server -- tsc \
-  && npm run -w client build:docker
+  && cd client && node ../node_modules/vite/dist/vite/node/cli.js build
 
 FROM node:26-bookworm-slim AS runtime
 
