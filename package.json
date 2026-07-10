@@ -17,15 +17,15 @@
     "prepare": "vp config"
   },
   "dependencies": {
-    "drizzle-orm": "1.0.0-rc.4"
+    "drizzle-orm": "1.0.0-rc.4-5d5b77c"
   },
   "devDependencies": {
-    "vite-plus": "0.2.2"
+    "vite-plus": "0.2.4"
   },
   "overrides": {
-    "drizzle-orm": "1.0.0-rc.4",
-    "vite": "npm:@voidzero-dev/vite-plus-core@0.2.2",
-    "vitest": "4.1.9"
+    "drizzle-orm": "1.0.0-rc.4-5d5b77c",
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.2.4",
+    "vitest": "4.1.10"
   },
   "devEngines": {
     "packageManager": {
