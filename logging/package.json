@@ -14,14 +14,14 @@
     "test": "vp test"
   },
   "dependencies": {
-    "pino": "^9.7.0",
-    "pino-http": "^10.5.0",
+    "pino": "^10.0.0",
+    "pino-http": "^11.0.0",
     "pino-pretty": "^13.0.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/node": "^26.0.1",
     "typescript": "^7.0.0",
-    "vite-plus": "0.2.2"
+    "vite-plus": "0.2.4"
   }
 }

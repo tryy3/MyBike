@@ -14,20 +14,20 @@
   },
   "dependencies": {
     "dotenv": "^17.4.2",
-    "drizzle-orm": "1.0.0-rc.4",
+    "drizzle-orm": "1.0.0-rc.4-5d5b77c",
     "express": "^5.2.1",
     "logging": "^0.0.1",
     "shared": "^0.0.1",
-    "zod": "^3.25.76"
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/node": "^26.0.1",
-    "@types/supertest": "^6.0.3",
-    "drizzle-kit": "1.0.0-rc.4",
+    "@types/supertest": "^7.0.0",
+    "drizzle-kit": "1.0.0-rc.4-ca0f029",
     "supertest": "^7.1.4",
     "tsx": "^4.22.4",
     "typescript": "^7.0.0",
-    "vite-plus": "0.2.2"
+    "vite-plus": "0.2.4"
   }
 }

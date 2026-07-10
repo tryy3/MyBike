@@ -14,10 +14,10 @@
     "test": "vp test"
   },
   "dependencies": {
-    "zod": "^3.25.76"
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "typescript": "^7.0.0",
-    "vite-plus": "0.2.2"
+    "vite-plus": "0.2.4"
   }
 }
