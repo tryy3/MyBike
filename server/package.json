@@ -27,7 +27,7 @@
     "graphql-yoga": "^5.21.2",
     "logging": "^0.0.1",
     "shared": "^0.0.1",
-    "zod": "^3.25.76"
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
