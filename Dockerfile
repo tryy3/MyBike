@@ -22,10 +22,8 @@ COPY . .
 
 RUN npm run -w shared build \
   && npm run -w logging build \
-  && bash -euo pipefail -c '\
-    npm run -w client build & client=$!; \
-    npm exec -w server -- tsc & server=$!; \
-    wait "$client"; wait "$server"'
+  && npm exec -w server -- tsc \
+  && npm run -w client build:docker
 
 FROM node:26-bookworm-slim AS runtime
 

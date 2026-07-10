@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "vp dev",
     "build": "tsc -b && vp build",
+    "build:docker": "npx vite build",
     "preview": "vp preview"
   },
   "dependencies": {
