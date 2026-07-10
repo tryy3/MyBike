@@ -24,6 +24,7 @@ import {
 } from "../../services/components.js";
 import { getRideStatsForBike } from "../../services/stats.js";
 import { builder } from "../builder.js";
+import { mergeComponentFilter, ComponentFilterInput } from "../component-filter.js";
 import { requireGraphQLPermission } from "../context.js";
 import { ComponentRef } from "./component.js";
 import { RideStatsRef } from "./stats.js";
@@ -60,10 +61,12 @@ builder.objectType(BikeRef, {
       type: [ComponentRef],
       args: {
         activeOnly: t.arg.boolean({ required: false, defaultValue: false }),
+        filter: t.arg({ type: ComponentFilterInput, required: false }),
       },
       resolve: (parent, args, context) => {
         const userId = requireGraphQLPermission(context, "read");
-        return listComponentsForBike(parent.id, userId, { activeOnly: args.activeOnly ?? false });
+        const mergedFilter = mergeComponentFilter(args.activeOnly ?? false, args.filter);
+        return listComponentsForBike(parent.id, userId, { filter: mergedFilter });
       },
     }),
   }),

@@ -217,6 +217,221 @@ describe("GraphQL wear and activeOnly", () => {
   });
 });
 
+describe("GraphQL component filters", () => {
+  it("filters by single and multiple categories", async () => {
+    const { agent } = await createAuthenticatedAgent(app);
+    const bike = await createBikeViaGraphql(agent, "Category Filter Bike");
+
+    await createComponentViaGraphql(
+      agent,
+      bike.id,
+      componentInput({ category: "crankset", name: "Crank", brand: "Shimano", model: "M7100" }),
+    );
+    await createComponentViaGraphql(
+      agent,
+      bike.id,
+      componentInput({ category: "cassette", name: "Cassette", brand: "Shimano", model: "M7100" }),
+    );
+    await createComponentViaGraphql(
+      agent,
+      bike.id,
+      componentInput({ category: "saddle", name: "Saddle", brand: "Fizik", model: "Arione" }),
+    );
+
+    const single = await graphqlRequest<{
+      bike: { components: { category: string; name: string }[] };
+    }>(
+      agent,
+      `query($id: ID!) {
+        bike(id: $id) {
+          components(filter: { categories: [crankset] }) { category name }
+        }
+      }`,
+      { id: bike.id },
+    );
+    expect(single.body.data?.bike.components).toHaveLength(1);
+    expect(single.body.data?.bike.components[0]?.category).toBe("crankset");
+
+    const multiple = await graphqlRequest<{
+      bike: { components: { category: string }[] };
+    }>(
+      agent,
+      `query($id: ID!) {
+        bike(id: $id) {
+          components(filter: { categories: [crankset, cassette] }) { category }
+        }
+      }`,
+      { id: bike.id },
+    );
+    expect(multiple.body.data?.bike.components).toHaveLength(2);
+    expect(multiple.body.data?.bike.components.map((c) => c.category).sort()).toEqual([
+      "cassette",
+      "crankset",
+    ]);
+  });
+
+  it("combines categories with activeOnly for drivetrain-style queries", async () => {
+    const { agent } = await createAuthenticatedAgent(app);
+    const bike = await createBikeViaGraphql(agent, "Drivetrain Bike");
+
+    await createComponentViaGraphql(
+      agent,
+      bike.id,
+      componentInput({ category: "chain", name: "Old Chain", isActive: false }),
+    );
+    await createComponentViaGraphql(
+      agent,
+      bike.id,
+      componentInput({ category: "chain", name: "Active Chain", isActive: true }),
+    );
+    await createComponentViaGraphql(
+      agent,
+      bike.id,
+      componentInput({ category: "cassette", name: "Cassette", isActive: true }),
+    );
+    await createComponentViaGraphql(
+      agent,
+      bike.id,
+      componentInput({ category: "saddle", name: "Saddle", isActive: true }),
+    );
+
+    const res = await graphqlRequest<{
+      bike: { components: { name: string; category: string }[] };
+    }>(
+      agent,
+      `query($id: ID!) {
+        bike(id: $id) {
+          components(filter: { categories: [chain, cassette], activeOnly: true }) { name category }
+        }
+      }`,
+      { id: bike.id },
+    );
+    expect(res.body.data?.bike.components).toHaveLength(2);
+    expect(res.body.data?.bike.components.map((c) => c.name).sort()).toEqual([
+      "Active Chain",
+      "Cassette",
+    ]);
+  });
+
+  it("filters by brand exact match case-insensitively", async () => {
+    const { agent } = await createAuthenticatedAgent(app);
+    const bike = await createBikeViaGraphql(agent, "Brand Filter Bike");
+
+    await createComponentViaGraphql(
+      agent,
+      bike.id,
+      componentInput({ category: "crankset", name: "Crank A", brand: "Shimano", model: "A" }),
+    );
+    await createComponentViaGraphql(
+      agent,
+      bike.id,
+      componentInput({ category: "cassette", name: "Cassette A", brand: "SRAM", model: "B" }),
+    );
+
+    const res = await graphqlRequest<{
+      bike: { components: { brand: string | null }[] };
+    }>(
+      agent,
+      `query($id: ID!) {
+        bike(id: $id) {
+          components(filter: { brands: ["shimano"] }) { brand }
+        }
+      }`,
+      { id: bike.id },
+    );
+    expect(res.body.data?.bike.components).toHaveLength(1);
+    expect(res.body.data?.bike.components[0]?.brand).toBe("Shimano");
+  });
+
+  it("filters by nameContains and brandContains", async () => {
+    const { agent } = await createAuthenticatedAgent(app);
+    const bike = await createBikeViaGraphql(agent, "Contains Filter Bike");
+
+    await createComponentViaGraphql(
+      agent,
+      bike.id,
+      componentInput({
+        category: "rear-derailleur",
+        name: "XT Rear Mech",
+        brand: "Shimano",
+        model: "M8100",
+      }),
+    );
+    await createComponentViaGraphql(
+      agent,
+      bike.id,
+      componentInput({
+        category: "front-derailleur",
+        name: "Front Mech",
+        brand: "SRAM",
+        model: "AXS",
+      }),
+    );
+
+    const byName = await graphqlRequest<{
+      bike: { components: { name: string }[] };
+    }>(
+      agent,
+      `query($id: ID!) {
+        bike(id: $id) {
+          components(filter: { nameContains: "rear" }) { name }
+        }
+      }`,
+      { id: bike.id },
+    );
+    expect(byName.body.data?.bike.components).toHaveLength(1);
+    expect(byName.body.data?.bike.components[0]?.name).toBe("XT Rear Mech");
+
+    const byBrand = await graphqlRequest<{
+      bike: { components: { brand: string | null }[] };
+    }>(
+      agent,
+      `query($id: ID!) {
+        bike(id: $id) {
+          components(filter: { brandContains: "shim" }) { brand }
+        }
+      }`,
+      { id: bike.id },
+    );
+    expect(byBrand.body.data?.bike.components).toHaveLength(1);
+    expect(byBrand.body.data?.bike.components[0]?.brand).toBe("Shimano");
+  });
+
+  it("rejects invalid category enum values at parse time", async () => {
+    const { agent } = await createAuthenticatedAgent(app);
+    const bike = await createBikeViaGraphql(agent, "Invalid Enum Bike");
+
+    const res = await graphqlRequest(
+      agent,
+      `query($id: ID!) {
+        bike(id: $id) {
+          components(filter: { categories: [not_a_category] }) { name }
+        }
+      }`,
+      { id: bike.id },
+    );
+    expect(res.body.errors?.length).toBeGreaterThan(0);
+    expect(res.body.data).toBeUndefined();
+  });
+
+  it("rejects conflicting activeOnly between top-level arg and filter", async () => {
+    const { agent } = await createAuthenticatedAgent(app);
+    const bike = await createBikeViaGraphql(agent, "Conflict Bike");
+
+    const res = await graphqlRequest(
+      agent,
+      `query($id: ID!) {
+        bike(id: $id) {
+          components(activeOnly: true, filter: { activeOnly: false }) { name }
+        }
+      }`,
+      { id: bike.id },
+    );
+    expect(res.body.errors?.[0]?.extensions?.code).toBe("BAD_USER_INPUT");
+    expect(res.body.errors?.[0]?.message).toContain("activeOnly");
+  });
+});
+
 describe("GraphQL fieldSuggestions", () => {
   it("returns garage-wide deduped suggestions for the authenticated user", async () => {
     const { agent: agentA } = await createAuthenticatedAgent(app);
