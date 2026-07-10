@@ -14,14 +14,14 @@
   },
   "dependencies": {
     "@better-auth/api-key": "^1.7.0-rc.0",
-    "@better-auth/drizzle-adapter": "1.7.0-rc.0",
+    "@better-auth/drizzle-adapter": "1.7.0-rc.1",
     "@pothos/core": "^4.13.1",
     "@pothos/plugin-errors": "^4.9.1",
-    "better-auth": "1.7.0-rc.0",
+    "better-auth": "1.7.0-rc.1",
     "csv-parse": "^7.0.0",
     "csv-stringify": "^6.8.0",
     "dotenv": "^17.4.2",
-    "drizzle-orm": "1.0.0-rc.4",
+    "drizzle-orm": "1.0.0-rc.4-5d5b77c",
     "express": "^5.2.1",
     "graphql": "^16.14.2",
     "graphql-yoga": "^5.21.2",
@@ -33,10 +33,10 @@
     "@types/express": "^5.0.6",
     "@types/node": "^26.0.1",
     "@types/supertest": "^6.0.3",
-    "drizzle-kit": "1.0.0-rc.4",
+    "drizzle-kit": "1.0.0-rc.4-ca0f029",
     "supertest": "^7.1.4",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
-    "vite-plus": "0.2.2"
+    "vite-plus": "0.2.4"
   }
 }
