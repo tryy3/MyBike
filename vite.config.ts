@@ -58,6 +58,6 @@ export default defineConfig({
   },
   staged: {
     "*.{js,ts,tsx}": "vp check --fix",
-    "*.{json,md,yml,yaml}": "vp fmt --write",
+    "!(package-lock).{json,md,yml,yaml}": "vp fmt --write",
   },
 });

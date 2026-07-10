@@ -2,7 +2,8 @@ FROM node:26-bookworm-slim AS base
 
 WORKDIR /app
 
-ENV npm_config_update_notifier=false
+ENV npm_config_update_notifier=false \
+  VITE_GIT_HOOKS=0
 
 COPY package.json package-lock.json ./
 COPY shared/package.json ./shared/package.json
@@ -16,13 +17,18 @@ RUN npm ci --omit=dev --ignore-scripts
 
 FROM base AS build
 
-RUN npm ci --ignore-scripts
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN npm ci
 
 COPY . .
 
 RUN npm run -w shared build \
   && npm run -w logging build \
-  && sh -c 'npm exec -w client -- vite build & npm exec -w server -- tsc & wait'
+  && npm exec -w server -- tsc \
+  && npm run -w client build
 
 FROM node:26-bookworm-slim AS runtime
 

@@ -6,7 +6,7 @@ import type { BikeRow } from "../db/schema.js";
 import { HttpError, notFound } from "../lib/errors.js";
 
 function containsInsensitive(
-  column: typeof components.name | typeof components.brand | typeof components.model,
+  column: typeof components.name | typeof components.brand,
   term: string,
 ): SQL {
   return sql`instr(lower(${column}), lower(${term})) > 0`;

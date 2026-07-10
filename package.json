@@ -23,6 +23,7 @@
     "vite-plus": "0.2.4"
   },
   "overrides": {
+    "better-auth": "1.7.0-rc.1",
     "drizzle-orm": "1.0.0-rc.4-5d5b77c",
     "vite": "npm:@voidzero-dev/vite-plus-core@0.2.4",
     "vitest": "4.1.10"
