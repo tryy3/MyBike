@@ -54,6 +54,7 @@ export default defineConfig({
     ignorePatterns,
     semi: true,
     singleQuote: false,
+    endOfLine: "lf",
   },
   staged: {
     "*.{js,ts,tsx}": "vp check --fix",
