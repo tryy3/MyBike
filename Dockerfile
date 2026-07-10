@@ -22,7 +22,10 @@ COPY . .
 
 RUN npm run -w shared build \
   && npm run -w logging build \
-  && sh -c 'npm exec -w client -- vite build & npm exec -w server -- tsc & wait'
+  && bash -euo pipefail -c '\
+    npm run -w client build & client=$!; \
+    npm exec -w server -- tsc & server=$!; \
+    wait "$client"; wait "$server"'
 
 FROM node:26-bookworm-slim AS runtime
 
