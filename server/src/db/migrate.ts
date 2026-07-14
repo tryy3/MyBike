@@ -2,10 +2,9 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { sql } from "drizzle-orm";
-import { migrate as migrateLocal } from "drizzle-orm/tursodatabase/migrator";
-import { migrate as migrateRemote } from "drizzle-orm/libsql/migrator";
 import { child } from "../lib/logging/index.js";
-import { db, dbMode } from "./index.js";
+import { db } from "./index.js";
+import { runDrizzleMigrations } from "./run-migrations.js";
 
 const log = child({ component: "db" });
 
@@ -47,7 +46,9 @@ async function recoverPartialComponentFieldsMigration(migrationsFolder: string):
   );
   if (applied.length > 0) return false;
 
-  const columns = await db.all<{ name: string }>(sql`PRAGMA table_info(components)`);
+  const columns = await db.all<{ name: string }>(
+    sql.raw(`SELECT name FROM pragma_table_info('components')`),
+  );
   const columnNames = new Set(columns.map((c) => c.name));
   const hasAllColumns = COMPONENT_FIELDS_COLUMNS.every((name) => columnNames.has(name));
   if (!hasAllColumns) return false;
@@ -71,9 +72,5 @@ export async function applyMigrations(): Promise<void> {
       "Recovered partial component-fields migration",
     );
   }
-  if (dbMode === "remote") {
-    await migrateRemote(db as never, { migrationsFolder });
-  } else {
-    await migrateLocal(db, { migrationsFolder });
-  }
+  await runDrizzleMigrations(db, migrationsFolder);
 }
