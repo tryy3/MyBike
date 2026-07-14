@@ -39,7 +39,7 @@ export async function processWebhookEvent(
 
   if (payload.object_type === "athlete") {
     if (payload.aspect_type === "update" && payload.updates?.authorized === "false") {
-      const account = findStravaAccountByAthleteId(athleteId);
+      const account = await findStravaAccountByAthleteId(athleteId);
       if (!account) return "skipped";
 
       const token = await getStravaAccessToken(account.userId);
@@ -81,7 +81,7 @@ export async function processWebhookEvent(
     return "skipped";
   }
 
-  const account = findStravaAccountByAthleteId(athleteId);
+  const account = await findStravaAccountByAthleteId(athleteId);
   if (!account) {
     log.debug({ athleteId }, "No MyBike user for Strava athlete");
     return "skipped";
@@ -97,7 +97,7 @@ export async function processWebhookEvent(
     return "skipped";
   }
 
-  const result = syncActivitiesForUser(account.userId, [activity]);
+  const result = await syncActivitiesForUser(account.userId, [activity]);
   if (result.processedActivities > 0) {
     log.info(
       {

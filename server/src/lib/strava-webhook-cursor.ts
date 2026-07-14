@@ -4,8 +4,8 @@ import { stravaWebhookCursor } from "../db/schema.js";
 
 const CURSOR_ROW_ID = 1;
 
-export function getLastProxyEventId(): number {
-  const row = db
+export async function getLastProxyEventId(): Promise<number> {
+  const row = await db
     .select()
     .from(stravaWebhookCursor)
     .where(eq(stravaWebhookCursor.id, CURSOR_ROW_ID))
@@ -13,23 +13,25 @@ export function getLastProxyEventId(): number {
   return row?.lastProxyEventId ?? 0;
 }
 
-export function setLastProxyEventId(lastProxyEventId: number): void {
+export async function setLastProxyEventId(lastProxyEventId: number): Promise<void> {
   const now = Date.now();
-  const existing = db
+  const existing = await db
     .select({ id: stravaWebhookCursor.id })
     .from(stravaWebhookCursor)
     .where(eq(stravaWebhookCursor.id, CURSOR_ROW_ID))
     .get();
 
   if (existing) {
-    db.update(stravaWebhookCursor)
+    await db
+      .update(stravaWebhookCursor)
       .set({ lastProxyEventId, updatedAt: now })
       .where(eq(stravaWebhookCursor.id, CURSOR_ROW_ID))
       .run();
     return;
   }
 
-  db.insert(stravaWebhookCursor)
+  await db
+    .insert(stravaWebhookCursor)
     .values({ id: CURSOR_ROW_ID, lastProxyEventId, updatedAt: now })
     .run();
 }

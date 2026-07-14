@@ -8,8 +8,8 @@ export interface WearTotals {
   movingTimeMinutes: number;
 }
 
-export function getStravaWearByComponentId(bikeId: string): Map<string, WearTotals> {
-  const rows = db
+export async function getStravaWearByComponentId(bikeId: string): Promise<Map<string, WearTotals>> {
+  const rows = await db
     .select({
       componentId: stravaActivityComponents.componentId,
       distanceMeters: sql<number>`coalesce(sum(${stravaActivityComponents.distanceMeters}), 0)`.as(
@@ -48,12 +48,12 @@ export function displayWear(
   };
 }
 
-export function migrateComponentBaselines(): { updated: number } {
-  const allComponents = db.select().from(components).all();
+export async function migrateComponentBaselines(): Promise<{ updated: number }> {
+  const allComponents = await db.select().from(components).all();
   let updated = 0;
 
   for (const component of allComponents) {
-    const wear = db
+    const wear = await db
       .select({
         distanceMeters: sql<number>`coalesce(sum(${stravaActivityComponents.distanceMeters}), 0)`,
         movingTimeMinutes: sql<number>`coalesce(sum(${stravaActivityComponents.movingTimeMinutes}), 0)`,
@@ -68,7 +68,8 @@ export function migrateComponentBaselines(): { updated: number } {
     const nextTime = computeBaseline(component.movingTimeMinutes, stravaTime);
 
     if (nextDistance !== component.distanceMeters || nextTime !== component.movingTimeMinutes) {
-      db.update(components)
+      await db
+        .update(components)
         .set({ distanceMeters: nextDistance, movingTimeMinutes: nextTime })
         .where(eq(components.id, component.id))
         .run();

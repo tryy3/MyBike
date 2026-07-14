@@ -43,10 +43,10 @@ builder.objectType(BikeRef, {
     createdAt: t.field({ type: "DateTime", resolve: (parent) => parent.createdAt }),
     updatedAt: t.field({ type: "DateTime", resolve: (parent) => parent.updatedAt }),
     componentCount: t.int({
-      resolve: (parent, _args, context) => {
+      resolve: async (parent, _args, context) => {
         if ("componentCount" in parent) return parent.componentCount;
         const userId = requireGraphQLPermission(context, "read");
-        return listComponentsForBike(parent.id, userId).length;
+        return (await listComponentsForBike(parent.id, userId)).length;
       },
     }),
     rideStats: t.field({
@@ -180,9 +180,9 @@ builder.mutationField("deleteBike", (t) =>
     args: {
       id: t.arg.id({ required: true }),
     },
-    resolve: (_root, args, context) => {
+    resolve: async (_root, args, context) => {
       const userId = requireGraphQLPermission(context, "delete");
-      deleteBike(args.id, userId);
+      await deleteBike(args.id, userId);
       return true;
     },
   }),
@@ -223,9 +223,9 @@ builder.mutationField("deleteComponent", (t) =>
     args: {
       id: t.arg.id({ required: true }),
     },
-    resolve: (_root, args, context) => {
+    resolve: async (_root, args, context) => {
       const userId = requireGraphQLPermission(context, "delete");
-      deleteComponent(args.id, userId);
+      await deleteComponent(args.id, userId);
       return true;
     },
   }),
@@ -251,13 +251,13 @@ builder.mutationField("reorderComponents", (t) =>
       category: t.arg.string({ required: true }),
       orderedIds: t.arg.idList({ required: true }),
     },
-    resolve: (_root, args, context) => {
+    resolve: async (_root, args, context) => {
       const userId = requireGraphQLPermission(context, "write");
       const data = componentReorderSchema.parse({
         category: args.category,
         orderedIds: args.orderedIds,
       });
-      reorderComponents(args.bikeId, userId, data);
+      await reorderComponents(args.bikeId, userId, data);
       return true;
     },
   }),

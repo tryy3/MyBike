@@ -47,7 +47,7 @@ export function registerGetBikeTool(server: McpServer): void {
       const effectiveBikeFields =
         args.fields && args.fields.length > 0 ? bikeFields : [...DEFAULT_BIKE_FIELDS];
 
-      const bike = requireBike(args.bikeId, userId);
+      const bike = await requireBike(args.bikeId, userId);
       const serializedBike = await withRideStatsIfNeeded(userId, bike, effectiveBikeFields);
       const result = pickFields(serializedBike, effectiveBikeFields);
 
@@ -66,8 +66,10 @@ export function registerGetBikeTool(server: McpServer): void {
           ? parseComponentFilterInput(args.componentFilter)
           : undefined;
         const mergedFilter = mergeMcpComponentFilter(args.activeOnly ?? false, parsedFilter);
-        const components = listComponentsForBike(bike.id, userId, { filter: mergedFilter }).map(
-          serializeComponent,
+        const components = await Promise.all(
+          (await listComponentsForBike(bike.id, userId, { filter: mergedFilter })).map(
+            serializeComponent,
+          ),
         );
         result.components = pickFieldsList(components, effectiveComponentFields);
       }
