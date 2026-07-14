@@ -5,7 +5,12 @@ import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import { sql } from "drizzle-orm";
 import { connect } from "@tursodatabase/database";
 import { drizzle } from "drizzle-orm/tursodatabase/database";
-import { runDrizzleMigrations } from "../db/run-migrations.js";
+import {
+  ensureMigrationsTableV1,
+  isDuplicateColumnError,
+  isNoSuchColumnError,
+  runDrizzleMigrations,
+} from "../db/run-migrations.js";
 import type { AppDb } from "../db/index.js";
 
 describe("runDrizzleMigrations", () => {
@@ -50,15 +55,41 @@ describe("runDrizzleMigrations", () => {
       )
     `);
 
-    // Pretend all folder migrations are already recorded (so nothing to run).
-    // Still must succeed ensureMigrationsTableV1 without ADD COLUMN errors.
     await runDrizzleMigrations(db, migrationsFolder);
 
-    const cols = await db.all<{ name: string }>(
-      sql.raw(`SELECT name FROM pragma_table_info('__drizzle_migrations')`),
-    );
-    expect(cols.map((c) => c.name)).toEqual(
-      expect.arrayContaining(["id", "hash", "created_at", "name", "applied_at"]),
-    );
+    await expect(ensureMigrationsTableV1(db, "__drizzle_migrations")).resolves.toBeUndefined();
+  });
+
+  it("upgrades a v0 migrations table and ignores duplicate-column retries", async () => {
+    await db.run(sql`
+      CREATE TABLE __drizzle_migrations (
+        id INTEGER PRIMARY KEY,
+        hash text NOT NULL,
+        created_at numeric
+      )
+    `);
+
+    await ensureMigrationsTableV1(db, "__drizzle_migrations");
+    await ensureMigrationsTableV1(db, "__drizzle_migrations");
+
+    await db.run(sql.raw(`SELECT "name", "applied_at" FROM "__drizzle_migrations" LIMIT 0`));
+  });
+});
+
+describe("migration error helpers", () => {
+  it("detects duplicate column errors from Turso / SQLite messages", () => {
+    expect(
+      isDuplicateColumnError(
+        new Error(
+          "SQLite error: duplicate column name: name: SQLite error: duplicate column name: name",
+        ),
+      ),
+    ).toBe(true);
+    expect(isDuplicateColumnError(new Error("something else"))).toBe(false);
+  });
+
+  it("detects no such column errors", () => {
+    expect(isNoSuchColumnError(new Error("SQLite error: no such column: name"))).toBe(true);
+    expect(isNoSuchColumnError(new Error("duplicate column name: name"))).toBe(false);
   });
 });

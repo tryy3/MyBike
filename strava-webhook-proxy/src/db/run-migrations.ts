@@ -7,7 +7,7 @@ const DEFAULT_MIGRATIONS_TABLE = "__drizzle_migrations";
 
 /**
  * See server/src/db/run-migrations.ts — same workaround for Turso serverless
- * `pragma_table_info(?)` detection in Drizzle's built-in migrator.
+ * column detection during migrations-table upgrades.
  */
 export async function runDrizzleMigrations(
   db: AppDb,
@@ -66,18 +66,47 @@ export async function runDrizzleMigrations(
   });
 }
 
-async function ensureMigrationsTableV1(db: AppDb, migrationsTable: string): Promise<void> {
-  const columns = await db.all<{ name: string }>(
-    sql.raw(`SELECT name FROM pragma_table_info('${migrationsTable.replaceAll("'", "''")}')`),
-  );
-  const names = new Set(columns.map((c) => c.name));
-  if (names.has("name") && names.has("applied_at")) return;
+export async function ensureMigrationsTableV1(db: AppDb, migrationsTable: string): Promise<void> {
+  await addColumnIfMissing(db, migrationsTable, "name", "text");
+  await addColumnIfMissing(db, migrationsTable, "applied_at", "TEXT");
+}
 
-  const table = sql.identifier(migrationsTable);
-  if (!names.has("name")) {
-    await db.run(sql`ALTER TABLE ${table} ADD COLUMN ${sql.identifier("name")} text`);
+export function isDuplicateColumnError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /duplicate column name/i.test(msg);
+}
+
+export function isNoSuchColumnError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /no such column/i.test(msg);
+}
+
+async function addColumnIfMissing(
+  db: AppDb,
+  migrationsTable: string,
+  column: string,
+  typeSql: string,
+): Promise<void> {
+  const safeTable = quoteIdent(migrationsTable);
+  const safeCol = quoteIdent(column);
+
+  try {
+    await db.run(sql.raw(`SELECT ${safeCol} FROM ${safeTable} LIMIT 0`));
+    return;
+  } catch (err) {
+    if (!isNoSuchColumnError(err)) {
+      // Inconclusive — fall through and try ADD COLUMN.
+    }
   }
-  if (!names.has("applied_at")) {
-    await db.run(sql`ALTER TABLE ${table} ADD COLUMN ${sql.identifier("applied_at")} TEXT`);
+
+  try {
+    await db.run(sql.raw(`ALTER TABLE ${safeTable} ADD COLUMN ${safeCol} ${typeSql}`));
+  } catch (err) {
+    if (isDuplicateColumnError(err)) return;
+    throw err;
   }
+}
+
+function quoteIdent(ident: string): string {
+  return `"${ident.replaceAll('"', '""')}"`;
 }
