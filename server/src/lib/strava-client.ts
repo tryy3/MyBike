@@ -43,7 +43,8 @@ export interface StravaAthleteProfile {
 }
 
 export interface StravaTokenResponse {
-  athleteId: string;
+  /** Present on initial OAuth exchange; omitted on token refresh per Strava API. */
+  athleteId?: string;
   accessToken: string;
   refreshToken: string;
   expiresAtMs: number;
@@ -314,11 +315,16 @@ function parseAthleteProfile(
   };
 }
 
-function parseTokenResponse(raw: unknown, fallbackScope?: string): StravaTokenResponse {
+function parseTokenFields(
+  raw: unknown,
+  fallbackScope?: string,
+): Pick<
+  StravaTokenResponse,
+  "accessToken" | "refreshToken" | "expiresAtMs" | "scope" | "athleteId" | "athlete"
+> {
   const data = raw as Record<string, unknown>;
   const athlete = parseAthleteProfile(data.athlete as Record<string, unknown> | undefined);
   if (
-    !athlete ||
     typeof data.access_token !== "string" ||
     typeof data.refresh_token !== "string" ||
     typeof data.expires_at !== "number"
@@ -326,13 +332,24 @@ function parseTokenResponse(raw: unknown, fallbackScope?: string): StravaTokenRe
     throw new HttpError(502, "Strava returned an invalid OAuth response");
   }
   return {
-    athleteId: athlete.id,
+    ...(athlete ? { athleteId: athlete.id, athlete } : {}),
     accessToken: data.access_token,
     refreshToken: data.refresh_token,
     expiresAtMs: data.expires_at * 1000,
     scope: typeof data.scope === "string" ? data.scope : fallbackScope,
-    athlete,
   };
+}
+
+function parseInitialTokenResponse(raw: unknown): StravaTokenResponse {
+  const parsed = parseTokenFields(raw);
+  if (!parsed.athleteId || !parsed.athlete) {
+    throw new HttpError(502, "Strava returned an invalid OAuth response");
+  }
+  return parsed;
+}
+
+function parseRefreshTokenResponse(raw: unknown, fallbackScope?: string): StravaTokenResponse {
+  return parseTokenFields(raw, fallbackScope);
 }
 
 export async function exchangeStravaCode(code: string): Promise<StravaTokenResponse> {
@@ -347,7 +364,7 @@ export async function exchangeStravaCode(code: string): Promise<StravaTokenRespo
       grant_type: "authorization_code",
     }),
   });
-  return parseTokenResponse(raw);
+  return parseInitialTokenResponse(raw);
 }
 
 export async function refreshStravaAccessToken(
@@ -365,7 +382,7 @@ export async function refreshStravaAccessToken(
       grant_type: "refresh_token",
     }),
   });
-  return parseTokenResponse(raw, scope ?? undefined);
+  return parseRefreshTokenResponse(raw, scope ?? undefined);
 }
 
 export async function revokeStravaAccessToken(accessToken: string): Promise<void> {

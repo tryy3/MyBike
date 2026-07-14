@@ -35,6 +35,9 @@ export function assertStravaAthleteAvailable(athleteId: string, userId: string):
 }
 
 export function upsertStravaAccount(userId: string, token: StravaTokenResponse): void {
+  if (!token.athleteId) {
+    throw new HttpError(502, "Strava returned an invalid OAuth response");
+  }
   assertStravaAthleteAvailable(token.athleteId, userId);
 
   const existing = findStravaAccount(userId);
