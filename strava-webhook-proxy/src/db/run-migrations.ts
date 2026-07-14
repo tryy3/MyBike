@@ -1,7 +1,9 @@
 import { sql } from "drizzle-orm";
 import { readMigrationFiles } from "drizzle-orm/migrator";
+import { child } from "../lib/logging/index.js";
 import type { AppDb } from "./index.js";
 
+const log = child({ component: "db" });
 const DEFAULT_MIGRATIONS_TABLE = "__drizzle_migrations";
 
 type LocalMigration = {
@@ -229,6 +231,10 @@ async function repairIncompleteAppliedMigrations(
     }
     if (!missing) continue;
 
+    log.warn(
+      { migration: migration.name, tables: createdTables },
+      "Re-applying migration whose journal row exists but CREATE TABLE objects are missing",
+    );
     await applyMigrationSql(db, migration.sql);
   }
 }

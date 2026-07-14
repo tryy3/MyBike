@@ -94,12 +94,21 @@ turso db show mybike --url
 turso db tokens create mybike
 ```
 
+After a Cloud import, the app migrator repairs missing tables and journal
+mismatches on boot. Prefer a single container applying migrations
+(`RUN_MIGRATIONS=true`); avoid multiple replicas migrating the same Cloud DB
+at once.
+
+`drizzle-kit` helpers (`db:generate`, `db:push`, `db:studio`) still target the
+**local file** in `drizzle.config.ts` — use the Turso dashboard/CLI for Cloud
+inspection, or point `DB_PATH` at a local copy.
+
 | What                                     | Command                         |
 | ---------------------------------------- | ------------------------------- |
 | Generate a migration from schema changes | `npm run -w server db:generate` |
 | Apply pending migrations                 | `npm run -w server db:migrate`  |
 | Push schema directly (interactive)       | `npm run -w server db:push`     |
-| Inspect data                             | `npm run -w server db:studio`   |
+| Inspect local data                       | `npm run -w server db:studio`   |
 
 ## Docker images
 

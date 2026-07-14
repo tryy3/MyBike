@@ -1,6 +1,7 @@
 import { and, asc, eq, ne, sql } from "drizzle-orm";
 import type { ComponentInsert, ComponentReorder, ComponentUpdate } from "shared";
 import { db } from "../db/index.js";
+import { affectedRows } from "../db/result.js";
 import { bikes, components } from "../db/schema.js";
 import type { ComponentRow } from "../db/schema.js";
 import { HttpError, notFound } from "../lib/errors.js";
@@ -115,7 +116,7 @@ export async function deleteComponent(componentId: string, userId: string): Prom
   const existing = await requireComponent(componentId, userId);
   await db.transaction(async (tx) => {
     const result = await tx.delete(components).where(eq(components.id, componentId)).run();
-    if (result.changes === 0) throw notFound("Component");
+    if (affectedRows(result) === 0) throw notFound("Component");
     if (existing.isActive) {
       const oldest = await tx
         .select()

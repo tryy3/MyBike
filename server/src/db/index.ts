@@ -1,8 +1,6 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import { connect } from "@tursodatabase/database";
 import { createClient } from "@tursodatabase/serverless/compat";
-import { drizzle as drizzleLocal } from "drizzle-orm/tursodatabase/database";
 import type { TursoDatabaseDatabase } from "drizzle-orm/tursodatabase/driver-core";
 import { relations } from "./relations.js";
 import { child } from "../lib/logging/index.js";
@@ -21,6 +19,8 @@ type LibsqlConstruct = (client: unknown, config?: { relations?: typeof relations
 
 async function createRemoteDb(url: string, authToken: string): Promise<AppDb> {
   const client = createClient({ url, authToken });
+  // Match local mode: enforce FK cascades (libSQL supports this pragma remotely).
+  await client.execute("PRAGMA foreign_keys = ON");
   // Use drizzle-orm/libsql's internal construct so we can pass the serverless
   // compat client without adding a runtime @libsql/client dependency.
   const { construct } = (await import("drizzle-orm/libsql/driver-core")) as unknown as {
@@ -30,6 +30,10 @@ async function createRemoteDb(url: string, authToken: string): Promise<AppDb> {
 }
 
 async function createLocalDb(dbPath: string): Promise<AppDb> {
+  // Dynamic import keeps the native optional package off the remote-only path.
+  const { connect } = await import("@tursodatabase/database");
+  const { drizzle } = await import("drizzle-orm/tursodatabase/database");
+
   const dir = dirname(dbPath);
   if (dir && !existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
@@ -37,7 +41,7 @@ async function createLocalDb(dbPath: string): Promise<AppDb> {
 
   const client = await connect(dbPath);
   await client.exec("PRAGMA foreign_keys = ON");
-  return drizzleLocal({ client, relations }) as AppDb;
+  return drizzle({ client, relations }) as AppDb;
 }
 
 /**

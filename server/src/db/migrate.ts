@@ -46,12 +46,14 @@ async function recoverPartialComponentFieldsMigration(migrationsFolder: string):
   );
   if (applied.length > 0) return false;
 
-  const columns = await db.all<{ name: string }>(
-    sql.raw(`SELECT name FROM pragma_table_info('components')`),
-  );
-  const columnNames = new Set(columns.map((c) => c.name));
-  const hasAllColumns = COMPONENT_FIELDS_COLUMNS.every((name) => columnNames.has(name));
-  if (!hasAllColumns) return false;
+  // Prefer SELECT … LIMIT 0 over PRAGMA — Turso serverless PRAGMA probes are unreliable.
+  for (const column of COMPONENT_FIELDS_COLUMNS) {
+    try {
+      await db.run(sql.raw(`SELECT "${column}" FROM "components" LIMIT 0`));
+    } catch {
+      return false;
+    }
+  }
 
   const migrationPath = join(migrationsFolder, COMPONENT_FIELDS_MIGRATION, "migration.sql");
   const query = readFileSync(migrationPath, "utf8");

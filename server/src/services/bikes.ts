@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, inArray, or, sql, type SQL } from "drizzle-orm";
 import type { BikeInsert, BikeUpdate, BikeDetail, BikeListItem, ComponentFilter } from "shared";
 import { db } from "../db/index.js";
+import { affectedRows } from "../db/result.js";
 import { bikes, components } from "../db/schema.js";
 import type { BikeRow, ComponentRow } from "../db/schema.js";
 import { HttpError, notFound } from "../lib/errors.js";
@@ -161,5 +162,5 @@ export async function deleteBike(bikeId: string, userId: string): Promise<void> 
     .delete(bikes)
     .where(and(eq(bikes.id, bikeId), eq(bikes.userId, userId)))
     .run();
-  if (result.changes === 0) throw notFound("Bike");
+  if (affectedRows(result) === 0) throw notFound("Bike");
 }
