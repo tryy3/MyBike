@@ -2,9 +2,15 @@ import type { SystemGroupColorToken, SystemGroupNav } from "shared";
 import { getActiveComponent } from "shared";
 
 import { Badge } from "@/components/ui/badge";
-import { ComponentStats } from "@/features/stats/ComponentStats";
 import { cn } from "@/lib/utils";
 import { componentBrandModel } from "./component-display";
+import {
+  ComponentDetailTier,
+  ComponentCategoryLabel,
+  ComponentIdentityTier,
+  ComponentMetaLine,
+  ComponentNameLabel,
+} from "./component-list-layout";
 import type { WearByComponentId } from "./ComponentsSplitView";
 
 const GROUP_DOT_CLASS: Record<SystemGroupColorToken, string> = {
@@ -98,7 +104,7 @@ export function ComponentsNav({
                       aria-current={selected ? "true" : undefined}
                       onClick={() => onSelectCategory(category.id)}
                       className={cn(
-                        "flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-1.5 text-left transition-colors",
+                        "flex w-full items-start gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-colors",
                         GROUP_HOVER_TINT_CLASS[group.colorToken],
                         selected && GROUP_SELECTED_TINT_CLASS[group.colorToken],
                         selected ? "border-ring ring-2 ring-ring/30" : "border-transparent",
@@ -111,32 +117,31 @@ export function ComponentsNav({
                         )}
                         aria-hidden="true"
                       />
-                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="truncate text-sm font-medium">{category.label}</span>
+                      <div className="flex min-w-0 flex-1 flex-col gap-1">
                         {active ? (
                           <>
-                            <span className="truncate text-sm">{active.name}</span>
-                            {brandModel ? (
-                              <span className="truncate text-xs text-muted-foreground">
-                                {brandModel}
-                              </span>
-                            ) : null}
-                            {displayWear ? (
-                              <ComponentStats
-                                distanceMeters={displayWear.distanceMeters}
-                                movingTimeMinutes={displayWear.movingTimeMinutes}
-                                className="truncate text-xs text-muted-foreground"
+                            <ComponentIdentityTier separated={Boolean(active.notes?.trim())}>
+                              <ComponentCategoryLabel>{category.label}</ComponentCategoryLabel>
+                              <ComponentNameLabel>{active.name}</ComponentNameLabel>
+                              <ComponentMetaLine
+                                brandModel={brandModel}
+                                distanceMeters={displayWear?.distanceMeters}
+                                movingTimeMinutes={displayWear?.movingTimeMinutes}
                               />
-                            ) : null}
+                            </ComponentIdentityTier>
+                            <ComponentDetailTier notes={active.notes} lineClamp={2} />
                           </>
                         ) : (
-                          <span className="truncate text-xs text-muted-foreground">
-                            No parts yet
-                          </span>
+                          <>
+                            <ComponentCategoryLabel>{category.label}</ComponentCategoryLabel>
+                            <span className="truncate text-xs text-muted-foreground">
+                              No parts yet
+                            </span>
+                          </>
                         )}
                       </div>
                       {alternateCount > 0 ? (
-                        <Badge variant="outline" className="shrink-0 tabular-nums">
+                        <Badge variant="outline" className="shrink-0 tabular-nums pt-0.5">
                           +{alternateCount}
                         </Badge>
                       ) : null}
