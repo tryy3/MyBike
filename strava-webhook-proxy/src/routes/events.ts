@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { and, asc, eq, gt, gte } from "drizzle-orm";
+import { and, asc, eq, gt, gte, sql } from "drizzle-orm";
 import type { StravaWebhookEvent } from "shared";
-import { db, sqlite } from "../db/index.js";
+import { db } from "../db/index.js";
 import { webhookEvents } from "../db/schema.js";
 import { requireApiKey } from "../lib/api-key-auth.js";
 
@@ -14,16 +14,18 @@ function queryString(value: unknown, fallback: string): string {
 }
 
 eventsRouter.get("/health", (req, res) => {
-  try {
-    sqlite.prepare("SELECT 1").get();
-    res.json({ status: "ok" });
-  } catch (err) {
-    req.log.warn({ err }, "Health check failed");
-    res.status(503).json({ status: "error", error: "Database unavailable" });
-  }
+  void (async () => {
+    try {
+      await db.all(sql`SELECT 1`);
+      res.json({ status: "ok" });
+    } catch (err) {
+      req.log.warn({ err }, "Health check failed");
+      res.status(503).json({ status: "error", error: "Database unavailable" });
+    }
+  })();
 });
 
-eventsRouter.get("/events", requireApiKey, (req, res) => {
+eventsRouter.get("/events", requireApiKey, async (req, res) => {
   const log = req.log.child({ component: "events" });
   const afterId = parseInt(queryString(req.query.after_id, "0"), 10);
   if (!Number.isFinite(afterId) || afterId < 0) {
@@ -56,7 +58,7 @@ eventsRouter.get("/events", requireApiKey, (req, res) => {
     conditions.push(eq(webhookEvents.ownerId, ownerId));
   }
 
-  const rows = db
+  const rows = await db
     .select()
     .from(webhookEvents)
     .where(and(...conditions))

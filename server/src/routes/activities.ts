@@ -15,8 +15,8 @@ function nowMs(): number {
   return Date.now();
 }
 
-function requireBike(bikeId: string, userId: string) {
-  const bike = db
+async function requireBike(bikeId: string, userId: string) {
+  const bike = await db
     .select({ id: bikes.id })
     .from(bikes)
     .where(and(eq(bikes.id, bikeId), eq(bikes.userId, userId)))
@@ -25,8 +25,8 @@ function requireBike(bikeId: string, userId: string) {
   return bike;
 }
 
-function requireActivity(activityId: string, userId: string) {
-  const row = db
+async function requireActivity(activityId: string, userId: string) {
+  const row = await db
     .select()
     .from(stravaActivities)
     .where(and(eq(stravaActivities.id, activityId), eq(stravaActivities.userId, userId)))
@@ -57,12 +57,12 @@ function encodeCursor(startDate: string, id: string): string {
   return `${startDate}|${id}`;
 }
 
-function loadComponentLinks(activityIds: string[]) {
+async function loadComponentLinks(activityIds: string[]) {
   if (activityIds.length === 0) {
     return new Map<string, { ids: string[]; names: string[] }>();
   }
 
-  const rows = db
+  const rows = await db
     .select({
       activityId: stravaActivityComponents.activityId,
       componentId: stravaActivityComponents.componentId,
@@ -102,10 +102,10 @@ function toListItem(
 export const bikeActivitiesRouter = Router({ mergeParams: true });
 bikeActivitiesRouter.use(requireAuth);
 
-bikeActivitiesRouter.get("/", (req, res) => {
+bikeActivitiesRouter.get("/", async (req, res) => {
   const { userId } = getAuthContext(req);
   const { bikeId } = parseParams(req, ["bikeId"]);
-  requireBike(bikeId, userId);
+  await requireBike(bikeId, userId);
 
   const limit = parseLimit(req.query.limit);
   const cursor = parseCursor(req.query.cursor);
@@ -120,7 +120,7 @@ bikeActivitiesRouter.get("/", (req, res) => {
     );
   }
 
-  const rows = db
+  const rows = await db
     .select()
     .from(stravaActivities)
     .where(and(...conditions))
@@ -130,7 +130,7 @@ bikeActivitiesRouter.get("/", (req, res) => {
 
   const hasMore = rows.length > limit;
   const page = hasMore ? rows.slice(0, limit) : rows;
-  const linksByActivity = loadComponentLinks(page.map((r) => r.id));
+  const linksByActivity = await loadComponentLinks(page.map((r) => r.id));
 
   const items = page.map((row) =>
     toListItem(row, linksByActivity.get(row.id) ?? { ids: [], names: [] }),
@@ -148,11 +148,11 @@ bikeActivitiesRouter.get("/", (req, res) => {
 export const activityRouter = Router();
 activityRouter.use(requireAuth);
 
-activityRouter.get("/:id", (req, res) => {
+activityRouter.get("/:id", async (req, res) => {
   const { userId } = getAuthContext(req);
   const { id } = parseParams(req, ["id"]);
-  const row = requireActivity(id, userId);
-  const links = loadComponentLinks([row.id]).get(row.id) ?? { ids: [], names: [] };
+  const row = await requireActivity(id, userId);
+  const links = (await loadComponentLinks([row.id])).get(row.id) ?? { ids: [], names: [] };
 
   const payload: ActivityDetail = {
     ...toListItem(row, links),
@@ -162,11 +162,11 @@ activityRouter.get("/:id", (req, res) => {
   res.json(payload);
 });
 
-activityRouter.patch("/:id", (req, res) => {
+activityRouter.patch("/:id", async (req, res) => {
   const { userId } = getAuthContext(req);
   const { id } = parseParams(req, ["id"]);
   const data = parseBody(req, activityUpdateSchema);
-  const activity = requireActivity(id, userId);
+  const activity = await requireActivity(id, userId);
 
   const uniqueComponentIds = [...new Set(data.componentIds)];
   if (uniqueComponentIds.length !== data.componentIds.length) {
@@ -174,7 +174,7 @@ activityRouter.patch("/:id", (req, res) => {
   }
 
   if (uniqueComponentIds.length > 0) {
-    const validComponents = db
+    const validComponents = await db
       .select({ id: components.id })
       .from(components)
       .where(
@@ -187,8 +187,9 @@ activityRouter.patch("/:id", (req, res) => {
     }
   }
 
-  db.transaction((tx) => {
-    tx.update(stravaActivities)
+  await db.transaction(async (tx) => {
+    await tx
+      .update(stravaActivities)
       .set({
         distanceMeters: data.distanceMeters,
         movingTimeMinutes: data.movingTimeMinutes,
@@ -197,10 +198,14 @@ activityRouter.patch("/:id", (req, res) => {
       .where(eq(stravaActivities.id, id))
       .run();
 
-    tx.delete(stravaActivityComponents).where(eq(stravaActivityComponents.activityId, id)).run();
+    await tx
+      .delete(stravaActivityComponents)
+      .where(eq(stravaActivityComponents.activityId, id))
+      .run();
 
     for (const componentId of uniqueComponentIds) {
-      tx.insert(stravaActivityComponents)
+      await tx
+        .insert(stravaActivityComponents)
         .values({
           activityId: id,
           componentId,
@@ -211,8 +216,11 @@ activityRouter.patch("/:id", (req, res) => {
     }
   });
 
-  const updated = requireActivity(id, userId);
-  const links = loadComponentLinks([updated.id]).get(updated.id) ?? { ids: [], names: [] };
+  const updated = await requireActivity(id, userId);
+  const links = (await loadComponentLinks([updated.id])).get(updated.id) ?? {
+    ids: [],
+    names: [],
+  };
 
   const payload: ActivityDetail = {
     ...toListItem(updated, links),

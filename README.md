@@ -8,7 +8,7 @@ Track your bikes and the interchangeable components you swap between them.
 direnv allow
 npm install
 cp .env.example .env   # then set BETTER_AUTH_SECRET (see Authentication below)
-npm run -w server db:migrate   # create the SQLite DB + tables (first run only)
+npm run -w server db:migrate   # create/open the local Turso Database file + tables (first run only)
 npm run -w server dev           # Backend on :3001
 npm run -w client dev           # Frontend on :5173
 ```
@@ -77,7 +77,22 @@ npm run -w client build
 
 ## Database
 
-SQLite via Drizzle ORM. The DB lives at `DB_PATH` (default `server/data/mybike.db`).
+Turso Database via Drizzle ORM. By default the server uses a **local file** at `DB_PATH` (default `server/data/mybike.db`) through `@tursodatabase/database`. Existing SQLite files open as-is.
+
+For **Turso Cloud** (remote-only, no local volume required), set both:
+
+| Variable             | Purpose                               |
+| -------------------- | ------------------------------------- |
+| `TURSO_DATABASE_URL` | `libsql://…` URL from `turso db show` |
+| `TURSO_AUTH_TOKEN`   | Token from `turso db tokens create`   |
+
+One-time import of a local file into Cloud:
+
+```bash
+turso db create mybike --from-file ./server/data/mybike.db
+turso db show mybike --url
+turso db tokens create mybike
+```
 
 | What                                     | Command                         |
 | ---------------------------------------- | ------------------------------- |

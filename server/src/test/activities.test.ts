@@ -32,10 +32,10 @@ async function seedActivitySetup(
     model: "11-28",
   });
 
-  const testUser = db.select({ id: user.id }).from(user).where(eq(user.email, email)).get();
+  const testUser = await db.select({ id: user.id }).from(user).where(eq(user.email, email)).get();
   expect(testUser).toBeDefined();
 
-  const activity = db
+  const activity = await db
     .insert(stravaActivities)
     .values({
       userId: testUser!.id,
@@ -49,7 +49,8 @@ async function seedActivitySetup(
     .returning()
     .get();
 
-  db.insert(stravaActivityComponents)
+  await db
+    .insert(stravaActivityComponents)
     .values({
       activityId: activity!.id,
       componentId: chain.id,
@@ -128,7 +129,7 @@ describe("PATCH /api/activities/:id", () => {
     expect(res.body.componentNames).toEqual(["Cassette"]);
     expect(res.body.editedAt).toBeTypeOf("number");
 
-    const junction = db
+    const junction = await db
       .select()
       .from(stravaActivityComponents)
       .where(eq(stravaActivityComponents.activityId, activity.id))

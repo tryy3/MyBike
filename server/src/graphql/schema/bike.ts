@@ -52,9 +52,10 @@ builder.objectType(BikeRef, {
     rideStats: t.field({
       type: RideStatsRef,
       nullable: true,
-      resolve: (parent, _args, context) => {
+      resolve: async (parent, _args, context) => {
         const userId = requireGraphQLPermission(context, "read");
-        return getRideStatsForBike(userId, parent.id);
+        const rideStats = await getRideStatsForBike(userId, parent.id);
+        return rideStats;
       },
     }),
     components: t.field({
@@ -63,10 +64,13 @@ builder.objectType(BikeRef, {
         activeOnly: t.arg.boolean({ required: false, defaultValue: false }),
         filter: t.arg({ type: ComponentFilterInput, required: false }),
       },
-      resolve: (parent, args, context) => {
+      resolve: async (parent, args, context) => {
         const userId = requireGraphQLPermission(context, "read");
         const mergedFilter = mergeComponentFilter(args.activeOnly ?? false, args.filter);
-        return listComponentsForBike(parent.id, userId, { filter: mergedFilter });
+        const componentList = await listComponentsForBike(parent.id, userId, {
+          filter: mergedFilter,
+        });
+        return componentList;
       },
     }),
   }),
@@ -125,9 +129,10 @@ const ComponentUpdateInput = builder.inputType("ComponentUpdateInput", {
 builder.queryField("bikes", (t) =>
   t.field({
     type: [BikeRef],
-    resolve: (_root, _args, context) => {
+    resolve: async (_root, _args, context) => {
       const userId = requireGraphQLPermission(context, "read");
-      return listBikes(userId);
+      const bikes = await listBikes(userId);
+      return bikes;
     },
   }),
 );
@@ -139,9 +144,10 @@ builder.queryField("bike", (t) =>
     args: {
       id: t.arg.id({ required: true }),
     },
-    resolve: (_root, args, context) => {
+    resolve: async (_root, args, context) => {
       const userId = requireGraphQLPermission(context, "read");
-      return requireBike(args.id, userId);
+      const bike = await requireBike(args.id, userId);
+      return bike;
     },
   }),
 );
@@ -152,10 +158,11 @@ builder.mutationField("createBike", (t) =>
     args: {
       input: t.arg({ type: BikeInsertInput, required: true }),
     },
-    resolve: (_root, args, context) => {
+    resolve: async (_root, args, context) => {
       const userId = requireGraphQLPermission(context, "write");
       const data = bikeInsertSchema.parse(args.input);
-      return createBike(userId, data);
+      const bike = await createBike(userId, data);
+      return bike;
     },
   }),
 );
@@ -167,10 +174,11 @@ builder.mutationField("updateBike", (t) =>
       id: t.arg.id({ required: true }),
       input: t.arg({ type: BikeUpdateInput, required: true }),
     },
-    resolve: (_root, args, context) => {
+    resolve: async (_root, args, context) => {
       const userId = requireGraphQLPermission(context, "write");
       const data = bikeUpdateSchema.parse(args.input);
-      return updateBike(args.id, userId, data);
+      const bike = await updateBike(args.id, userId, data);
+      return bike;
     },
   }),
 );
@@ -195,10 +203,11 @@ builder.mutationField("createComponent", (t) =>
       bikeId: t.arg.id({ required: true }),
       input: t.arg({ type: ComponentInsertInput, required: true }),
     },
-    resolve: (_root, args, context) => {
+    resolve: async (_root, args, context) => {
       const userId = requireGraphQLPermission(context, "write");
       const data = componentInsertSchema.parse(args.input);
-      return createComponent(args.bikeId, userId, data);
+      const component = await createComponent(args.bikeId, userId, data);
+      return component;
     },
   }),
 );
@@ -210,10 +219,11 @@ builder.mutationField("updateComponent", (t) =>
       id: t.arg.id({ required: true }),
       input: t.arg({ type: ComponentUpdateInput, required: true }),
     },
-    resolve: (_root, args, context) => {
+    resolve: async (_root, args, context) => {
       const userId = requireGraphQLPermission(context, "write");
       const data = componentUpdateSchema.parse(args.input);
-      return updateComponent(args.id, userId, data);
+      const component = await updateComponent(args.id, userId, data);
+      return component;
     },
   }),
 );
@@ -237,9 +247,10 @@ builder.mutationField("activateComponent", (t) =>
     args: {
       id: t.arg.id({ required: true }),
     },
-    resolve: (_root, args, context) => {
+    resolve: async (_root, args, context) => {
       const userId = requireGraphQLPermission(context, "write");
-      return activateComponent(args.id, userId);
+      const component = await activateComponent(args.id, userId);
+      return component;
     },
   }),
 );

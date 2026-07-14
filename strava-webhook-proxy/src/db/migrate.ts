@@ -1,7 +1,12 @@
-import { migrate } from "drizzle-orm/node-sqlite/migrator";
-import { db } from "./index.js";
+import { migrate as migrateLocal } from "drizzle-orm/tursodatabase/migrator";
+import { migrate as migrateRemote } from "drizzle-orm/libsql/migrator";
+import { db, dbMode } from "./index.js";
 
-export function applyMigrations() {
+export async function applyMigrations(): Promise<void> {
   const migrationsFolder = process.env.DRIZZLE_MIGRATIONS_FOLDER ?? "./drizzle";
-  migrate(db, { migrationsFolder });
+  if (dbMode === "remote") {
+    await migrateRemote(db as never, { migrationsFolder });
+  } else {
+    await migrateLocal(db, { migrationsFolder });
+  }
 }

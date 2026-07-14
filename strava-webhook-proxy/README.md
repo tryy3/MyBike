@@ -7,7 +7,7 @@ Use this when MyBike runs on a home network or Tailscale and cannot receive Stra
 ## Architecture
 
 ```
-Strava  --POST /webhook/strava-->  proxy (public HTTPS)  --SQLite-->
+Strava  --POST /webhook/strava-->  proxy (public HTTPS)  --Turso DB-->
 MyBike  --GET /api/events-------->  proxy (API key)       --poll-->
 ```
 

@@ -13,6 +13,8 @@
     "db:migrate": "tsx scripts/migrate.ts"
   },
   "dependencies": {
+    "@tursodatabase/database": "^0.7.0",
+    "@tursodatabase/serverless": "^1.2.3",
     "dotenv": "^17.4.2",
     "drizzle-orm": "1.0.0-rc.4-5d5b77c",
     "express": "^5.2.1",

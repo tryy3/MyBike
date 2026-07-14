@@ -7,7 +7,10 @@ COPY logging/package.json ./logging/
 COPY strava-webhook-proxy/package.json ./strava-webhook-proxy/
 
 FROM base AS prod-deps
+# Optional @tursodatabase/database-* native binaries ship prebuilt (.node) files;
+# no postinstall script is required. Keep --ignore-scripts.
 RUN npm ci --omit=dev --ignore-scripts -w shared -w logging -w strava-webhook-proxy
+RUN node --input-type=module -e "import('@tursodatabase/database').then(()=>console.log('turso database native ok'))"
 
 FROM base AS build
 RUN npm ci --ignore-scripts

@@ -495,7 +495,9 @@ stravaRouter.post("/sync", async (req, res) => {
 
 stravaRouter.post("/backfill-components", async (req, res) => {
   const { userId } = getAuthContext(req);
-  const creditedActivities = await db.transaction((tx) => backfillComponentCredits(tx, userId));
+  const creditedActivities = await db.transaction(async (tx) => {
+    return await backfillComponentCredits(tx, userId);
+  });
   res.json({ creditedActivities });
 });
 

@@ -19,9 +19,10 @@ function componentInput(overrides: Record<string, unknown> = {}) {
 }
 
 async function connectStravaAccount(email: string) {
-  const currentUser = db.select().from(user).where(eq(user.email, email)).get();
+  const currentUser = await db.select().from(user).where(eq(user.email, email)).get();
   expect(currentUser).toBeDefined();
-  db.insert(account)
+  await db
+    .insert(account)
     .values({
       id: crypto.randomUUID(),
       accountId: `strava-athlete-${crypto.randomUUID()}`,
@@ -166,7 +167,7 @@ describe("GraphQL wear and activeOnly", () => {
     const { agent, user: testUser } = await createAuthenticatedAgent(app);
     await connectStravaAccount(testUser.email);
 
-    const dbUser = db
+    const dbUser = await db
       .select({ id: user.id })
       .from(user)
       .where(eq(user.email, testUser.email))
@@ -176,7 +177,8 @@ describe("GraphQL wear and activeOnly", () => {
     const bike = await createBikeViaGraphql(agent, "Wear Bike");
     const component = await createComponentViaGraphql(agent, bike.id, componentInput());
 
-    db.insert(stravaActivities)
+    await db
+      .insert(stravaActivities)
       .values({
         userId: dbUser!.id,
         bikeId: bike.id,
@@ -464,7 +466,7 @@ describe("GraphQL garageStats", () => {
     const { agent, user: testUser } = await createAuthenticatedAgent(app);
     await connectStravaAccount(testUser.email);
 
-    const dbUser = db
+    const dbUser = await db
       .select({ id: user.id })
       .from(user)
       .where(eq(user.email, testUser.email))
@@ -473,7 +475,8 @@ describe("GraphQL garageStats", () => {
 
     const bike = await createBikeViaGraphql(agent, "Road");
 
-    db.insert(stravaActivities)
+    await db
+      .insert(stravaActivities)
       .values({
         userId: dbUser!.id,
         bikeId: bike.id,

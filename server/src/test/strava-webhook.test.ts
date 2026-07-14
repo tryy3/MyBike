@@ -200,9 +200,8 @@ describe("processWebhookEvent", () => {
     });
 
     expect(outcome).toBe("disconnected");
-    await expect(
-      db.select().from(account).where(eq(account.userId, userId)).get(),
-    ).resolves.toBeUndefined();
+    const linkedAccount = await db.select().from(account).where(eq(account.userId, userId)).get();
+    expect(linkedAccount).toBeUndefined();
   });
 
   it("ignores forged deauth when token is still valid", async () => {
@@ -233,9 +232,8 @@ describe("processWebhookEvent", () => {
     });
 
     expect(outcome).toBe("skipped");
-    await expect(
-      db.select().from(account).where(eq(account.userId, userId)).get(),
-    ).resolves.toBeDefined();
+    const linkedAccount = await db.select().from(account).where(eq(account.userId, userId)).get();
+    expect(linkedAccount).toBeDefined();
   });
 });
 
