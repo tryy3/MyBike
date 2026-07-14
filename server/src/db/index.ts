@@ -1,6 +1,8 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
+import type { Client } from "@libsql/client";
 import { createClient } from "@tursodatabase/serverless/compat";
+import { drizzle as drizzleLibsql } from "drizzle-orm/libsql";
 import type { TursoDatabaseDatabase } from "drizzle-orm/tursodatabase/driver-core";
 import { relations } from "./relations.js";
 import { child } from "../lib/logging/index.js";
@@ -9,24 +11,25 @@ const log = child({ component: "db" });
 
 export type DbMode = "local" | "remote";
 
-/** Async SQLite Drizzle DB — local Turso Database or remote serverless (compat). */
+/**
+ * Async SQLite Drizzle DB — local Turso Database or remote serverless (compat).
+ * Typed as the local adapter; remote uses the same async query surface at runtime.
+ */
 export type AppDb = TursoDatabaseDatabase & { $client: unknown };
 
 export let db!: AppDb;
 export let dbMode: DbMode = "local";
 
-type LibsqlConstruct = (client: unknown, config?: { relations?: typeof relations }) => AppDb;
-
 async function createRemoteDb(url: string, authToken: string): Promise<AppDb> {
+  // Official remote path: Turso serverless compat client + public drizzle-orm/libsql.
+  // @libsql/client is required by drizzle-orm/libsql's module graph (even when we
+  // pass our own client) — we do not call libsql's createClient.
   const client = createClient({ url, authToken });
-  // Match local mode: enforce FK cascades (libSQL supports this pragma remotely).
   await client.execute("PRAGMA foreign_keys = ON");
-  // Use drizzle-orm/libsql's internal construct so we can pass the serverless
-  // compat client without adding a runtime @libsql/client dependency.
-  const { construct } = (await import("drizzle-orm/libsql/driver-core")) as unknown as {
-    construct: LibsqlConstruct;
-  };
-  return construct(client, { relations });
+  return drizzleLibsql({
+    client: client as unknown as Client,
+    relations,
+  }) as unknown as AppDb;
 }
 
 async function createLocalDb(dbPath: string): Promise<AppDb> {

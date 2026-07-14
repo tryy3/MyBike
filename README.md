@@ -86,6 +86,14 @@ For **Turso Cloud** (remote-only, no local volume required), set both:
 | `TURSO_DATABASE_URL` | `libsql://…` URL from `turso db show` |
 | `TURSO_AUTH_TOKEN`   | Token from `turso db tokens create`   |
 
+Runtime: local file uses `@tursodatabase/database` + `drizzle-orm/tursodatabase/database`;
+Cloud uses `@tursodatabase/serverless/compat` + public `drizzle-orm/libsql`
+(`@libsql/client` is installed only because Drizzle’s libsql entry imports it — we
+pass the Turso compat client, we do not open a second connection through libsql).
+
+The Turso-safe migrator lives in `shared` (`runDrizzleMigrations`) and is wrapped
+by server/proxy for logging.
+
 One-time import of a local file into Cloud:
 
 ```bash

@@ -1,6 +1,8 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
+import type { Client } from "@libsql/client";
 import { createClient } from "@tursodatabase/serverless/compat";
+import { drizzle as drizzleLibsql } from "drizzle-orm/libsql";
 import type { TursoDatabaseDatabase } from "drizzle-orm/tursodatabase/driver-core";
 import { child } from "../lib/logging/index.js";
 
@@ -13,15 +15,12 @@ export type AppDb = TursoDatabaseDatabase & { $client: unknown };
 export let db!: AppDb;
 export let dbMode: DbMode = "local";
 
-type LibsqlConstruct = (client: unknown, config?: Record<string, never>) => AppDb;
-
 async function createRemoteDb(url: string, authToken: string): Promise<AppDb> {
   const client = createClient({ url, authToken });
   await client.execute("PRAGMA foreign_keys = ON");
-  const { construct } = (await import("drizzle-orm/libsql/driver-core")) as unknown as {
-    construct: LibsqlConstruct;
-  };
-  return construct(client);
+  return drizzleLibsql({
+    client: client as unknown as Client,
+  }) as unknown as AppDb;
 }
 
 async function createLocalDb(dbPath: string): Promise<AppDb> {

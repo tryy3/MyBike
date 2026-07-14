@@ -10,3 +10,18 @@ export * from "./schemas/strava-webhook.js";
 export * from "./schemas/stats.js";
 export * from "./schemas/activity.js";
 export * from "./types.js";
+export {
+  ensureMigrationsTableV1,
+  errorMessageChain,
+  extractCreatedTableNames,
+  isBenignSchemaError,
+  isDuplicateColumnError,
+  isNoSuchColumnError,
+  matchLocalMigration,
+  resolveMigrationsToRun,
+  runDrizzleMigrations,
+  type DbMigrationRow,
+  type LocalMigration,
+  type MigratorDb,
+  type RunDrizzleMigrationsOptions,
+} from "./db/run-migrations.js";
