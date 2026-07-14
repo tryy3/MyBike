@@ -9,6 +9,8 @@ import { drizzle } from "drizzle-orm/tursodatabase/database";
 import { readMigrationFiles } from "drizzle-orm/migrator";
 import {
   ensureMigrationsTableV1,
+  extractCreatedTableNames,
+  isBenignSchemaError,
   isDuplicateColumnError,
   isNoSuchColumnError,
   resolveMigrationsToRun,
@@ -108,15 +110,26 @@ describe("runDrizzleMigrations", () => {
       );
     }
 
+    // Journal says everything is applied, but most tables are missing — repair them.
     await expect(runDrizzleMigrations(db, migrationsFolder)).resolves.toBeUndefined();
 
     const named = await db.all<{ name: string }>(
       sql`SELECT name FROM __drizzle_migrations WHERE name IS NOT NULL`,
     );
     expect(named.length).toBe(local.length);
+
+    const apikey = await db.all<{ name: string }>(
+      sql`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'apikey'`,
+    );
+    expect(apikey).toHaveLength(1);
+
+    const cursor = await db.all<{ name: string }>(
+      sql`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'strava_webhook_cursor'`,
+    );
+    expect(cursor).toHaveLength(1);
   });
 
-  it("baselines an imported schema with an empty migrations journal", async () => {
+  it("continues past existing tables when importing a partial Cloud schema", async () => {
     await db.run(sql`
       CREATE TABLE __drizzle_migrations (
         id INTEGER PRIMARY KEY,
@@ -136,6 +149,11 @@ describe("runDrizzleMigrations", () => {
     `);
 
     await expect(runDrizzleMigrations(db, migrationsFolder)).resolves.toBeUndefined();
+
+    const apikey = await db.all<{ name: string }>(
+      sql`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'apikey'`,
+    );
+    expect(apikey).toHaveLength(1);
 
     const applied = await db.all<{ name: string }>(sql`SELECT name FROM __drizzle_migrations`);
     expect(applied.length).toBeGreaterThan(0);
@@ -172,7 +190,26 @@ describe("resolveMigrationsToRun", () => {
   });
 });
 
-describe("migration error helpers", () => {
+describe("migration helpers", () => {
+  it("extracts CREATE TABLE names from migration SQL", () => {
+    expect(
+      extractCreatedTableNames([
+        "CREATE TABLE `apikey` (\n  id text\n);\n",
+        'CREATE TABLE "strava_webhook_cursor" (id integer);',
+      ]),
+    ).toEqual(["apikey", "strava_webhook_cursor"]);
+  });
+
+  it("detects benign schema errors including nested Drizzle causes", () => {
+    expect(isBenignSchemaError(new Error("table `bikes` already exists"))).toBe(true);
+    expect(isBenignSchemaError(new Error("duplicate column name: name"))).toBe(true);
+    expect(isBenignSchemaError(new Error("no such table: apikey"))).toBe(false);
+
+    const nested = new Error("Failed to run the query 'CREATE TABLE bikes'");
+    nested.cause = new Error("prepare failed: Parse error: table bikes already exists");
+    expect(isBenignSchemaError(nested)).toBe(true);
+  });
+
   it("detects duplicate column errors from Turso / SQLite messages", () => {
     expect(
       isDuplicateColumnError(

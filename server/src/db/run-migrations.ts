@@ -24,9 +24,10 @@ type DbMigrationRow = {
  * - v1 matching is name-only; imported DBs often have hash/created_at rows
  *   with NULL `name`, so every migration looks pending and CREATE TABLE fails
  *
- * This runner: upgrades columns idempotently, backfills names from hash/millis,
- * treats hash matches as already applied, and baselines when schema exists but
- * the journal is empty (common after some Cloud imports).
+ * This runner upgrades columns idempotently, backfills names from hash/millis,
+ * matches applied migrations by name or hash, applies pending SQL with benign
+ * "already exists" tolerance (needed after Cloud imports), and repairs journal
+ * rows whose CREATE TABLE objects are still missing.
  */
 export async function runDrizzleMigrations(
   db: AppDb,
@@ -58,24 +59,21 @@ export async function runDrizzleMigrations(
   await backfillMigrationNames(db, migrationsTable, migrations, dbMigrationRows);
   dbMigrationRows = await readDbMigrations(db, migrationsTable);
 
-  if (dbMigrationRows.length === 0 && (await schemaLooksMigrated(db))) {
-    await recordMigrationsApplied(db, migrationsTable, migrations);
-    return;
-  }
+  // Fix false "applied" markers (e.g. empty-journal baselining) when tables are missing.
+  await repairIncompleteAppliedMigrations(db, migrations, dbMigrationRows);
 
+  dbMigrationRows = await readDbMigrations(db, migrationsTable);
   const migrationsToRun = resolveMigrationsToRun(migrations, dbMigrationRows);
   if (migrationsToRun.length === 0) return;
 
-  await db.transaction(async (tx) => {
-    for (const migration of migrationsToRun) {
-      for (const stmt of migration.sql) {
-        await tx.run(sql.raw(stmt));
-      }
-      await tx.run(
-        sql`INSERT INTO ${table} ("hash", "created_at", "name", "applied_at") VALUES (${migration.hash}, ${migration.folderMillis}, ${migration.name ?? null}, ${new Date().toISOString()})`,
-      );
-    }
-  });
+  // Per-statement commits: SQLite aborts a transaction after the first error, so
+  // we cannot swallow "already exists" inside one multi-migration transaction.
+  for (const migration of migrationsToRun) {
+    await applyMigrationSql(db, migration.sql);
+    await db.run(
+      sql`INSERT INTO ${table} ("hash", "created_at", "name", "applied_at") VALUES (${migration.hash}, ${migration.folderMillis}, ${migration.name ?? null}, ${new Date().toISOString()})`,
+    );
+  }
 }
 
 export async function ensureMigrationsTableV1(db: AppDb, migrationsTable: string): Promise<void> {
@@ -84,13 +82,37 @@ export async function ensureMigrationsTableV1(db: AppDb, migrationsTable: string
 }
 
 export function isDuplicateColumnError(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err);
-  return /duplicate column name/i.test(msg);
+  return /duplicate column name/i.test(errorMessageChain(err));
 }
 
 export function isNoSuchColumnError(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err);
-  return /no such column/i.test(msg);
+  return /no such column/i.test(errorMessageChain(err));
+}
+
+/** Schema objects that already exist after a Cloud import / partial apply. */
+export function isBenignSchemaError(err: unknown): boolean {
+  const msg = errorMessageChain(err);
+  return /already exists/i.test(msg) || /duplicate column name/i.test(msg);
+}
+
+/** Drizzle wraps driver errors; match against the full cause chain. */
+export function errorMessageChain(err: unknown): string {
+  const parts: string[] = [];
+  const seen = new Set<unknown>();
+  let current: unknown = err;
+  while (current && typeof current === "object" && !seen.has(current)) {
+    seen.add(current);
+    if (current instanceof Error) {
+      parts.push(current.message);
+      current = current.cause;
+      continue;
+    }
+    if ("message" in current && typeof (current as { message: unknown }).message === "string") {
+      parts.push((current as { message: string }).message);
+    }
+    break;
+  }
+  return parts.length > 0 ? parts.join("\n") : String(err);
 }
 
 /** Prefer name matches; fall back to hash so NULL-name journal rows still count. */
@@ -148,9 +170,20 @@ export function matchLocalMigration(
   return byHash.get(dbRow.hash);
 }
 
+export function extractCreatedTableNames(statements: string[]): string[] {
+  const names: string[] = [];
+  const re = /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`"]?([A-Za-z_][\w]*)[`"]?/gi;
+  for (const stmt of statements) {
+    for (const match of stmt.matchAll(re)) {
+      const name = match[1];
+      if (name) names.push(name);
+    }
+  }
+  return names;
+}
+
 async function readDbMigrations(db: AppDb, migrationsTable: string): Promise<DbMigrationRow[]> {
   const safeTable = quoteIdent(migrationsTable);
-  // Avoid drizzle identifier quirks over serverless; use literal SQL + aliases.
   const rows = await db.all<{
     id: number;
     hash: string;
@@ -187,27 +220,50 @@ async function backfillMigrationNames(
   }
 }
 
-async function schemaLooksMigrated(db: AppDb): Promise<boolean> {
-  const rows = await db.all<{ name: string }>(
-    sql`SELECT name FROM sqlite_master WHERE type = 'table' AND name = ${"bikes"}`,
-  );
-  return rows.length > 0;
+async function repairIncompleteAppliedMigrations(
+  db: AppDb,
+  localMigrations: LocalMigration[],
+  dbRows: DbMigrationRow[],
+): Promise<void> {
+  const pending = new Set(resolveMigrationsToRun(localMigrations, dbRows).map((m) => m.hash));
+
+  for (const migration of localMigrations) {
+    if (pending.has(migration.hash)) continue;
+
+    const createdTables = extractCreatedTableNames(migration.sql);
+    if (createdTables.length === 0) continue;
+
+    let missing = false;
+    for (const tableName of createdTables) {
+      if (!(await hasTable(db, tableName))) {
+        missing = true;
+        break;
+      }
+    }
+    if (!missing) continue;
+
+    await applyMigrationSql(db, migration.sql);
+  }
 }
 
-async function recordMigrationsApplied(
-  db: AppDb,
-  migrationsTable: string,
-  migrations: LocalMigration[],
-): Promise<void> {
-  const table = sql.identifier(migrationsTable);
-  const appliedAt = new Date().toISOString();
-  await db.transaction(async (tx) => {
-    for (const migration of migrations) {
-      await tx.run(
-        sql`INSERT INTO ${table} ("hash", "created_at", "name", "applied_at") VALUES (${migration.hash}, ${migration.folderMillis}, ${migration.name ?? null}, ${appliedAt})`,
-      );
+async function applyMigrationSql(db: AppDb, statements: string[]): Promise<void> {
+  for (const stmt of statements) {
+    const trimmed = stmt.trim();
+    if (!trimmed) continue;
+    try {
+      await db.run(sql.raw(trimmed));
+    } catch (err) {
+      if (isBenignSchemaError(err)) continue;
+      throw err;
     }
-  });
+  }
+}
+
+async function hasTable(db: AppDb, tableName: string): Promise<boolean> {
+  const rows = await db.all<{ name: string }>(
+    sql`SELECT name FROM sqlite_master WHERE type = 'table' AND name = ${tableName}`,
+  );
+  return rows.length > 0;
 }
 
 async function addColumnIfMissing(

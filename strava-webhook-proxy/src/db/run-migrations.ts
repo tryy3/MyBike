@@ -19,8 +19,7 @@ type DbMigrationRow = {
 };
 
 /**
- * See server/src/db/run-migrations.ts — Turso Cloud / serverless-safe migrator
- * with name backfill, hash matching, and schema baselining.
+ * See server/src/db/run-migrations.ts — Turso Cloud / serverless-safe migrator.
  */
 export async function runDrizzleMigrations(
   db: AppDb,
@@ -52,24 +51,18 @@ export async function runDrizzleMigrations(
   await backfillMigrationNames(db, migrationsTable, migrations, dbMigrationRows);
   dbMigrationRows = await readDbMigrations(db, migrationsTable);
 
-  if (dbMigrationRows.length === 0 && (await schemaLooksMigrated(db))) {
-    await recordMigrationsApplied(db, migrationsTable, migrations);
-    return;
-  }
+  await repairIncompleteAppliedMigrations(db, migrations, dbMigrationRows);
 
+  dbMigrationRows = await readDbMigrations(db, migrationsTable);
   const migrationsToRun = resolveMigrationsToRun(migrations, dbMigrationRows);
   if (migrationsToRun.length === 0) return;
 
-  await db.transaction(async (tx) => {
-    for (const migration of migrationsToRun) {
-      for (const stmt of migration.sql) {
-        await tx.run(sql.raw(stmt));
-      }
-      await tx.run(
-        sql`INSERT INTO ${table} ("hash", "created_at", "name", "applied_at") VALUES (${migration.hash}, ${migration.folderMillis}, ${migration.name ?? null}, ${new Date().toISOString()})`,
-      );
-    }
-  });
+  for (const migration of migrationsToRun) {
+    await applyMigrationSql(db, migration.sql);
+    await db.run(
+      sql`INSERT INTO ${table} ("hash", "created_at", "name", "applied_at") VALUES (${migration.hash}, ${migration.folderMillis}, ${migration.name ?? null}, ${new Date().toISOString()})`,
+    );
+  }
 }
 
 export async function ensureMigrationsTableV1(db: AppDb, migrationsTable: string): Promise<void> {
@@ -78,13 +71,36 @@ export async function ensureMigrationsTableV1(db: AppDb, migrationsTable: string
 }
 
 export function isDuplicateColumnError(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err);
-  return /duplicate column name/i.test(msg);
+  return /duplicate column name/i.test(errorMessageChain(err));
 }
 
 export function isNoSuchColumnError(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err);
-  return /no such column/i.test(msg);
+  return /no such column/i.test(errorMessageChain(err));
+}
+
+export function isBenignSchemaError(err: unknown): boolean {
+  const msg = errorMessageChain(err);
+  return /already exists/i.test(msg) || /duplicate column name/i.test(msg);
+}
+
+/** Drizzle wraps driver errors; match against the full cause chain. */
+export function errorMessageChain(err: unknown): string {
+  const parts: string[] = [];
+  const seen = new Set<unknown>();
+  let current: unknown = err;
+  while (current && typeof current === "object" && !seen.has(current)) {
+    seen.add(current);
+    if (current instanceof Error) {
+      parts.push(current.message);
+      current = current.cause;
+      continue;
+    }
+    if ("message" in current && typeof (current as { message: unknown }).message === "string") {
+      parts.push((current as { message: string }).message);
+    }
+    break;
+  }
+  return parts.length > 0 ? parts.join("\n") : String(err);
 }
 
 export function resolveMigrationsToRun(
@@ -141,6 +157,18 @@ export function matchLocalMigration(
   return byHash.get(dbRow.hash);
 }
 
+export function extractCreatedTableNames(statements: string[]): string[] {
+  const names: string[] = [];
+  const re = /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`"]?([A-Za-z_][\w]*)[`"]?/gi;
+  for (const stmt of statements) {
+    for (const match of stmt.matchAll(re)) {
+      const name = match[1];
+      if (name) names.push(name);
+    }
+  }
+  return names;
+}
+
 async function readDbMigrations(db: AppDb, migrationsTable: string): Promise<DbMigrationRow[]> {
   const safeTable = quoteIdent(migrationsTable);
   const rows = await db.all<{
@@ -179,27 +207,50 @@ async function backfillMigrationNames(
   }
 }
 
-async function schemaLooksMigrated(db: AppDb): Promise<boolean> {
-  const rows = await db.all<{ name: string }>(
-    sql`SELECT name FROM sqlite_master WHERE type = 'table' AND name = ${"webhook_events"}`,
-  );
-  return rows.length > 0;
+async function repairIncompleteAppliedMigrations(
+  db: AppDb,
+  localMigrations: LocalMigration[],
+  dbRows: DbMigrationRow[],
+): Promise<void> {
+  const pending = new Set(resolveMigrationsToRun(localMigrations, dbRows).map((m) => m.hash));
+
+  for (const migration of localMigrations) {
+    if (pending.has(migration.hash)) continue;
+
+    const createdTables = extractCreatedTableNames(migration.sql);
+    if (createdTables.length === 0) continue;
+
+    let missing = false;
+    for (const tableName of createdTables) {
+      if (!(await hasTable(db, tableName))) {
+        missing = true;
+        break;
+      }
+    }
+    if (!missing) continue;
+
+    await applyMigrationSql(db, migration.sql);
+  }
 }
 
-async function recordMigrationsApplied(
-  db: AppDb,
-  migrationsTable: string,
-  migrations: LocalMigration[],
-): Promise<void> {
-  const table = sql.identifier(migrationsTable);
-  const appliedAt = new Date().toISOString();
-  await db.transaction(async (tx) => {
-    for (const migration of migrations) {
-      await tx.run(
-        sql`INSERT INTO ${table} ("hash", "created_at", "name", "applied_at") VALUES (${migration.hash}, ${migration.folderMillis}, ${migration.name ?? null}, ${appliedAt})`,
-      );
+async function applyMigrationSql(db: AppDb, statements: string[]): Promise<void> {
+  for (const stmt of statements) {
+    const trimmed = stmt.trim();
+    if (!trimmed) continue;
+    try {
+      await db.run(sql.raw(trimmed));
+    } catch (err) {
+      if (isBenignSchemaError(err)) continue;
+      throw err;
     }
-  });
+  }
+}
+
+async function hasTable(db: AppDb, tableName: string): Promise<boolean> {
+  const rows = await db.all<{ name: string }>(
+    sql`SELECT name FROM sqlite_master WHERE type = 'table' AND name = ${tableName}`,
+  );
+  return rows.length > 0;
 }
 
 async function addColumnIfMissing(
