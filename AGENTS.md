@@ -170,7 +170,7 @@ git config core.hooksPath .vite-hooks   # enable pre-commit/pre-push hooks
 
 ## Cursor Cloud specific instructions
 
-Cloud agents run on a snapshot-managed environment (the previous `.cursor/environment.json` + Dockerfile were removed) that already has **Node 26** available. The startup update script runs `npm install`, builds `shared`, and applies DB migrations so a fresh agent is ready for dev servers and typecheck.
+Cloud agents run on a snapshot-managed environment (the previous `.cursor/environment.json` + Dockerfile were removed) that already has **Node 26** available. The startup update script runs `npm install` and builds the `shared` + `logging` packages (both are consumed as compiled `dist/`, so dev servers and typecheck need them built). The local DB file (`server/data/mybike.db`) is committed and opens as-is; if you need a fresh/updated schema, run `npm run -w server db:migrate` manually (idempotent). A `.env` is not committed — copy `.env.example` to `.env` and set `BETTER_AUTH_SECRET` if you want non-fallback auth.
 
 If you edit anything under `shared/src`, rebuild with `npm run -w shared build` before running server/client dev or typecheck — `tsx watch` does **not** recompile `shared`.
 
