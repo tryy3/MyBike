@@ -104,9 +104,10 @@ function componentPayload(overrides: Record<string, unknown> = {}) {
 }
 
 async function connectStravaAccount(email: string) {
-  const currentUser = db.select().from(user).where(eq(user.email, email)).get();
+  const currentUser = await db.select().from(user).where(eq(user.email, email)).get();
   expect(currentUser).toBeDefined();
-  db.insert(account)
+  await db
+    .insert(account)
     .values({
       id: crypto.randomUUID(),
       accountId: `strava-athlete-${currentUser!.id}`,
@@ -124,8 +125,8 @@ function todayRideDate(time = "10:00:00Z"): string {
   return `${new Date().toISOString().slice(0, 10)}T${time}`;
 }
 
-function getComponentBaseline(componentId: string) {
-  const row = db.select().from(components).where(eq(components.id, componentId)).get();
+async function getComponentBaseline(componentId: string) {
+  const row = await db.select().from(components).where(eq(components.id, componentId)).get();
   expect(row).toBeDefined();
   return row!;
 }
@@ -182,7 +183,7 @@ describe("Strava import", () => {
       creditedComponents: 1,
     });
 
-    const baseline = getComponentBaseline(component.id);
+    const baseline = await getComponentBaseline(component.id);
     expect(baseline.distanceMeters).toBe(1000);
     expect(baseline.movingTimeMinutes).toBe(10);
 
@@ -367,8 +368,9 @@ describe("Strava sync", () => {
 
     const first = await agent.post("/api/strava/sync").expect(200);
 
-    const dbUser = db.select().from(user).where(eq(user.email, testUser.email)).get();
-    db.update(stravaSyncState)
+    const dbUser = await db.select().from(user).where(eq(user.email, testUser.email)).get();
+    await db
+      .update(stravaSyncState)
       .set({ lastSyncedAt: 0 })
       .where(eq(stravaSyncState.userId, dbUser!.id))
       .run();
@@ -386,7 +388,7 @@ describe("Strava sync", () => {
       creditedComponents: 0,
     });
 
-    const baseline = getComponentBaseline(component.id);
+    const baseline = await getComponentBaseline(component.id);
     expect(baseline.distanceMeters).toBe(0);
     expect(baseline.movingTimeMinutes).toBe(0);
 
@@ -399,8 +401,9 @@ describe("Strava sync", () => {
     const { agent, user: testUser } = await createAuthenticatedAgent(app);
     await connectStravaAccount(testUser.email);
 
-    const dbUser = db.select().from(user).where(eq(user.email, testUser.email)).get();
-    db.insert(stravaSyncState)
+    const dbUser = await db.select().from(user).where(eq(user.email, testUser.email)).get();
+    await db
+      .insert(stravaSyncState)
       .values({
         userId: dbUser!.id,
         lastSyncedAt: Date.parse("2026-07-01T00:00:00Z"),

@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { migrate } from "drizzle-orm/node-sqlite/migrator";
+import { sql } from "drizzle-orm";
 import { child } from "../lib/logging/index.js";
-import { db, sqlite } from "./index.js";
+import { db } from "./index.js";
+import { runDrizzleMigrations } from "./run-migrations.js";
 
 const log = child({ component: "db" });
 
@@ -27,50 +28,51 @@ function formatToMillis(dateStr: string): number {
   return Date.UTC(year, month, day, hour, minute, second);
 }
 
-function hasTable(tableName: string): boolean {
-  const row = sqlite
-    .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?")
-    .get(tableName);
-  return row !== undefined;
+async function hasTable(tableName: string): Promise<boolean> {
+  const rows = await db.all<{ name: string }>(
+    sql`SELECT name FROM sqlite_master WHERE type = 'table' AND name = ${tableName}`,
+  );
+  return rows.length > 0;
 }
 
 /** If a failed run added all component columns but never recorded the migration, mark it applied. */
-function recoverPartialComponentFieldsMigration(migrationsFolder: string): boolean {
-  if (!hasTable("__drizzle_migrations") || !hasTable("components")) return false;
+async function recoverPartialComponentFieldsMigration(migrationsFolder: string): Promise<boolean> {
+  if (!(await hasTable("__drizzle_migrations")) || !(await hasTable("components"))) {
+    return false;
+  }
 
-  const applied = sqlite
-    .prepare("SELECT name FROM __drizzle_migrations WHERE name = ?")
-    .get(COMPONENT_FIELDS_MIGRATION) as { name: string } | undefined;
-  if (applied) return false;
-
-  const columnNames = new Set(
-    (sqlite.prepare("PRAGMA table_info(components)").all() as { name: string }[]).map(
-      (c) => c.name,
-    ),
+  const applied = await db.all<{ name: string }>(
+    sql`SELECT name FROM __drizzle_migrations WHERE name = ${COMPONENT_FIELDS_MIGRATION}`,
   );
-  const hasAllColumns = COMPONENT_FIELDS_COLUMNS.every((name) => columnNames.has(name));
-  if (!hasAllColumns) return false;
+  if (applied.length > 0) return false;
+
+  // Prefer SELECT … LIMIT 0 over PRAGMA — Turso serverless PRAGMA probes are unreliable.
+  for (const column of COMPONENT_FIELDS_COLUMNS) {
+    try {
+      await db.run(sql.raw(`SELECT "${column}" FROM "components" LIMIT 0`));
+    } catch {
+      return false;
+    }
+  }
 
   const migrationPath = join(migrationsFolder, COMPONENT_FIELDS_MIGRATION, "migration.sql");
   const query = readFileSync(migrationPath, "utf8");
   const hash = createHash("sha256").update(query).digest("hex");
   const createdAt = formatToMillis(COMPONENT_FIELDS_MIGRATION.slice(0, 14));
 
-  sqlite
-    .prepare(
-      'INSERT INTO __drizzle_migrations ("hash", "created_at", "name", "applied_at") VALUES (?, ?, ?, ?)',
-    )
-    .run(hash, createdAt, COMPONENT_FIELDS_MIGRATION, new Date().toISOString());
+  await db.run(
+    sql`INSERT INTO __drizzle_migrations ("hash", "created_at", "name", "applied_at") VALUES (${hash}, ${createdAt}, ${COMPONENT_FIELDS_MIGRATION}, ${new Date().toISOString()})`,
+  );
   return true;
 }
 
-export function applyMigrations() {
+export async function applyMigrations(): Promise<void> {
   const migrationsFolder = process.env.DRIZZLE_MIGRATIONS_FOLDER ?? "./drizzle";
-  if (recoverPartialComponentFieldsMigration(migrationsFolder)) {
+  if (await recoverPartialComponentFieldsMigration(migrationsFolder)) {
     log.warn(
       { migration: COMPONENT_FIELDS_MIGRATION },
       "Recovered partial component-fields migration",
     );
   }
-  migrate(db, { migrationsFolder });
+  await runDrizzleMigrations(db, migrationsFolder);
 }

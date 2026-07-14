@@ -66,9 +66,12 @@ export interface ComponentExportResult {
   filename: string;
 }
 
-export function exportComponentsCsv(bikeId: string, userId: string): ComponentExportResult {
-  const bike = requireBike(bikeId, userId);
-  const rows = db.select().from(components).where(eq(components.bikeId, bikeId)).all();
+export async function exportComponentsCsv(
+  bikeId: string,
+  userId: string,
+): Promise<ComponentExportResult> {
+  const bike = await requireBike(bikeId, userId);
+  const rows = await db.select().from(components).where(eq(components.bikeId, bikeId)).all();
   rows.sort((a, b) => {
     const oa = CATEGORY_ORDER.get(a.category) ?? Number.MAX_SAFE_INTEGER;
     const ob = CATEGORY_ORDER.get(b.category) ?? Number.MAX_SAFE_INTEGER;
@@ -144,13 +147,13 @@ export interface ImportComponentsResult {
   dryRun?: boolean;
 }
 
-export function importComponentsFromCsv(
+export async function importComponentsFromCsv(
   bikeId: string,
   userId: string,
   csvText: string,
   dryRun = false,
-): ImportComponentsResult {
-  requireBike(bikeId, userId);
+): Promise<ImportComponentsResult> {
+  await requireBike(bikeId, userId);
 
   if (csvText.length > COMPONENT_IMPORT_MAX_BYTES) {
     throw badRequest(`CSV is too large (max ${COMPONENT_IMPORT_MAX_BYTES} bytes)`);
@@ -283,7 +286,7 @@ export function importComponentsFromCsv(
         purchaseStore: parsed.data.purchaseStore ?? null,
       });
     } else {
-      const rowForBike = db
+      const rowForBike = await db
         .select({ component: components })
         .from(components)
         .innerJoin(bikes, eq(components.bikeId, bikes.id))
@@ -368,22 +371,25 @@ export function importComponentsFromCsv(
     return { bikeId, dryRun: true, inserted, updated };
   }
 
-  db.transaction((tx) => {
+  await db.transaction(async (tx) => {
     for (const op of ops) {
       if (op.kind === "insert") {
-        const existingCount = tx
-          .select({ c: components.id })
-          .from(components)
-          .where(and(eq(components.bikeId, bikeId), eq(components.category, op.category)))
-          .all().length;
+        const existingCount = (
+          await tx
+            .select({ c: components.id })
+            .from(components)
+            .where(and(eq(components.bikeId, bikeId), eq(components.category, op.category)))
+            .all()
+        ).length;
         const isActive = existingCount === 0 ? true : op.isActive;
         if (isActive) {
-          tx.update(components)
+          await tx
+            .update(components)
             .set({ isActive: false })
             .where(and(eq(components.bikeId, bikeId), eq(components.category, op.category)))
             .run();
         }
-        const maxOrder = tx
+        const maxOrder = await tx
           .select({
             max: sql<number | null>`max(${components.sortOrder})`.as("max"),
           })
@@ -391,7 +397,8 @@ export function importComponentsFromCsv(
           .where(and(eq(components.bikeId, bikeId), eq(components.category, op.category)))
           .get();
         const sortOrder = (maxOrder?.max ?? -1) + 1;
-        tx.insert(components)
+        await tx
+          .insert(components)
           .values({
             bikeId,
             category: op.category,
@@ -423,7 +430,8 @@ export function importComponentsFromCsv(
         if (op.isActiveExplicit) {
           updates.isActive = op.isActive;
           if (op.isActive) {
-            tx.update(components)
+            await tx
+              .update(components)
               .set({ isActive: false })
               .where(
                 and(
@@ -435,7 +443,7 @@ export function importComponentsFromCsv(
               .run();
           }
         }
-        tx.update(components).set(updates).where(eq(components.id, op.id)).run();
+        await tx.update(components).set(updates).where(eq(components.id, op.id)).run();
       }
     }
   });

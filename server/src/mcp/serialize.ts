@@ -30,7 +30,7 @@ export function serializeBikeBase(
   return base;
 }
 
-export function serializeComponent(row: ComponentRow): Record<string, unknown> {
+export async function serializeComponent(row: ComponentRow): Promise<Record<string, unknown>> {
   return {
     id: row.id,
     bikeId: row.bikeId,
@@ -47,7 +47,7 @@ export function serializeComponent(row: ComponentRow): Record<string, unknown> {
     sortOrder: row.sortOrder,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
-    wear: getWearForComponent(row.bikeId, row.id, row.distanceMeters, row.movingTimeMinutes),
+    wear: await getWearForComponent(row.bikeId, row.id, row.distanceMeters, row.movingTimeMinutes),
   };
 }
 
@@ -59,6 +59,6 @@ export async function withRideStatsIfNeeded(
   const wantsRideStats = fields.some(
     (field) => field === "rideStats" || field.startsWith("rideStats."),
   );
-  const rideStats = wantsRideStats ? getRideStatsForBike(userId, bike.id) : undefined;
+  const rideStats = wantsRideStats ? await getRideStatsForBike(userId, bike.id) : undefined;
   return serializeBikeBase(bike, rideStats);
 }

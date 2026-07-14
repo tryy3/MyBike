@@ -51,9 +51,10 @@ builder.objectType(GarageStatsRef, {
 builder.queryField("garageStats", (t) =>
   t.field({
     type: GarageStatsRef,
-    resolve: (_root, _args, context) => {
+    resolve: async (_root, _args, context) => {
       const userId = requireGraphQLPermission(context, "read");
-      return getGarageStats(userId);
+      const garageStats = await getGarageStats(userId);
+      return garageStats;
     },
   }),
 );

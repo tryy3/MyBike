@@ -12,7 +12,7 @@ import { findStravaAccount } from "./strava-token.js";
 
 const log = child({ component: "strava" });
 
-export function findStravaAccountByAthleteId(athleteId: string) {
+export async function findStravaAccountByAthleteId(athleteId: string) {
   return db
     .select()
     .from(account)
@@ -20,8 +20,11 @@ export function findStravaAccountByAthleteId(athleteId: string) {
     .get();
 }
 
-export function assertStravaAthleteAvailable(athleteId: string, userId: string): void {
-  const existing = findStravaAccountByAthleteId(athleteId);
+export async function assertStravaAthleteAvailable(
+  athleteId: string,
+  userId: string,
+): Promise<void> {
+  const existing = await findStravaAccountByAthleteId(athleteId);
   if (existing && existing.userId !== userId) {
     log.warn(
       { athleteId, userId, existingUserId: existing.userId },
@@ -34,13 +37,16 @@ export function assertStravaAthleteAvailable(athleteId: string, userId: string):
   }
 }
 
-export function upsertStravaAccount(userId: string, token: StravaTokenResponse): void {
+export async function upsertStravaAccount(
+  userId: string,
+  token: StravaTokenResponse,
+): Promise<void> {
   if (!token.athleteId) {
     throw new HttpError(502, "Strava returned an invalid OAuth response");
   }
-  assertStravaAthleteAvailable(token.athleteId, userId);
+  await assertStravaAthleteAvailable(token.athleteId, userId);
 
-  const existing = findStravaAccount(userId);
+  const existing = await findStravaAccount(userId);
   const values = {
     accountId: token.athleteId,
     providerId: STRAVA_PROVIDER_ID,
@@ -52,11 +58,12 @@ export function upsertStravaAccount(userId: string, token: StravaTokenResponse):
   };
 
   if (existing) {
-    db.update(account).set(values).where(eq(account.id, existing.id)).run();
+    await db.update(account).set(values).where(eq(account.id, existing.id)).run();
     return;
   }
 
-  db.insert(account)
+  await db
+    .insert(account)
     .values({
       id: crypto.randomUUID(),
       ...values,
@@ -65,11 +72,11 @@ export function upsertStravaAccount(userId: string, token: StravaTokenResponse):
 }
 
 export async function disconnectStravaUser(userId: string): Promise<void> {
-  const row = findStravaAccount(userId);
+  const row = await findStravaAccount(userId);
   if (row?.accessToken) {
     await revokeStravaAccessToken(row.accessToken);
   }
   if (row) {
-    db.delete(account).where(eq(account.id, row.id)).run();
+    await db.delete(account).where(eq(account.id, row.id)).run();
   }
 }

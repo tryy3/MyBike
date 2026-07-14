@@ -5,13 +5,13 @@ import { db } from "../db/index.js";
 import { bikes, components, stravaActivities } from "../db/schema.js";
 import { requireBike } from "./bikes.js";
 
-export function aggregateRideStats(
+export async function aggregateRideStats(
   userId: string,
   bikeIds: string[],
-): Map<string, RideStats | null> {
+): Promise<Map<string, RideStats | null>> {
   if (bikeIds.length === 0) return new Map();
 
-  const rows = db
+  const rows = await db
     .select({
       bikeId: stravaActivities.bikeId,
       distanceMeters: sql<number>`coalesce(sum(${stravaActivities.distanceMeters}), 0)`.as(
@@ -39,10 +39,14 @@ export function aggregateRideStats(
   );
 }
 
-export function getGarageStats(userId: string): GarageStats {
-  const userBikes = db.select({ id: bikes.id }).from(bikes).where(eq(bikes.userId, userId)).all();
+export async function getGarageStats(userId: string): Promise<GarageStats> {
+  const userBikes = await db
+    .select({ id: bikes.id })
+    .from(bikes)
+    .where(eq(bikes.userId, userId))
+    .all();
   const bikeIds = userBikes.map((b) => b.id);
-  const statsByBike = aggregateRideStats(userId, bikeIds);
+  const statsByBike = await aggregateRideStats(userId, bikeIds);
 
   return {
     bikes: bikeIds.map((bikeId) => ({
@@ -52,19 +56,22 @@ export function getGarageStats(userId: string): GarageStats {
   };
 }
 
-export function getRideStatsForBike(userId: string, bikeId: string): RideStats | null {
-  const map = aggregateRideStats(userId, [bikeId]);
+export async function getRideStatsForBike(
+  userId: string,
+  bikeId: string,
+): Promise<RideStats | null> {
+  const map = await aggregateRideStats(userId, [bikeId]);
   return map.get(bikeId) ?? null;
 }
 
-export function getWearForComponent(
+export async function getWearForComponent(
   bikeId: string,
   componentId: string,
   baselineDistance: number | null,
   baselineTime: number | null,
   stravaWearByComponent?: Map<string, { distanceMeters: number; movingTimeMinutes: number }>,
-) {
-  const wearMap = stravaWearByComponent ?? getStravaWearByComponentId(bikeId);
+): Promise<{ distanceMeters: number | null; movingTimeMinutes: number | null }> {
+  const wearMap = stravaWearByComponent ?? (await getStravaWearByComponentId(bikeId));
   const wear = displayWear(baselineDistance, baselineTime, wearMap.get(componentId));
   return {
     distanceMeters: wear.distanceMeters > 0 ? wear.distanceMeters : null,
@@ -72,13 +79,13 @@ export function getWearForComponent(
   };
 }
 
-export function getBikeStats(userId: string, bikeId: string): BikeStats {
-  requireBike(bikeId, userId);
+export async function getBikeStats(userId: string, bikeId: string): Promise<BikeStats> {
+  await requireBike(bikeId, userId);
 
-  const rideStats = getRideStatsForBike(userId, bikeId);
-  const stravaWearByComponent = getStravaWearByComponentId(bikeId);
+  const rideStats = await getRideStatsForBike(userId, bikeId);
+  const stravaWearByComponent = await getStravaWearByComponentId(bikeId);
 
-  const componentRows = db
+  const componentsForBike = await db
     .select({
       id: components.id,
       category: components.category,
@@ -92,27 +99,32 @@ export function getBikeStats(userId: string, bikeId: string): BikeStats {
     })
     .from(components)
     .where(eq(components.bikeId, bikeId))
-    .all()
-    .map((row) => {
-      const wear = getWearForComponent(
-        bikeId,
-        row.id,
-        row.baselineDistanceMeters,
-        row.baselineMovingTimeMinutes,
-        stravaWearByComponent,
-      );
-      return {
-        id: row.id,
-        category: row.category,
-        name: row.name,
-        brand: row.brand,
-        model: row.model,
-        distanceMeters: wear.distanceMeters,
-        movingTimeMinutes: wear.movingTimeMinutes,
-        isActive: row.isActive,
-        sortOrder: row.sortOrder,
-      };
-    })
+    .all();
+
+  const componentRows = (
+    await Promise.all(
+      componentsForBike.map(async (row) => {
+        const wear = await getWearForComponent(
+          bikeId,
+          row.id,
+          row.baselineDistanceMeters,
+          row.baselineMovingTimeMinutes,
+          stravaWearByComponent,
+        );
+        return {
+          id: row.id,
+          category: row.category,
+          name: row.name,
+          brand: row.brand,
+          model: row.model,
+          distanceMeters: wear.distanceMeters,
+          movingTimeMinutes: wear.movingTimeMinutes,
+          isActive: row.isActive,
+          sortOrder: row.sortOrder,
+        };
+      }),
+    )
+  )
     .sort((a, b) => {
       const distA = a.distanceMeters ?? 0;
       const distB = b.distanceMeters ?? 0;

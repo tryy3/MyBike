@@ -23,7 +23,7 @@ export function registerListBikesTool(server: McpServer): void {
       const effectiveFields =
         args.fields && args.fields.length > 0 ? fields : [...DEFAULT_BIKE_FIELDS];
 
-      const bikes = listBikes(userId);
+      const bikes = await listBikes(userId);
       const serialized = await Promise.all(
         bikes.map((bike) => withRideStatsIfNeeded(userId, bike, effectiveFields)),
       );

@@ -15,7 +15,7 @@ function toExpiresAt(value: unknown): number {
   return 0;
 }
 
-export function findStravaAccount(userId: string) {
+export async function findStravaAccount(userId: string) {
   return db
     .select()
     .from(account)
@@ -23,8 +23,8 @@ export function findStravaAccount(userId: string) {
     .get();
 }
 
-export function isStravaConnected(userId: string): boolean {
-  return !!findStravaAccount(userId)?.accessToken;
+export async function isStravaConnected(userId: string): Promise<boolean> {
+  return !!(await findStravaAccount(userId))?.accessToken;
 }
 
 async function refreshAndPersist(
@@ -36,11 +36,12 @@ async function refreshAndPersist(
     log.debug({ userId }, "Refreshing Strava access token");
     try {
       const refreshed = await refreshStravaAccessToken(refreshToken, scope);
-      const row = findStravaAccount(userId);
+      const row = await findStravaAccount(userId);
       if (!row) {
         throw new HttpError(409, "Connect Strava before importing rides");
       }
-      db.update(account)
+      await db
+        .update(account)
         .set({
           accountId: refreshed.athleteId ?? row.accountId,
           accessToken: refreshed.accessToken,
@@ -62,7 +63,7 @@ async function refreshAndPersist(
 }
 
 export async function getStravaAccessToken(userId: string): Promise<string> {
-  const row = findStravaAccount(userId);
+  const row = await findStravaAccount(userId);
   if (!row?.accessToken) {
     throw new HttpError(409, "Connect Strava before importing rides");
   }

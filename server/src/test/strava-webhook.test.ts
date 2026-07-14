@@ -34,8 +34,8 @@ function mockActivityResponse(activity: {
   });
 }
 
-beforeEach(() => {
-  setLastProxyEventId(0);
+beforeEach(async () => {
+  await setLastProxyEventId(0);
   setStravaEventSourceForTests(null);
 });
 
@@ -44,10 +44,11 @@ afterEach(() => {
   setStravaEventSourceForTests(null);
 });
 
-function seedConnectedUser() {
+async function seedConnectedUser() {
   const athleteId = nextAthleteId();
   const userId = crypto.randomUUID();
-  db.insert(user)
+  await db
+    .insert(user)
     .values({
       id: userId,
       name: "Webhook Rider",
@@ -56,7 +57,8 @@ function seedConnectedUser() {
     })
     .run();
 
-  db.insert(account)
+  await db
+    .insert(account)
     .values({
       id: crypto.randomUUID(),
       accountId: athleteId,
@@ -69,13 +71,14 @@ function seedConnectedUser() {
     })
     .run();
 
-  const bike = db
+  const bike = await db
     .insert(bikes)
     .values({ userId, name: "Webhook Bike", stravaGearId: "gear-webhook-1" })
     .returning()
     .get();
 
-  db.insert(stravaBikes)
+  await db
+    .insert(stravaBikes)
     .values({
       userId,
       bikeId: bike.id,
@@ -88,9 +91,10 @@ function seedConnectedUser() {
 }
 
 async function connectStravaAccount(email: string, athleteId?: string) {
-  const currentUser = db.select().from(user).where(eq(user.email, email)).get();
+  const currentUser = await db.select().from(user).where(eq(user.email, email)).get();
   expect(currentUser).toBeDefined();
-  db.insert(account)
+  await db
+    .insert(account)
     .values({
       id: crypto.randomUUID(),
       accountId: athleteId ?? `strava-athlete-${currentUser!.id}`,
@@ -106,7 +110,7 @@ async function connectStravaAccount(email: string, athleteId?: string) {
 
 describe("processWebhookEvent", () => {
   it("imports activity create events for linked gear", async () => {
-    const { userId, athleteId } = seedConnectedUser();
+    const { userId, athleteId } = await seedConnectedUser();
 
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = new URL(
@@ -140,7 +144,7 @@ describe("processWebhookEvent", () => {
     const outcome = await processWebhookEvent(envelope);
     expect(outcome).toBe("imported");
 
-    const imported = db
+    const imported = await db
       .select()
       .from(stravaActivities)
       .where(eq(stravaActivities.userId, userId))
@@ -150,7 +154,7 @@ describe("processWebhookEvent", () => {
   });
 
   it("skips activity update events", async () => {
-    const { athleteId } = seedConnectedUser();
+    const { athleteId } = await seedConnectedUser();
 
     const outcome = await processWebhookEvent({
       id: 2,
@@ -169,7 +173,7 @@ describe("processWebhookEvent", () => {
   });
 
   it("disconnects only when Strava token is revoked", async () => {
-    const { userId, athleteId } = seedConnectedUser();
+    const { userId, athleteId } = await seedConnectedUser();
 
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = new URL(
@@ -196,11 +200,12 @@ describe("processWebhookEvent", () => {
     });
 
     expect(outcome).toBe("disconnected");
-    expect(db.select().from(account).where(eq(account.userId, userId)).get()).toBeUndefined();
+    const linkedAccount = await db.select().from(account).where(eq(account.userId, userId)).get();
+    expect(linkedAccount).toBeUndefined();
   });
 
   it("ignores forged deauth when token is still valid", async () => {
-    const { userId, athleteId } = seedConnectedUser();
+    const { userId, athleteId } = await seedConnectedUser();
 
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = new URL(
@@ -227,13 +232,14 @@ describe("processWebhookEvent", () => {
     });
 
     expect(outcome).toBe("skipped");
-    expect(db.select().from(account).where(eq(account.userId, userId)).get()).toBeDefined();
+    const linkedAccount = await db.select().from(account).where(eq(account.userId, userId)).get();
+    expect(linkedAccount).toBeDefined();
   });
 });
 
 describe("processPendingWebhookEvents", () => {
   it("advances cursor after processing proxy events", async () => {
-    const { athleteId } = seedConnectedUser();
+    const { athleteId } = await seedConnectedUser();
 
     const events: StravaWebhookEnvelope[] = [
       {
@@ -278,16 +284,16 @@ describe("processPendingWebhookEvents", () => {
       throw new Error(`Unexpected fetch: ${url.toString()}`);
     });
 
-    expect(getLastProxyEventId()).toBe(0);
+    await expect(getLastProxyEventId()).resolves.toBe(0);
 
     const result = await processPendingWebhookEvents();
     expect(result.eventsProcessed).toBe(1);
     expect(result.activitiesImported).toBe(1);
-    expect(getLastProxyEventId()).toBe(10);
+    await expect(getLastProxyEventId()).resolves.toBe(10);
   });
 
   it("does not advance cursor when event processing fails", async () => {
-    const { athleteId } = seedConnectedUser();
+    const { athleteId } = await seedConnectedUser();
 
     const events: StravaWebhookEnvelope[] = [
       {
@@ -320,7 +326,7 @@ describe("processPendingWebhookEvents", () => {
 
     const result = await processPendingWebhookEvents();
     expect(result.errors?.[0]).toMatch(/event 20/);
-    expect(getLastProxyEventId()).toBe(0);
+    await expect(getLastProxyEventId()).resolves.toBe(0);
   });
 
   it("does not advance cursor when proxy fetch fails", async () => {
@@ -332,7 +338,7 @@ describe("processPendingWebhookEvents", () => {
 
     const result = await processPendingWebhookEvents();
     expect(result.errors?.[0]).toMatch(/fetch: proxy down/);
-    expect(getLastProxyEventId()).toBe(0);
+    await expect(getLastProxyEventId()).resolves.toBe(0);
   });
 });
 

@@ -1,8 +1,9 @@
 import { and, asc, desc, eq, inArray, or, sql, type SQL } from "drizzle-orm";
 import type { BikeInsert, BikeUpdate, BikeDetail, BikeListItem, ComponentFilter } from "shared";
 import { db } from "../db/index.js";
+import { affectedRows } from "../db/result.js";
 import { bikes, components } from "../db/schema.js";
-import type { BikeRow } from "../db/schema.js";
+import type { BikeRow, ComponentRow } from "../db/schema.js";
 import { HttpError, notFound } from "../lib/errors.js";
 
 function containsInsensitive(
@@ -47,8 +48,8 @@ function buildComponentFilterConditions(filter: ComponentFilter): SQL[] {
   return conditions;
 }
 
-export function requireBike(bikeId: string, userId: string): BikeRow {
-  const bike = db
+export async function requireBike(bikeId: string, userId: string): Promise<BikeRow> {
+  const bike = await db
     .select()
     .from(bikes)
     .where(and(eq(bikes.id, bikeId), eq(bikes.userId, userId)))
@@ -57,8 +58,8 @@ export function requireBike(bikeId: string, userId: string): BikeRow {
   return bike;
 }
 
-export function listBikes(userId: string): BikeListItem[] {
-  const all = db
+export async function listBikes(userId: string): Promise<BikeListItem[]> {
+  const all = await db
     .select()
     .from(bikes)
     .where(eq(bikes.userId, userId))
@@ -69,19 +70,20 @@ export function listBikes(userId: string): BikeListItem[] {
   const componentCounts =
     bikeIds.length === 0
       ? {}
-      : db
-          .select({
-            bikeId: components.bikeId,
-            count: sql<number>`count(*)`.as("count"),
-          })
-          .from(components)
-          .where(inArray(components.bikeId, bikeIds))
-          .groupBy(components.bikeId)
-          .all()
-          .reduce<Record<string, number>>((acc, row) => {
-            acc[row.bikeId] = Number(row.count);
-            return acc;
-          }, {});
+      : (
+          await db
+            .select({
+              bikeId: components.bikeId,
+              count: sql<number>`count(*)`.as("count"),
+            })
+            .from(components)
+            .where(inArray(components.bikeId, bikeIds))
+            .groupBy(components.bikeId)
+            .all()
+        ).reduce<Record<string, number>>((acc, row) => {
+          acc[row.bikeId] = Number(row.count);
+          return acc;
+        }, {});
 
   return all.map((b) => ({
     ...b,
@@ -89,9 +91,9 @@ export function listBikes(userId: string): BikeListItem[] {
   }));
 }
 
-export function getBikeDetail(bikeId: string, userId: string): BikeDetail {
-  const bike = requireBike(bikeId, userId);
-  const rows = db
+export async function getBikeDetail(bikeId: string, userId: string): Promise<BikeDetail> {
+  const bike = await requireBike(bikeId, userId);
+  const rows = await db
     .select()
     .from(components)
     .where(eq(components.bikeId, bikeId))
@@ -100,14 +102,14 @@ export function getBikeDetail(bikeId: string, userId: string): BikeDetail {
   return { ...bike, components: rows };
 }
 
-export function listComponentsForBike(
+export async function listComponentsForBike(
   bikeId: string,
   userId: string,
   options?: { filter?: ComponentFilter },
-) {
-  requireBike(bikeId, userId);
+): Promise<ComponentRow[]> {
+  await requireBike(bikeId, userId);
   const filterConditions = options?.filter ? buildComponentFilterConditions(options.filter) : [];
-  const rows = db
+  const rows = await db
     .select()
     .from(components)
     .where(and(eq(components.bikeId, bikeId), ...filterConditions))
@@ -116,8 +118,8 @@ export function listComponentsForBike(
   return rows;
 }
 
-export function createBike(userId: string, data: BikeInsert): BikeRow {
-  return db
+export async function createBike(userId: string, data: BikeInsert): Promise<BikeRow> {
+  return await db
     .insert(bikes)
     .values({
       userId,
@@ -131,8 +133,12 @@ export function createBike(userId: string, data: BikeInsert): BikeRow {
     .get();
 }
 
-export function updateBike(bikeId: string, userId: string, data: BikeUpdate): BikeRow {
-  requireBike(bikeId, userId);
+export async function updateBike(
+  bikeId: string,
+  userId: string,
+  data: BikeUpdate,
+): Promise<BikeRow> {
+  await requireBike(bikeId, userId);
   const updates = {
     ...(data.name !== undefined ? { name: data.name } : {}),
     ...(data.brand !== undefined ? { brand: data.brand ?? null } : {}),
@@ -143,7 +149,7 @@ export function updateBike(bikeId: string, userId: string, data: BikeUpdate): Bi
   if (Object.keys(updates).length === 0) {
     throw new HttpError(400, "No fields to update");
   }
-  return db
+  return await db
     .update(bikes)
     .set(updates)
     .where(and(eq(bikes.id, bikeId), eq(bikes.userId, userId)))
@@ -151,10 +157,10 @@ export function updateBike(bikeId: string, userId: string, data: BikeUpdate): Bi
     .get();
 }
 
-export function deleteBike(bikeId: string, userId: string): void {
-  const result = db
+export async function deleteBike(bikeId: string, userId: string): Promise<void> {
+  const result = await db
     .delete(bikes)
     .where(and(eq(bikes.id, bikeId), eq(bikes.userId, userId)))
     .run();
-  if (result.changes === 0) throw notFound("Bike");
+  if (affectedRows(result) === 0) throw notFound("Bike");
 }

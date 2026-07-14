@@ -166,14 +166,15 @@ function ensureDecisionGear(
   };
 }
 
-function createImportedMileageComponent(
+async function createImportedMileageComponent(
   tx: DbTransaction,
   bikeId: string,
   aggregate: GearAggregate,
-): void {
+): Promise<void> {
   if (aggregate.activityCount === 0) return;
 
-  tx.insert(components)
+  await tx
+    .insert(components)
     .values({
       bikeId,
       category: "other",
@@ -194,20 +195,20 @@ function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function upsertStravaBikeLink(
+async function upsertStravaBikeLink(
   tx: DbTransaction,
   userId: string,
   bikeId: string,
   stravaGearId: string,
   creditHistoricalComponents: boolean,
-): void {
+): Promise<void> {
   const creditFrom = creditHistoricalComponents ? "1970-01-01" : todayIsoDate();
-  const byBike = tx
+  const byBike = await tx
     .select({ id: stravaBikes.id })
     .from(stravaBikes)
     .where(and(eq(stravaBikes.userId, userId), eq(stravaBikes.bikeId, bikeId)))
     .get();
-  const byGear = tx
+  const byGear = await tx
     .select({ id: stravaBikes.id, bikeId: stravaBikes.bikeId })
     .from(stravaBikes)
     .where(and(eq(stravaBikes.userId, userId), eq(stravaBikes.stravaGearId, stravaGearId)))
@@ -218,14 +219,16 @@ function upsertStravaBikeLink(
   }
 
   if (byBike) {
-    tx.update(stravaBikes)
+    await tx
+      .update(stravaBikes)
       .set({ stravaGearId, componentCreditFrom: creditFrom })
       .where(eq(stravaBikes.id, byBike.id))
       .run();
     return;
   }
 
-  tx.insert(stravaBikes)
+  await tx
+    .insert(stravaBikes)
     .values({
       userId,
       bikeId,
@@ -259,14 +262,16 @@ async function loadAggregates(userId: string): Promise<Map<string, GearAggregate
   return aggregates;
 }
 
-stravaRouter.get("/status", (req, res) => {
+stravaRouter.get("/status", async (req, res) => {
   const { userId } = getAuthContext(req);
-  const row = findStravaAccount(userId);
-  const linkedBikes = db
-    .select({ id: stravaBikes.id })
-    .from(stravaBikes)
-    .where(eq(stravaBikes.userId, userId))
-    .all().length;
+  const row = await findStravaAccount(userId);
+  const linkedBikes = (
+    await db
+      .select({ id: stravaBikes.id })
+      .from(stravaBikes)
+      .where(eq(stravaBikes.userId, userId))
+      .all()
+  ).length;
 
   res.json({
     connected: !!row?.accessToken,
@@ -307,7 +312,7 @@ stravaRouter.get("/callback", async (req, res) => {
   }
 
   const token = await exchangeStravaCode(code);
-  upsertStravaAccount(userId, token);
+  await upsertStravaAccount(userId, token);
   req.log.info({ athleteId: token.athleteId, userId }, "Strava OAuth connected");
   res.setHeader(
     "Set-Cookie",
@@ -326,7 +331,7 @@ stravaRouter.post("/disconnect", async (req, res) => {
 stravaRouter.get("/import/preview", async (req, res) => {
   const { userId } = getAuthContext(req);
   const aggregates = await loadAggregates(userId);
-  const allBikes = db.select().from(bikes).where(eq(bikes.userId, userId)).all();
+  const allBikes = await db.select().from(bikes).where(eq(bikes.userId, userId)).all();
 
   const items = [...aggregates.values()]
     .map((aggregate) => {
@@ -360,7 +365,7 @@ stravaRouter.post("/import/commit", async (req, res) => {
 
   const aggregates = await loadAggregates(userId);
   const warnings = detectImportDrift(data.previewSnapshot, aggregates, data.decisions);
-  const result = db.transaction((tx) => {
+  const result = await db.transaction(async (tx) => {
     const counters = {
       linked: 0,
       created: 0,
@@ -376,7 +381,7 @@ stravaRouter.post("/import/commit", async (req, res) => {
         continue;
       }
 
-      const alreadyLinked = tx
+      const alreadyLinked = await tx
         .select()
         .from(bikes)
         .where(and(eq(bikes.userId, userId), eq(bikes.stravaGearId, decision.gearId)))
@@ -384,7 +389,7 @@ stravaRouter.post("/import/commit", async (req, res) => {
 
       let bike: BikeRow;
       if (decision.action === "link") {
-        const linkedBike = tx
+        const linkedBike = await tx
           .select()
           .from(bikes)
           .where(and(eq(bikes.id, decision.bikeId), eq(bikes.userId, userId)))
@@ -394,8 +399,12 @@ stravaRouter.post("/import/commit", async (req, res) => {
         if (alreadyLinked && alreadyLinked.id !== bike.id) {
           throw badRequest("That Strava bike is already linked to another bike");
         }
-        tx.update(bikes).set({ stravaGearId: decision.gearId }).where(eq(bikes.id, bike.id)).run();
-        upsertStravaBikeLink(
+        await tx
+          .update(bikes)
+          .set({ stravaGearId: decision.gearId })
+          .where(eq(bikes.id, bike.id))
+          .run();
+        await upsertStravaBikeLink(
           tx,
           userId,
           bike.id,
@@ -407,7 +416,7 @@ stravaRouter.post("/import/commit", async (req, res) => {
         if (alreadyLinked) {
           throw badRequest("That Strava bike is already linked to another bike");
         }
-        bike = tx
+        bike = await tx
           .insert(bikes)
           .values({
             userId,
@@ -416,8 +425,8 @@ stravaRouter.post("/import/commit", async (req, res) => {
           })
           .returning()
           .get();
-        createImportedMileageComponent(tx, bike.id, aggregate);
-        upsertStravaBikeLink(
+        await createImportedMileageComponent(tx, bike.id, aggregate);
+        await upsertStravaBikeLink(
           tx,
           userId,
           bike.id,
@@ -428,7 +437,7 @@ stravaRouter.post("/import/commit", async (req, res) => {
       }
 
       for (const activity of aggregate.activities) {
-        addCounters(counters, processActivity(tx, userId, activity));
+        addCounters(counters, await processActivity(tx, userId, activity));
       }
     }
 
@@ -458,16 +467,16 @@ stravaRouter.post("/sync", async (req, res) => {
   const { userId } = getAuthContext(req);
   const webhook = await drainWebhookEventsBestEffort();
   const token = await getStravaAccessToken(userId);
-  const afterSeconds = getSyncAfterSeconds(userId);
+  const afterSeconds = await getSyncAfterSeconds(userId);
   const activities = await fetchStravaActivities(token, { afterSeconds });
-  const result = db.transaction((tx) => {
+  const result = await db.transaction(async (tx) => {
     const counters = emptySyncCounters();
     for (const activity of activities) {
-      addCounters(counters, processActivity(tx, userId, activity));
+      addCounters(counters, await processActivity(tx, userId, activity));
     }
     return counters;
   });
-  markSyncedNow(userId);
+  await markSyncedNow(userId);
 
   req.log.info(
     {
@@ -484,9 +493,11 @@ stravaRouter.post("/sync", async (req, res) => {
   res.json({ ...result, webhook });
 });
 
-stravaRouter.post("/backfill-components", (req, res) => {
+stravaRouter.post("/backfill-components", async (req, res) => {
   const { userId } = getAuthContext(req);
-  const creditedActivities = db.transaction((tx) => backfillComponentCredits(tx, userId));
+  const creditedActivities = await db.transaction(async (tx) => {
+    return await backfillComponentCredits(tx, userId);
+  });
   res.json({ creditedActivities });
 });
 

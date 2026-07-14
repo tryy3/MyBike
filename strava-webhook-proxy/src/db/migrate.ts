@@ -1,7 +1,7 @@
-import { migrate } from "drizzle-orm/node-sqlite/migrator";
 import { db } from "./index.js";
+import { runDrizzleMigrations } from "./run-migrations.js";
 
-export function applyMigrations() {
+export async function applyMigrations(): Promise<void> {
   const migrationsFolder = process.env.DRIZZLE_MIGRATIONS_FOLDER ?? "./drizzle";
-  migrate(db, { migrationsFolder });
+  await runDrizzleMigrations(db, migrationsFolder);
 }

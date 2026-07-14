@@ -43,12 +43,12 @@ function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function resolveLinkedBike(
+async function resolveLinkedBike(
   tx: DbTransaction,
   userId: string,
   gearId: string,
-): { bikeId: string; componentCreditFrom: string } | null {
-  const link = tx
+): Promise<{ bikeId: string; componentCreditFrom: string } | null> {
+  const link = await tx
     .select({
       bikeId: stravaBikes.bikeId,
       componentCreditFrom: stravaBikes.componentCreditFrom,
@@ -58,7 +58,7 @@ function resolveLinkedBike(
     .get();
   if (link) return link;
 
-  const bike = tx
+  const bike = await tx
     .select({ id: bikes.id })
     .from(bikes)
     .where(and(eq(bikes.userId, userId), eq(bikes.stravaGearId, gearId)))
@@ -68,20 +68,21 @@ function resolveLinkedBike(
   return { bikeId: bike.id, componentCreditFrom: todayIsoDate() };
 }
 
-export function creditActivityToActiveComponents(
+export async function creditActivityToActiveComponents(
   tx: DbTransaction,
   activityId: string,
   bikeId: string,
   activity: Pick<StravaActivity, "distanceMeters" | "movingTimeMinutes">,
-): number {
-  const activeComponents = tx
+): Promise<number> {
+  const activeComponents = await tx
     .select()
     .from(components)
     .where(and(eq(components.bikeId, bikeId), eq(components.isActive, true)))
     .all();
 
   for (const component of activeComponents) {
-    tx.insert(stravaActivityComponents)
+    await tx
+      .insert(stravaActivityComponents)
       .values({
         activityId,
         componentId: component.id,
@@ -94,11 +95,11 @@ export function creditActivityToActiveComponents(
   return activeComponents.length;
 }
 
-export function processActivity(
+export async function processActivity(
   tx: DbTransaction,
   userId: string,
   activity: StravaActivity,
-): SyncCounters {
+): Promise<SyncCounters> {
   if (!activity.gearId) {
     return {
       processedActivities: 0,
@@ -108,7 +109,7 @@ export function processActivity(
     };
   }
 
-  const existing = tx
+  const existing = await tx
     .select({ id: stravaActivities.id })
     .from(stravaActivities)
     .where(
@@ -127,7 +128,7 @@ export function processActivity(
     };
   }
 
-  const linked = resolveLinkedBike(tx, userId, activity.gearId);
+  const linked = await resolveLinkedBike(tx, userId, activity.gearId);
   if (!linked) {
     return {
       processedActivities: 0,
@@ -137,7 +138,7 @@ export function processActivity(
     };
   }
 
-  const createdActivity = tx
+  const createdActivity = await tx
     .insert(stravaActivities)
     .values({
       userId,
@@ -160,7 +161,7 @@ export function processActivity(
     };
   }
 
-  const creditedComponents = creditActivityToActiveComponents(
+  const creditedComponents = await creditActivityToActiveComponents(
     tx,
     createdActivity.id,
     linked.bikeId,
@@ -185,37 +186,40 @@ export function mergeSyncCounters(target: SyncCounters, source: SyncCounters): v
   target.skipReasons.beforeCreditDate += source.skipReasons.beforeCreditDate;
 }
 
-export function syncActivitiesForUser(userId: string, activities: StravaActivity[]): SyncCounters {
-  return db.transaction((tx) => {
+export async function syncActivitiesForUser(
+  userId: string,
+  activities: StravaActivity[],
+): Promise<SyncCounters> {
+  return db.transaction(async (tx) => {
     const counters = emptySyncCounters();
     for (const activity of activities) {
-      mergeSyncCounters(counters, processActivity(tx, userId, activity));
+      mergeSyncCounters(counters, await processActivity(tx, userId, activity));
     }
     return counters;
   });
 }
 
-export function backfillComponentCredits(tx: DbTransaction, userId: string): number {
-  const links = tx.select().from(stravaBikes).where(eq(stravaBikes.userId, userId)).all();
+export async function backfillComponentCredits(tx: DbTransaction, userId: string): Promise<number> {
+  const links = await tx.select().from(stravaBikes).where(eq(stravaBikes.userId, userId)).all();
 
   let creditedActivities = 0;
 
   for (const link of links) {
-    const activities = tx
+    const activities = await tx
       .select()
       .from(stravaActivities)
       .where(and(eq(stravaActivities.userId, userId), eq(stravaActivities.bikeId, link.bikeId)))
       .all();
 
     for (const activity of activities) {
-      const existingJunction = tx
+      const existingJunction = await tx
         .select({ id: stravaActivityComponents.id })
         .from(stravaActivityComponents)
         .where(eq(stravaActivityComponents.activityId, activity.id))
         .get();
       if (existingJunction) continue;
 
-      creditActivityToActiveComponents(tx, activity.id, link.bikeId, activity);
+      await creditActivityToActiveComponents(tx, activity.id, link.bikeId, activity);
       creditedActivities += 1;
     }
   }
