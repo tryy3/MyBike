@@ -22,8 +22,8 @@ function optionalComponentFields(data: {
   };
 }
 
-export function requireComponent(componentId: string, userId: string): ComponentRow {
-  const row = db
+export async function requireComponent(componentId: string, userId: string): Promise<ComponentRow> {
+  const row = await db
     .select({ component: components })
     .from(components)
     .innerJoin(bikes, eq(components.bikeId, bikes.id))
@@ -33,26 +33,29 @@ export function requireComponent(componentId: string, userId: string): Component
   return row.component;
 }
 
-export function createComponent(
+export async function createComponent(
   bikeId: string,
   userId: string,
   data: ComponentInsert,
-): ComponentRow {
-  requireBike(bikeId, userId);
-  const existingCount = db
-    .select({ c: components.id })
-    .from(components)
-    .where(and(eq(components.bikeId, bikeId), eq(components.category, data.category)))
-    .all().length;
+): Promise<ComponentRow> {
+  await requireBike(bikeId, userId);
+  const existingCount = (
+    await db
+      .select({ c: components.id })
+      .from(components)
+      .where(and(eq(components.bikeId, bikeId), eq(components.category, data.category)))
+      .all()
+  ).length;
   const isActive = existingCount === 0 ? true : data.isActive;
-  return db.transaction((tx) => {
+  return await db.transaction(async (tx) => {
     if (isActive && existingCount > 0) {
-      tx.update(components)
+      await tx
+        .update(components)
         .set({ isActive: false })
         .where(and(eq(components.bikeId, bikeId), eq(components.category, data.category)))
         .run();
     }
-    const maxOrder = tx
+    const maxOrder = await tx
       .select({
         max: sql<number | null>`max(${components.sortOrder})`.as("max"),
       })
@@ -60,7 +63,7 @@ export function createComponent(
       .where(and(eq(components.bikeId, bikeId), eq(components.category, data.category)))
       .get();
     const sortOrder = (maxOrder?.max ?? -1) + 1;
-    return tx
+    return await tx
       .insert(components)
       .values({
         bikeId,
@@ -78,12 +81,12 @@ export function createComponent(
   });
 }
 
-export function updateComponent(
+export async function updateComponent(
   componentId: string,
   userId: string,
   data: ComponentUpdate,
-): ComponentRow {
-  requireComponent(componentId, userId);
+): Promise<ComponentRow> {
+  await requireComponent(componentId, userId);
   const updates: Record<string, unknown> = {};
   if (data.name !== undefined) updates.name = data.name;
   if (data.brand !== undefined) updates.brand = data.brand ?? null;
@@ -96,20 +99,25 @@ export function updateComponent(
   if (data.purchaseCost !== undefined) updates.purchaseCost = data.purchaseCost ?? null;
   if (data.purchaseStore !== undefined) updates.purchaseStore = data.purchaseStore ?? null;
   if (Object.keys(updates).length === 0) {
-    const row = db.select().from(components).where(eq(components.id, componentId)).get();
+    const row = await db.select().from(components).where(eq(components.id, componentId)).get();
     if (!row) throw notFound("Component");
     return row;
   }
-  return db.update(components).set(updates).where(eq(components.id, componentId)).returning().get();
+  return await db
+    .update(components)
+    .set(updates)
+    .where(eq(components.id, componentId))
+    .returning()
+    .get();
 }
 
-export function deleteComponent(componentId: string, userId: string): void {
-  const existing = requireComponent(componentId, userId);
-  db.transaction((tx) => {
-    const result = tx.delete(components).where(eq(components.id, componentId)).run();
+export async function deleteComponent(componentId: string, userId: string): Promise<void> {
+  const existing = await requireComponent(componentId, userId);
+  await db.transaction(async (tx) => {
+    const result = await tx.delete(components).where(eq(components.id, componentId)).run();
     if (result.changes === 0) throw notFound("Component");
     if (existing.isActive) {
-      const oldest = tx
+      const oldest = await tx
         .select()
         .from(components)
         .where(
@@ -118,16 +126,24 @@ export function deleteComponent(componentId: string, userId: string): void {
         .orderBy(asc(components.createdAt))
         .get();
       if (oldest) {
-        tx.update(components).set({ isActive: true }).where(eq(components.id, oldest.id)).run();
+        await tx
+          .update(components)
+          .set({ isActive: true })
+          .where(eq(components.id, oldest.id))
+          .run();
       }
     }
   });
 }
 
-export function activateComponent(componentId: string, userId: string): ComponentRow {
-  const component = requireComponent(componentId, userId);
-  db.transaction((tx) => {
-    tx.update(components)
+export async function activateComponent(
+  componentId: string,
+  userId: string,
+): Promise<ComponentRow> {
+  const component = await requireComponent(componentId, userId);
+  await db.transaction(async (tx) => {
+    await tx
+      .update(components)
       .set({ isActive: false })
       .where(
         and(
@@ -137,16 +153,20 @@ export function activateComponent(componentId: string, userId: string): Componen
         ),
       )
       .run();
-    tx.update(components).set({ isActive: true }).where(eq(components.id, componentId)).run();
+    await tx.update(components).set({ isActive: true }).where(eq(components.id, componentId)).run();
   });
-  const updated = db.select().from(components).where(eq(components.id, componentId)).get();
+  const updated = await db.select().from(components).where(eq(components.id, componentId)).get();
   if (!updated) throw notFound("Component");
   return updated;
 }
 
-export function reorderComponents(bikeId: string, userId: string, data: ComponentReorder): void {
-  requireBike(bikeId, userId);
-  const rows = db
+export async function reorderComponents(
+  bikeId: string,
+  userId: string,
+  data: ComponentReorder,
+): Promise<void> {
+  await requireBike(bikeId, userId);
+  const rows = await db
     .select({ id: components.id })
     .from(components)
     .where(and(eq(components.bikeId, bikeId), eq(components.category, data.category)))
@@ -164,9 +184,10 @@ export function reorderComponents(bikeId: string, userId: string, data: Componen
       throw new HttpError(400, `Component ${id} does not belong to this (bike, category)`);
     }
   }
-  db.transaction((tx) => {
-    data.orderedIds.forEach((id, index) => {
-      tx.update(components).set({ sortOrder: index }).where(eq(components.id, id)).run();
-    });
+  await db.transaction(async (tx) => {
+    for (let index = 0; index < data.orderedIds.length; index++) {
+      const id = data.orderedIds[index];
+      await tx.update(components).set({ sortOrder: index }).where(eq(components.id, id)).run();
+    }
   });
 }

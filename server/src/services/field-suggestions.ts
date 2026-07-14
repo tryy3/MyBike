@@ -15,8 +15,8 @@ function dedupeSorted(values: (string | null)[]): string[] {
   return [...seen.values()].sort((a, b) => a.localeCompare(b));
 }
 
-export function getFieldSuggestions(userId: string): FieldSuggestions {
-  const rows = db
+export async function getFieldSuggestions(userId: string): Promise<FieldSuggestions> {
+  const rows = await db
     .select({
       name: components.name,
       brand: components.brand,

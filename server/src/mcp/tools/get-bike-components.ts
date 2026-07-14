@@ -45,8 +45,10 @@ export function registerGetBikeComponentsTool(server: McpServer): void {
 
       const parsedFilter = args.filter ? parseComponentFilterInput(args.filter) : undefined;
       const mergedFilter = mergeMcpComponentFilter(args.activeOnly ?? false, parsedFilter);
-      const components = listComponentsForBike(args.bikeId, userId, { filter: mergedFilter }).map(
-        serializeComponent,
+      const components = await Promise.all(
+        (await listComponentsForBike(args.bikeId, userId, { filter: mergedFilter })).map(
+          serializeComponent,
+        ),
       );
       const result = pickFieldsList(components, effectiveFields);
 
