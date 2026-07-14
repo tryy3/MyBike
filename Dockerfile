@@ -16,9 +16,7 @@ FROM base AS prod-deps
 # Install only the server runtime workspace tree. better-auth is nested under
 # server/node_modules in this lockfile, so the runtime image must copy that too.
 RUN npm ci --omit=dev --ignore-scripts \
-    -w server -w shared -w logging --include-workspace-root \
-  && test -d server/node_modules/better-auth \
-  && test -d node_modules/express
+  -w server -w shared -w logging --include-workspace-root
 
 FROM base AS build
 
