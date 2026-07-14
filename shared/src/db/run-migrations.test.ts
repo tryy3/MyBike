@@ -3,6 +3,7 @@ import {
   errorMessageChain,
   extractCreatedTableNames,
   isBenignSchemaError,
+  isDataMigrationStatement,
   isDuplicateColumnError,
   isNoSuchColumnError,
   resolveMigrationsToRun,
@@ -79,5 +80,15 @@ describe("migration helpers", () => {
     err.cause = new Error("inner already exists");
     expect(errorMessageChain(err)).toContain("outer");
     expect(errorMessageChain(err)).toContain("inner already exists");
+  });
+
+  it("detects one-time data migration statements", () => {
+    expect(isDataMigrationStatement("DELETE FROM `bikes`;")).toBe(true);
+    expect(isDataMigrationStatement("UPDATE `components` SET x = 1;")).toBe(true);
+    expect(isDataMigrationStatement("DROP INDEX `idx`;")).toBe(false);
+    expect(isDataMigrationStatement("CREATE TABLE `user` (id text);")).toBe(false);
+    expect(isDataMigrationStatement("-- Existing bikes have no owner\nDELETE FROM `bikes`;")).toBe(
+      true,
+    );
   });
 });

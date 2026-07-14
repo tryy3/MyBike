@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { sql } from "drizzle-orm";
 import { child } from "../lib/logging/index.js";
 import { db } from "./index.js";
+import { importLocalSqliteIfNeeded } from "./import-local-sqlite.js";
 import { runDrizzleMigrations } from "./run-migrations.js";
 
 const log = child({ component: "db" });
@@ -75,4 +76,5 @@ export async function applyMigrations(): Promise<void> {
     );
   }
   await runDrizzleMigrations(db, migrationsFolder);
+  await importLocalSqliteIfNeeded();
 }

@@ -80,7 +80,8 @@ export async function runDrizzleMigrations(
   // Per-statement commits: SQLite aborts a transaction after the first error, so
   // we cannot swallow "already exists" inside one multi-migration transaction.
   for (const migration of migrationsToRun) {
-    await applyMigrationSql(db, migration.sql);
+    const includeDataStatements = await shouldRunFullMigration(db, migration);
+    await applyMigrationSql(db, migration.sql, { includeDataStatements });
     await db.run(
       sql`INSERT INTO ${table} ("hash", "created_at", "name", "applied_at") VALUES (${migration.hash}, ${migration.folderMillis}, ${migration.name ?? null}, ${new Date().toISOString()})`,
     );
@@ -196,6 +197,28 @@ export function extractCreatedTableNames(statements: string[]): string[] {
   return names;
 }
 
+/** One-time data fixes (DELETE/UPDATE/INSERT) must not run again on re-apply. */
+export function isDataMigrationStatement(statement: string): boolean {
+  const stmt = stripSqlComments(statement).trim();
+  if (!stmt) return false;
+  if (/^DROP\s+INDEX\b/i.test(stmt)) return false;
+  return /^(DELETE|INSERT|UPDATE|DROP)\b/i.test(stmt);
+}
+
+/** Full apply only when none of the migration's CREATE TABLE targets exist yet. */
+export async function shouldRunFullMigration(
+  db: MigratorDb,
+  migration: LocalMigration,
+): Promise<boolean> {
+  const createdTables = extractCreatedTableNames(migration.sql);
+  if (createdTables.length === 0) return true;
+
+  for (const tableName of createdTables) {
+    if (await hasTable(db, tableName)) return false;
+  }
+  return true;
+}
+
 async function readDbMigrations(
   db: MigratorDb,
   migrationsTable: string,
@@ -261,14 +284,24 @@ async function repairIncompleteAppliedMigrations(
     if (!missing) continue;
 
     onRepair?.({ migration: migration.name, tables: createdTables });
-    await applyMigrationSql(db, migration.sql);
+    await applyMigrationSql(db, migration.sql, { includeDataStatements: false });
   }
 }
 
-async function applyMigrationSql(db: MigratorDb, statements: string[]): Promise<void> {
+type ApplyMigrationSqlOptions = {
+  /** When false, skip DELETE/UPDATE/INSERT and other data statements. */
+  includeDataStatements: boolean;
+};
+
+async function applyMigrationSql(
+  db: MigratorDb,
+  statements: string[],
+  options: ApplyMigrationSqlOptions,
+): Promise<void> {
   for (const stmt of statements) {
     const trimmed = stmt.trim();
     if (!trimmed) continue;
+    if (!options.includeDataStatements && isDataMigrationStatement(trimmed)) continue;
     try {
       await db.run(sql.raw(trimmed));
     } catch (err) {
@@ -276,6 +309,13 @@ async function applyMigrationSql(db: MigratorDb, statements: string[]): Promise<
       throw err;
     }
   }
+}
+
+function stripSqlComments(statement: string): string {
+  return statement
+    .replace(/--[^\n]*/g, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .trim();
 }
 
 async function hasTable(db: MigratorDb, tableName: string): Promise<boolean> {
