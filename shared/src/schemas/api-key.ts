@@ -26,7 +26,7 @@ export const GRAPHQL_API_KEY_SCOPE_LABELS: Record<GraphQLApiKeyScopeId, string> 
 };
 
 export const GRAPHQL_API_KEY_SCOPE_DESCRIPTIONS: Record<GraphQLApiKeyScopeId, string> = {
-  read: "Fetch bikes, components, and stats via GraphQL queries",
+  read: "Fetch bikes, components, and stats via GraphQL or MCP",
   write: "Read data and create or update bikes and components",
   full: "Read, write, and delete bikes and components",
 };

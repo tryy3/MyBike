@@ -11,6 +11,7 @@ import { auth } from "./lib/auth.js";
 import { httpLogger, logger } from "./lib/logging/index.js";
 import { sqlite } from "./db/index.js";
 import { createGraphQLYoga } from "./graphql/yoga.js";
+import { mountMcp } from "./mcp/mount.js";
 
 const IMPORT_MAX_BYTES = 256 * 1024;
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -29,6 +30,8 @@ export function createApp() {
   app.use("/graphql", (req, res) => {
     void yoga(req, res);
   });
+
+  mountMcp(app);
 
   app.get("/api/health", (req, res) => {
     try {
@@ -52,7 +55,11 @@ export function createApp() {
     if (existsSync(clientIndexPath)) {
       app.use(express.static(clientDistPath));
       app.get("/{*splat}", (req, res, next) => {
-        if (req.path.startsWith("/api") || req.path.startsWith("/graphql")) {
+        if (
+          req.path.startsWith("/api") ||
+          req.path.startsWith("/graphql") ||
+          req.path.startsWith("/mcp")
+        ) {
           next();
           return;
         }
