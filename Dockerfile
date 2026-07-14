@@ -13,7 +13,10 @@ COPY client/package.json ./client/package.json
 
 FROM base AS prod-deps
 
-RUN npm ci --omit=dev --ignore-scripts
+# Install only the server runtime workspace tree. better-auth is nested under
+# server/node_modules in this lockfile, so the runtime image must copy that too.
+RUN npm ci --omit=dev --ignore-scripts \
+  -w server -w shared -w logging --include-workspace-root
 
 FROM base AS build
 
@@ -42,6 +45,7 @@ ENV NODE_ENV=production \
 RUN mkdir -p /data && chown node:node /data
 
 COPY --from=prod-deps --chown=node:node /app/node_modules /app/node_modules
+COPY --from=prod-deps --chown=node:node /app/server/node_modules /app/server/node_modules
 COPY --from=build --chown=node:node /app/package.json /app/package-lock.json /app/
 COPY --from=build --chown=node:node /app/shared/package.json /app/shared/package.json
 COPY --from=build --chown=node:node /app/shared/dist /app/shared/dist
