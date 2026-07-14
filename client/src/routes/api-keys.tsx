@@ -111,6 +111,7 @@ export function ApiKeysPage() {
 
   const graphqlUrl =
     typeof window !== "undefined" ? `${window.location.origin}/graphql` : "/graphql";
+  const mcpUrl = typeof window !== "undefined" ? `${window.location.origin}/mcp` : "/mcp";
 
   return (
     <div className="flex flex-col gap-6">
@@ -126,8 +127,8 @@ export function ApiKeysPage() {
       <div className="flex flex-col gap-1">
         <h2 className="text-lg font-semibold tracking-tight">API keys</h2>
         <p className="text-sm text-muted-foreground">
-          Create keys for scripts or LLM tools to read your garage via GraphQL. Keys only work on
-          the GraphQL endpoint, not other REST routes.
+          Create keys for scripts, LLM tools, or MCP clients to read your garage via GraphQL or the
+          remote MCP endpoint. Keys work on GraphQL and MCP, not other REST routes.
         </p>
       </div>
 
@@ -193,10 +194,11 @@ export function ApiKeysPage() {
             <p className="text-sm text-muted-foreground">No API keys yet.</p>
           )}
         </CardContent>
-        <CardFooter className="flex flex-col items-start gap-2 border-t bg-muted/30">
-          <p className="text-sm font-medium">Example requests</p>
-          <pre className="w-full overflow-x-auto rounded-md bg-background p-3 text-xs leading-relaxed">
-            {`# List bikes
+        <CardFooter className="flex flex-col items-start gap-4 border-t bg-muted/30">
+          <div className="flex w-full flex-col gap-2">
+            <p className="text-sm font-medium">GraphQL example</p>
+            <pre className="w-full overflow-x-auto rounded-md bg-background p-3 text-xs leading-relaxed">
+              {`# List bikes
 curl -s ${graphqlUrl} \\
   -H "Authorization: Bearer mbk_<your-key>" \\
   -H "Content-Type: application/json" \\
@@ -207,7 +209,22 @@ curl -s ${graphqlUrl} \\
   -H "Authorization: Bearer mbk_<your-key>" \\
   -H "Content-Type: application/json" \\
   -d '{"query":"query($id: ID!) { bike(id: $id) { name components(filter: { categories: [crankset, cassette, chain], activeOnly: true }) { category brand model } } }","variables":{"id":"<bike-id>"}}'`}
-          </pre>
+            </pre>
+          </div>
+          <div className="flex w-full flex-col gap-2">
+            <p className="text-sm font-medium">Hermes MCP example</p>
+            <pre className="w-full overflow-x-auto rounded-md bg-background p-3 text-xs leading-relaxed">
+              {`# ~/.hermes/config.yaml
+mcp_servers:
+  mybike:
+    url: "${mcpUrl}"
+    headers:
+      Authorization: "Bearer \${MYBIKE_API_KEY}"
+
+# ~/.hermes/.env
+MYBIKE_API_KEY=mbk_<your-key>`}
+            </pre>
+          </div>
         </CardFooter>
       </Card>
 

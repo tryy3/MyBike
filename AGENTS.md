@@ -109,7 +109,19 @@ In GitHub **Settings → Branches** for `master`, require the **CI / Check and t
 
 **Validation:** continue using Zod schemas in `shared/`; GraphQL mutation resolvers call `.parse()` on the same schemas.
 
-**GraphQL API keys (LLM / script access):** users create keys at `/settings/api-keys` while logged in (Better Auth `@better-auth/api-key` plugin). Keys authenticate **only** `POST /graphql` via `Authorization: Bearer mbk_…` or `x-api-key`; REST routes remain session-only. Default scope is read-only (`graphql: ["read"]`); write and delete scopes are available when creating a key. Permission constants live in `shared/src/schemas/api-key.ts`.
+**GraphQL API keys (LLM / script access):** users create keys at `/settings/api-keys` while logged in (Better Auth `@better-auth/api-key` plugin). Keys authenticate `POST /graphql` and the remote MCP endpoint at `POST /mcp` via `Authorization: Bearer mbk_…` or `x-api-key`; REST routes remain session-only. Default scope is read-only (`graphql: ["read"]`); write and delete scopes are available when creating a key. Permission constants live in `shared/src/schemas/api-key.ts`.
+
+**Remote MCP (AI clients):** Streamable HTTP at `/mcp` on the main server (dev: `http://localhost:3001/mcp`). Authenticate with the same GraphQL API key as Bearer token. Read-only trial tools: `describe_data_model`, `list_bikes`, `get_bike`, `list_component_categories`, `get_bike_components`, plus read-only `graphql_query` escape hatch. Hermes example (`~/.hermes/config.yaml`):
+
+```yaml
+mcp_servers:
+  mybike:
+    url: "http://localhost:3001/mcp"
+    headers:
+      Authorization: "Bearer ${MYBIKE_API_KEY}"
+```
+
+Implementation lives in `server/src/mcp/`. After MCP changes, add or update tests in `server/src/test/mcp.test.ts`.
 
 **Token-efficient component reads:** use field selection plus `bike(id) { components(filter: { … }) }`. Filter by `categories` (GraphQL enum `ComponentCategory`, e.g. `crankset`, `rear_derailleur`), `activeOnly`, `isActive`, `brands`, `nameContains`, `brandContains`, or `modelContains`. Example for drivetrain compatibility on one bike:
 
