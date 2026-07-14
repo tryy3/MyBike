@@ -149,6 +149,47 @@ describe("runDrizzleMigrations", () => {
     const applied = await db.all<{ name: string }>(sql`SELECT name FROM __drizzle_migrations`);
     expect(applied.length).toBeGreaterThan(0);
   });
+
+  it("does not delete bikes when re-applying auth migration after partial import", async () => {
+    await db.run(sql`
+      CREATE TABLE __drizzle_migrations (
+        id INTEGER PRIMARY KEY,
+        hash text NOT NULL,
+        created_at numeric,
+        name text,
+        applied_at TEXT
+      )
+    `);
+    await db.run(sql`
+      CREATE TABLE user (
+        id text PRIMARY KEY NOT NULL,
+        name text NOT NULL,
+        email text NOT NULL,
+        email_verified integer DEFAULT false NOT NULL,
+        created_at integer NOT NULL,
+        updated_at integer NOT NULL
+      )
+    `);
+    await db.run(sql`
+      CREATE TABLE bikes (
+        id text PRIMARY KEY NOT NULL,
+        user_id text NOT NULL,
+        name text NOT NULL,
+        created_at integer NOT NULL,
+        updated_at integer NOT NULL
+      )
+    `);
+    await db.run(sql`
+      INSERT INTO bikes (id, user_id, name, created_at, updated_at)
+      VALUES ('bike-1', 'user-1', 'Road bike', 1, 1)
+    `);
+
+    await expect(runDrizzleMigrations(db, migrationsFolder)).resolves.toBeUndefined();
+
+    const bikes = await db.all<{ id: string }>(sql`SELECT id FROM bikes`);
+    expect(bikes).toHaveLength(1);
+    expect(bikes[0]?.id).toBe("bike-1");
+  });
 });
 
 describe("affectedRows re-export smoke", () => {
