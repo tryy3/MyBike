@@ -41,6 +41,9 @@ export async function upsertStravaAccount(
   userId: string,
   token: StravaTokenResponse,
 ): Promise<void> {
+  if (!token.athleteId) {
+    throw new HttpError(502, "Strava returned an invalid OAuth response");
+  }
   await assertStravaAthleteAvailable(token.athleteId, userId);
 
   const existing = await findStravaAccount(userId);

@@ -43,7 +43,7 @@ async function refreshAndPersist(
       await db
         .update(account)
         .set({
-          accountId: refreshed.athleteId,
+          accountId: refreshed.athleteId ?? row.accountId,
           accessToken: refreshed.accessToken,
           refreshToken: refreshed.refreshToken,
           accessTokenExpiresAt: new Date(refreshed.expiresAtMs),
