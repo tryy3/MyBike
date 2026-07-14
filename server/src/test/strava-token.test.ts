@@ -18,10 +18,11 @@ afterEach(() => {
   delete process.env.STRAVA_CLIENT_SECRET;
 });
 
-function seedExpiredStravaAccount() {
+async function seedExpiredStravaAccount() {
   const userId = crypto.randomUUID();
   const athleteId = "424242";
-  db.insert(user)
+  await db
+    .insert(user)
     .values({
       id: userId,
       name: "Refresh Rider",
@@ -30,7 +31,8 @@ function seedExpiredStravaAccount() {
     })
     .run();
 
-  db.insert(account)
+  await db
+    .insert(account)
     .values({
       id: crypto.randomUUID(),
       accountId: athleteId,
@@ -76,7 +78,7 @@ describe("refreshStravaAccessToken", () => {
 
 describe("getStravaAccessToken", () => {
   it("persists refreshed tokens and keeps existing athlete id", async () => {
-    const { userId, athleteId } = seedExpiredStravaAccount();
+    const { userId, athleteId } = await seedExpiredStravaAccount();
 
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = new URL(
@@ -98,14 +100,15 @@ describe("getStravaAccessToken", () => {
     const token = await getStravaAccessToken(userId);
     expect(token).toBe("new-access-token");
 
-    const row = findStravaAccount(userId);
+    const row = await findStravaAccount(userId);
     expect(row?.accessToken).toBe("new-access-token");
     expect(row?.refreshToken).toBe("new-refresh-token");
     expect(row?.accountId).toBe(athleteId);
 
-    db.delete(account)
+    await db
+      .delete(account)
       .where(and(eq(account.userId, userId), eq(account.providerId, "strava")))
       .run();
-    db.delete(user).where(eq(user.id, userId)).run();
+    await db.delete(user).where(eq(user.id, userId)).run();
   });
 });
