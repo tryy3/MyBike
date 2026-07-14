@@ -104,8 +104,12 @@ turso db tokens create mybike
 
 Alternatively, point `DB_PATH` (or `SQLITE_IMPORT_PATH`) at your old local file while
 running against Turso Cloud — on the first startup with `RUN_MIGRATIONS=true`, the server
-applies schema migrations, then copies bike/domain data once and records a marker in
-`__mybike_meta` so the import never runs again.
+applies schema migrations, then copies bike/domain data once. Completion is recorded in
+`<local-db>.imported` on the mounted volume (and in remote `__mybike_meta` when Turso
+accepts the write), so the import never runs again on restart.
+
+After a Cloud import, recreate GraphQL API keys in the UI if MCP/API access fails — imported
+keys may not match what clients send after the migration.
 
 After a Cloud import, the app migrator repairs missing tables and journal
 mismatches on boot. Re-applying an already-applied migration runs **schema
