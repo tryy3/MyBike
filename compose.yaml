@@ -8,6 +8,9 @@ services:
     environment:
       PORT: "3001"
       DB_PATH: /data/mybike.db
+      # Remote-only Turso Cloud (omit DB_PATH volume if using these):
+      # TURSO_DATABASE_URL: libsql://…
+      # TURSO_AUTH_TOKEN: …
       BETTER_AUTH_URL: http://localhost:3001
       CLIENT_URL: http://localhost:3001
       BETTER_AUTH_SECRET: replace-this-with-a-long-random-secret

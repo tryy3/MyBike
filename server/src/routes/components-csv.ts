@@ -9,21 +9,21 @@ export const componentsCsvRouter = Router({ mergeParams: true });
 
 componentsCsvRouter.use(requireAuth);
 
-componentsCsvRouter.get("/export.csv", (req, res) => {
+componentsCsvRouter.get("/export.csv", async (req, res) => {
   const { userId } = getAuthContext(req);
   const { bikeId } = parseParams(req, ["bikeId"]);
-  const { csv, filename } = exportComponentsCsv(bikeId, userId);
+  const { csv, filename } = await exportComponentsCsv(bikeId, userId);
   res.setHeader("Content-Type", "text/csv; charset=utf-8");
   res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
   res.send(csv);
 });
 
-componentsCsvRouter.post("/import", (req, res) => {
+componentsCsvRouter.post("/import", async (req, res) => {
   const { userId } = getAuthContext(req);
   const { bikeId } = parseParams(req, ["bikeId"]);
   const { csv: csvText, dryRun = false } = parseBody(req, componentImportSchema);
   try {
-    const result = importComponentsFromCsv(bikeId, userId, csvText, dryRun);
+    const result = await importComponentsFromCsv(bikeId, userId, csvText, dryRun);
     if (result.dryRun) {
       req.log.debug(
         { bikeId, userId, inserted: result.inserted, updated: result.updated, dryRun: true },

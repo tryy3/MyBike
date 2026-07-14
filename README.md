@@ -8,7 +8,7 @@ Track your bikes and the interchangeable components you swap between them.
 direnv allow
 npm install
 cp .env.example .env   # then set BETTER_AUTH_SECRET (see Authentication below)
-npm run -w server db:migrate   # create the SQLite DB + tables (first run only)
+npm run -w server db:migrate   # create/open the local Turso Database file + tables (first run only)
 npm run -w server dev           # Backend on :3001
 npm run -w client dev           # Frontend on :5173
 ```
@@ -77,14 +77,46 @@ npm run -w client build
 
 ## Database
 
-SQLite via Drizzle ORM. The DB lives at `DB_PATH` (default `server/data/mybike.db`).
+Turso Database via Drizzle ORM. By default the server uses a **local file** at `DB_PATH` (default `server/data/mybike.db`) through `@tursodatabase/database`. Existing SQLite files open as-is.
+
+For **Turso Cloud** (remote-only, no local volume required), set both:
+
+| Variable             | Purpose                               |
+| -------------------- | ------------------------------------- |
+| `TURSO_DATABASE_URL` | `libsql://…` URL from `turso db show` |
+| `TURSO_AUTH_TOKEN`   | Token from `turso db tokens create`   |
+
+Runtime: local file uses `@tursodatabase/database` + `drizzle-orm/tursodatabase/database`;
+Cloud uses `@tursodatabase/serverless/compat` + public `drizzle-orm/libsql`
+(`@libsql/client` is installed only because Drizzle’s libsql entry imports it — we
+pass the Turso compat client, we do not open a second connection through libsql).
+
+The Turso-safe migrator lives in `shared` (`runDrizzleMigrations`) and is wrapped
+by server/proxy for logging.
+
+One-time import of a local file into Cloud:
+
+```bash
+turso db create mybike --from-file ./server/data/mybike.db
+turso db show mybike --url
+turso db tokens create mybike
+```
+
+After a Cloud import, the app migrator repairs missing tables and journal
+mismatches on boot. Prefer a single container applying migrations
+(`RUN_MIGRATIONS=true`); avoid multiple replicas migrating the same Cloud DB
+at once.
+
+`drizzle-kit` helpers (`db:generate`, `db:push`, `db:studio`) still target the
+**local file** in `drizzle.config.ts` — use the Turso dashboard/CLI for Cloud
+inspection, or point `DB_PATH` at a local copy.
 
 | What                                     | Command                         |
 | ---------------------------------------- | ------------------------------- |
 | Generate a migration from schema changes | `npm run -w server db:generate` |
 | Apply pending migrations                 | `npm run -w server db:migrate`  |
 | Push schema directly (interactive)       | `npm run -w server db:push`     |
-| Inspect data                             | `npm run -w server db:studio`   |
+| Inspect local data                       | `npm run -w server db:studio`   |
 
 ## Docker images
 

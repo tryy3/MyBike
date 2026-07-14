@@ -1,13 +1,14 @@
 import "../src/load-env.js";
 import { eq, sql } from "drizzle-orm";
 import { applyMigrations } from "../src/db/migrate.js";
-import { db } from "../src/db/index.js";
+import { db, initDatabase } from "../src/db/index.js";
 import { bikes, stravaBikes } from "../src/db/schema.js";
 import { migrateComponentBaselines } from "../src/lib/component-wear.js";
 
-applyMigrations();
+await initDatabase();
+await applyMigrations();
 
-const linkedBikes = db
+const linkedBikes = await db
   .select({
     id: bikes.id,
     userId: bikes.userId,
@@ -20,7 +21,7 @@ const linkedBikes = db
 
 for (const bike of linkedBikes) {
   if (!bike.stravaGearId) continue;
-  const existing = db
+  const existing = await db
     .select({ id: stravaBikes.id })
     .from(stravaBikes)
     .where(eq(stravaBikes.bikeId, bike.id))
@@ -28,7 +29,8 @@ for (const bike of linkedBikes) {
   if (existing) continue;
 
   const creditFrom = new Date(bike.updatedAt).toISOString().slice(0, 10);
-  db.insert(stravaBikes)
+  await db
+    .insert(stravaBikes)
     .values({
       userId: bike.userId,
       stravaGearId: bike.stravaGearId,
@@ -39,5 +41,5 @@ for (const bike of linkedBikes) {
     .run();
 }
 
-const { updated } = migrateComponentBaselines();
+const { updated } = await migrateComponentBaselines();
 console.log(`Wear baseline migration complete. Updated ${updated} component(s).`);

@@ -15,8 +15,13 @@ FROM base AS prod-deps
 
 # Install only the server runtime workspace tree. better-auth is nested under
 # server/node_modules in this lockfile, so the runtime image must copy that too.
+# Optional @tursodatabase/database-* native binaries ship prebuilt (.node) files
+# (~90MB); no postinstall script is required. Keep --ignore-scripts.
 RUN npm ci --omit=dev --ignore-scripts \
   -w server -w shared -w logging --include-workspace-root
+
+# Fail the image build if the Turso native binding for this platform is missing.
+RUN node --input-type=module -e "import('@tursodatabase/database').then(()=>console.log('turso database native ok'))"
 
 FROM base AS build
 

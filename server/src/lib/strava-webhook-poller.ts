@@ -39,7 +39,7 @@ async function runPoll(): Promise<StravaWebhookProcessResult> {
       errors: [],
     };
 
-    let afterId = getLastProxyEventId();
+    let afterId = await getLastProxyEventId();
 
     while (true) {
       let batch;
@@ -65,7 +65,7 @@ async function runPoll(): Promise<StravaWebhookProcessResult> {
           } else {
             result.skipped += 1;
           }
-          setLastProxyEventId(event.id);
+          await setLastProxyEventId(event.id);
           afterId = event.id;
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);

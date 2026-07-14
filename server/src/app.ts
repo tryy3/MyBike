@@ -9,9 +9,10 @@ import { activityRouter, bikeActivitiesRouter } from "./routes/activities.js";
 import { errorHandler } from "./lib/errors.js";
 import { auth } from "./lib/auth.js";
 import { httpLogger, logger } from "./lib/logging/index.js";
-import { sqlite } from "./db/index.js";
+import { db } from "./db/index.js";
 import { createGraphQLYoga } from "./graphql/yoga.js";
 import { mountMcp } from "./mcp/mount.js";
+import { sql } from "drizzle-orm";
 
 const IMPORT_MAX_BYTES = 256 * 1024;
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -34,13 +35,15 @@ export function createApp() {
   mountMcp(app);
 
   app.get("/api/health", (req, res) => {
-    try {
-      sqlite.prepare("SELECT 1").get();
-      res.json({ status: "ok" });
-    } catch (err) {
-      req.log.warn({ err }, "Health check failed");
-      res.status(503).json({ status: "error", error: "Database unavailable" });
-    }
+    void (async () => {
+      try {
+        await db.all(sql`SELECT 1`);
+        res.json({ status: "ok" });
+      } catch (err) {
+        req.log.warn({ err }, "Health check failed");
+        res.status(503).json({ status: "error", error: "Database unavailable" });
+      }
+    })();
   });
 
   app.use("/api/bikes/:bikeId/components", componentsCsvRouter);

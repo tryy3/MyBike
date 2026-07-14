@@ -9,7 +9,7 @@ import { graphqlRequest } from "./graphql-helper.js";
 import type { TestUser } from "./auth-helper.js";
 
 export async function userIdForEmail(email: string): Promise<string> {
-  const row = db.select().from(user).where(eq(user.email, email)).get();
+  const row = await db.select().from(user).where(eq(user.email, email)).get();
   if (!row) {
     throw new Error(`User not found for email: ${email}`);
   }

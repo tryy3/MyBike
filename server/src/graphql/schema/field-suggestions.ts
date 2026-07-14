@@ -17,9 +17,10 @@ builder.objectType(FieldSuggestionsRef, {
 builder.queryField("fieldSuggestions", (t) =>
   t.field({
     type: FieldSuggestionsRef,
-    resolve: (_root, _args, context) => {
+    resolve: async (_root, _args, context) => {
       const userId = requireGraphQLPermission(context, "read");
-      return getFieldSuggestions(userId);
+      const suggestions = await getFieldSuggestions(userId);
+      return suggestions;
     },
   }),
 );

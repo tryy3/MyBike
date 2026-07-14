@@ -5,13 +5,16 @@ import { flushLogs, logger } from "./lib/logging/index.js";
 let server: Server | undefined;
 
 async function main(): Promise<void> {
+  const { initDatabase } = await import("./db/index.js");
+  await initDatabase();
+
   const { applyMigrations } = await import("./db/migrate.js");
   const { createApp } = await import("./app.js");
   const { createStravaEventSource } = await import("./lib/strava-event-source.js");
   const { processPendingWebhookEvents } = await import("./lib/strava-webhook-poller.js");
 
   if (process.env.RUN_MIGRATIONS === "true") {
-    applyMigrations();
+    await applyMigrations();
     logger.info("Migrations applied successfully");
   }
 

@@ -40,7 +40,7 @@ webhookRouter.get("/strava", (req, res) => {
   res.status(403).json({ error: "Forbidden" });
 });
 
-webhookRouter.post("/strava", rateLimitWebhook, (req, res) => {
+webhookRouter.post("/strava", rateLimitWebhook, async (req, res) => {
   const log = req.log.child({ component: "webhook" });
   const parsed = stravaWebhookEventSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -62,7 +62,8 @@ webhookRouter.post("/strava", rateLimitWebhook, (req, res) => {
 
   const rawBody = JSON.stringify(req.body);
 
-  db.insert(webhookEvents)
+  await db
+    .insert(webhookEvents)
     .values({
       objectType: event.object_type,
       aspectType: event.aspect_type,

@@ -10,7 +10,7 @@ MyBike/
 │   └── src/
 ├── server/          # Express + TypeScript API
 │   ├── src/
-│   │   ├── db/      # Drizzle schema + SQLite client
+│   │   ├── db/      # Drizzle schema + Turso Database client
 │   │   ├── graphql/ # Yoga + Pothos schema (bike/component/stats domain)
 │   │   ├── lib/     # errors, validation helpers
 │   │   ├── routes/  # REST legacy (CSV, Strava, activities)
@@ -73,7 +73,7 @@ In GitHub **Settings → Branches** for `master`, require the **CI / Check and t
 - TypeScript strict mode throughout
 - ESM modules everywhere
 - Server listens on `PORT` env var (default 3001)
-- SQLite database file at `DB_PATH` env var (default `server/data/mybike.db`)
+- Database: local Turso Database file at `DB_PATH` (default `server/data/mybike.db`). Set both `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` for remote-only Turso Cloud. Existing SQLite files open as-is.
 - Client dev server proxies `/api` and `/graphql` to `http://localhost:3001`
 - Validation schemas live in `shared/` and are reused by both server and client (zod); client forms use react-hook-form + `@hookform/resolvers/zod`
 - Component categories are a fixed, hardcoded set in `shared/src/categories.ts` (`CATEGORIES` — frame, fork, crankset, … plus an `other` catchall). They are always visible and cannot be created/deleted/edited.
@@ -162,7 +162,7 @@ Validation schema: `shared/src/schemas/component-filter.ts`.
 
 ```bash
 vp install   # or npm install
-npm run -w server db:migrate   # create the SQLite DB + tables
+npm run -w server db:migrate   # create/open the Turso Database file + tables
 npm run -w server dev          # API on :3001
 npm run -w client dev          # UI on :5173
 git config core.hooksPath .vite-hooks   # enable pre-commit/pre-push hooks
@@ -177,7 +177,7 @@ If you edit anything under `shared/src`, rebuild with `npm run -w shared build` 
 Other notes:
 
 - `.env` is optional in dev (the server has built-in auth fallbacks), but recommended: `cp .env.example .env` and set `BETTER_AUTH_SECRET`. `.env` is gitignored.
-- Node: requires **Node 26+** (`engines` in root `package.json`, `.node-version`, `flake.nix`). The server uses the built-in `node:sqlite` driver (no native addon rebuild).
+- Node: requires **Node 26+** (`engines` in root `package.json`, `.node-version`, `flake.nix`). Local DB uses `@tursodatabase/database` (native addon via optional platform package); Cloud mode uses `@tursodatabase/serverless` (fetch-only).
 - **Node version / nvm override (important):** the Cursor exec-daemon injects `/exec-daemon` into `PATH` ahead of nvm's bin, and `/exec-daemon/node` is **v22** — so without an override, `node` resolves to v22. We force **nvm's v26** by (a) `nvm alias default 26` and (b) symlink shims in `~/.local/bin` (`node`/`npm`/`npx` → the nvm v26 binaries). `~/.local/bin` is always earlier in `PATH` than `/exec-daemon` (via `~/.profile`, plus a guard in `~/.bashrc`), so the shims win in every shell/tool/update-script context. Both `~/.local/bin` and `~/.nvm` live in the home dir, so this persists in the snapshot. If a fresh agent ever shows `node -v` = v22, re-create the shims: `NVM_DIR=$HOME/.nvm; . $NVM_DIR/nvm.sh; nvm alias default 26; d=$(dirname "$(nvm which default)"); for b in node npm npx; do ln -sfn "$d/$b" "$HOME/.local/bin/$b"; done`. Do **not** edit `/exec-daemon` (root-owned daemon infra).
 - Run both dev servers together: API `npm run -w server dev` (:3001) and UI `npm run -w client dev` (:5173). The client proxies `/api` → `:3001`.
 - Auth is cookie-based (better-auth). Unauthenticated `/api/*` requests return `401` — this is expected, not a failure. Register at `/register`, then use the app.
