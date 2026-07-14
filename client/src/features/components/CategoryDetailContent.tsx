@@ -24,8 +24,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { cn } from "@/lib/utils";
-import { ComponentStats } from "@/features/stats/ComponentStats";
 import { componentBrandModel } from "./component-display";
+import {
+  ComponentDetailTier,
+  ComponentIdentityTier,
+  ComponentMetaLine,
+  ComponentNameLabel,
+} from "./component-list-layout";
 import { ComponentForm } from "./ComponentForm";
 import { useActivateComponent, useDeleteComponent, useReorderComponents } from "./api";
 import type { WearByComponentId } from "./ComponentsSplitView";
@@ -291,7 +296,7 @@ function ComponentRow({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex items-center justify-between gap-3 px-3 py-3",
+        "flex items-start justify-between gap-3 px-3 py-3",
         highlighted && "bg-muted/40",
       )}
     >
@@ -308,26 +313,26 @@ function ComponentRow({
           </button>
         )}
         <div className="flex min-w-0 flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <span className="truncate font-medium">{component.name}</span>
-            {component.isActive && (
-              <Badge variant="secondary" className="gap-1">
-                <CheckIcon className="size-3" aria-hidden="true" /> Active
-              </Badge>
-            )}
-          </div>
-          <span className="truncate text-sm text-muted-foreground">
-            {componentBrandModel(component) ?? "—"}
-          </span>
-          <ComponentStats
-            distanceMeters={displayWear.distanceMeters}
-            movingTimeMinutes={displayWear.movingTimeMinutes}
-            className="text-xs text-muted-foreground"
-          />
+          <ComponentIdentityTier separated={Boolean(component.notes?.trim())}>
+            <div className="flex items-center gap-2">
+              <ComponentNameLabel>{component.name}</ComponentNameLabel>
+              {component.isActive && (
+                <Badge variant="secondary" className="gap-1">
+                  <CheckIcon className="size-3" aria-hidden="true" /> Active
+                </Badge>
+              )}
+            </div>
+            <ComponentMetaLine
+              brandModel={componentBrandModel(component)}
+              distanceMeters={displayWear.distanceMeters}
+              movingTimeMinutes={displayWear.movingTimeMinutes}
+            />
+          </ComponentIdentityTier>
+          <ComponentDetailTier notes={component.notes} lineClamp={3} />
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1">
+      <div className="flex shrink-0 items-center gap-1 pt-0.5">
         {canActivate && !component.isActive && (
           <Button
             size="sm"
