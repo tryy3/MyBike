@@ -1,9 +1,9 @@
 import type { RequestHandler } from "express";
 import type { Logger } from "pino";
 import { createLogContextHelpers } from "./context.js";
-import type { LoggingPackageOptions } from "./config.js";
+import { getLoggingConfig, type LoggingPackageOptions } from "./config.js";
 import { createHttpLogger, type HttpLoggerOptions } from "./http.js";
-import { createLogger } from "./transport.js";
+import { createLoggerFromConfig } from "./transport.js";
 
 export interface CreateLoggingOptions extends LoggingPackageOptions, HttpLoggerOptions {}
 
@@ -17,9 +17,14 @@ export interface Logging {
 }
 
 export function createLogging(options: CreateLoggingOptions): Logging {
-  const logger = createLogger(options);
+  const config = getLoggingConfig(options);
+  const logger = createLoggerFromConfig(config);
   const { child, getLog, withLogContext } = createLogContextHelpers(logger);
   const httpLogger = createHttpLogger(logger, options);
+
+  if (!config.redactEnabled && !config.isTest) {
+    logger.warn("Log redaction disabled (LOG_REDACT=false); sensitive fields will appear in logs");
+  }
 
   return {
     logger,

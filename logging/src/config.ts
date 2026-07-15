@@ -41,10 +41,25 @@ export interface LoggingConfig {
   level: PinoLevel;
   logFilePath: string;
   logToFile: boolean;
+  redactEnabled: boolean;
   isDevelopment: boolean;
   isTest: boolean;
   loggerOptions: LoggerOptions;
 }
+
+const REDACT_PATHS = [
+  "req.headers.authorization",
+  'req.headers["x-api-key"]',
+  "req.headers.cookie",
+  "req.body.password",
+  "accessToken",
+  "refreshToken",
+  "*.accessToken",
+  "*.refreshToken",
+  "*.password",
+  "*.clientSecret",
+  "authorization",
+] as const;
 
 export function getLoggingConfig(packageOptions: LoggingPackageOptions): LoggingConfig {
   const isTest = isTestLogging();
@@ -52,6 +67,7 @@ export function getLoggingConfig(packageOptions: LoggingPackageOptions): Logging
   const level = parseLogLevel(process.env.LOG_LEVEL, isTest ? "silent" : isDev ? "debug" : "info");
   const logFilePath = resolveLogFilePath(packageOptions.defaultLogFilePath);
   const logToFile = process.env.LOG_TO_FILE !== "false";
+  const redactEnabled = process.env.LOG_REDACT !== "false";
 
   const loggerOptions: LoggerOptions = {
     level,
@@ -59,31 +75,23 @@ export function getLoggingConfig(packageOptions: LoggingPackageOptions): Logging
       service: packageOptions.service,
       env: process.env.NODE_ENV ?? "development",
     },
-    redact: {
-      paths: [
-        "req.headers.authorization",
-        'req.headers["x-api-key"]',
-        "req.headers.cookie",
-        "req.body.password",
-        "accessToken",
-        "refreshToken",
-        "*.accessToken",
-        "*.refreshToken",
-        "*.password",
-        "*.clientSecret",
-        "authorization",
-      ],
-      censor: "[Redacted]",
-    },
     serializers: {
       err: pino.stdSerializers.err,
     },
   };
 
+  if (redactEnabled) {
+    loggerOptions.redact = {
+      paths: [...REDACT_PATHS],
+      censor: "[Redacted]",
+    };
+  }
+
   return {
     level,
     logFilePath,
     logToFile,
+    redactEnabled,
     isDevelopment: isDev,
     isTest,
     loggerOptions,

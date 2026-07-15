@@ -7,7 +7,7 @@ function ensureLogDirectory(logFilePath: string): void {
   mkdirSync(dirname(logFilePath), { recursive: true });
 }
 
-function createLoggerFromConfig(config: LoggingConfig): Logger {
+export function createLoggerFromConfig(config: LoggingConfig): Logger {
   if (config.isTest) {
     return pino(config.loggerOptions);
   }

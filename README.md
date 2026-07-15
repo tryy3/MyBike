@@ -40,6 +40,7 @@ In development you get colorized console output plus a JSON log file; in product
 | `LOG_LEVEL`     | `debug` (dev), `info` (prod) | Minimum level: `trace`, `debug`, `info`, `warn`, `error`, `fatal`, or `silent` |
 | `LOG_FILE_PATH` | per-service (see below)      | Override log file path (parent dirs created automatically)                     |
 | `LOG_TO_FILE`   | `true`                       | Set `false` to disable file output (stdout only)                               |
+| `LOG_REDACT`    | `true`                       | Set `false` to disable redaction (logs secrets in plaintext; debug only)       |
 
 Default log files when `LOG_FILE_PATH` is unset: `server/data/mybike.log` (API) and `strava-webhook-proxy/data/proxy.log` (webhook proxy).
 
@@ -62,7 +63,7 @@ await withLogContext({ athleteId, operation: "fetchActivities" }, async () => {
 - Use **`withLogContext()`** when context applies only to a function or async flow.
 - Inside HTTP handlers, prefer **`req.log`** (includes `requestId`; authenticated routes also get `userId`).
 
-Sensitive fields (`authorization`, `accessToken`, `refreshToken`, cookies, passwords) are redacted automatically. Do not log OAuth payloads, session tokens, or Strava credentials explicitly.
+Sensitive fields (`authorization`, `accessToken`, `refreshToken`, cookies, passwords) are redacted automatically unless `LOG_REDACT=false`. Do not log OAuth payloads, session tokens, or Strava credentials explicitly. Only disable redaction briefly for debugging — secrets will appear in stdout and log files.
 
 **Migrating an existing database:** migration `0003` creates auth tables and adds `user_id` to `bikes`. Any bikes created before auth had no owner, so that migration clears existing bikes and components before adding the column. Back up `server/data/mybike.db` first if you need to preserve data.
 

@@ -1,6 +1,7 @@
 import "./express.js";
 
 export {
+  getLoggingConfig,
   LOG_LEVELS,
   type LoggingConfig,
   type LoggingPackageOptions,
