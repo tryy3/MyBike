@@ -86,6 +86,39 @@ describe("componentUpdateSchema", () => {
     const result = componentUpdateSchema.safeParse({ brand: "  " });
     expect(result.success).toBe(false);
   });
+
+  it("omits unset patch fields so partial updates do not clear them", () => {
+    const result = componentUpdateSchema.safeParse({ purchaseCost: 42 });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data).toEqual({ purchaseCost: 42 });
+    expect("notes" in result.data).toBe(false);
+    expect("purchaseDate" in result.data).toBe(false);
+    expect("purchaseStore" in result.data).toBe(false);
+    expect("distanceMeters" in result.data).toBe(false);
+    expect("movingTimeMinutes" in result.data).toBe(false);
+  });
+
+  it("clears nullable fields when null or empty string is sent", () => {
+    const result = componentUpdateSchema.safeParse({
+      notes: "",
+      purchaseDate: null,
+      purchaseCost: null,
+      purchaseStore: "   ",
+      distanceMeters: null,
+      movingTimeMinutes: null,
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data).toEqual({
+      notes: null,
+      purchaseDate: null,
+      purchaseCost: null,
+      purchaseStore: null,
+      distanceMeters: null,
+      movingTimeMinutes: null,
+    });
+  });
 });
 
 describe("COMPONENT_CSV_COLUMNS", () => {
