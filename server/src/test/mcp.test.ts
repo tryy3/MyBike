@@ -240,6 +240,50 @@ describe("MCP server", () => {
     expect(component?.isActive).toBe(false);
   });
 
+  it("update_component updates brand/model and rejects name", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    const writeKey = await createApiKeyForTestUser(testUser, permissionsForScope("write"));
+    const bike = await createBikeViaGraphql(agent, "Update Comp Bike");
+    const created = await createComponentViaGraphql(agent, bike.id, {
+      category: "chain",
+      name: "Keep This Name",
+      brand: "OldBrand",
+      model: "OldModel",
+      isActive: true,
+    });
+
+    const ok = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 40,
+      method: "tools/call",
+      params: {
+        name: "update_component",
+        arguments: { componentId: created.id, brand: "NewBrand", model: "NewModel" },
+      },
+    });
+    const component = (
+      jsonRpcResult(ok.body)?.structuredContent as {
+        component: { name: string; brand: string; model: string };
+      }
+    )?.component;
+    expect(component).toMatchObject({
+      name: "Keep This Name",
+      brand: "NewBrand",
+      model: "NewModel",
+    });
+
+    const rejected = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 41,
+      method: "tools/call",
+      params: {
+        name: "update_component",
+        arguments: { componentId: created.id, name: "Hacked" },
+      },
+    });
+    expect(jsonRpcResult(rejected.body)?.isError).toBe(true);
+  });
+
   it("list_component_categories returns all categories", async () => {
     const { user: testUser } = await createAuthenticatedAgent(app);
     const readKey = await createApiKeyForTestUser(testUser);
