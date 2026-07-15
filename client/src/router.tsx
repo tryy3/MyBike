@@ -1,10 +1,17 @@
 import { useEffect } from "react";
-import { createRoute, createRouter, Link, NotFoundRoute } from "@tanstack/react-router";
+import { createRoute, createRouter, Link, NotFoundRoute, redirect } from "@tanstack/react-router";
 
 import { rootRoute } from "./routes/root";
 import { appLayoutRoute } from "./routes/app-layout";
 import { BikesListPage } from "./routes/bikes-list";
-import { BikeDetailPage } from "./routes/bike-detail";
+import {
+  BikeActivitiesTabPage,
+  BikeComponentsTabPage,
+  BikeDetailLayout,
+  BikeMaintenanceTabPage,
+  BikeOverviewTabPage,
+} from "./routes/bike-detail";
+import type { MaintenanceTabSearch } from "./routes/bike-routes";
 import { IntegrationsPage } from "./routes/integrations";
 import { ApiKeysPage } from "./routes/api-keys";
 import { LoginPage } from "./routes/login";
@@ -17,11 +24,57 @@ const indexRoute = createRoute({
   component: BikesListPage,
 });
 
-const bikeRoute = createRoute({
+export const bikeLayoutRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: "/bikes/$bikeId",
-  component: BikeDetailWrapper,
+  component: BikeDetailLayout,
 });
+
+const bikeIndexRoute = createRoute({
+  getParentRoute: () => bikeLayoutRoute,
+  path: "/",
+  beforeLoad: ({ params }) => {
+    throw redirect({
+      to: "/bikes/$bikeId/components",
+      params: { bikeId: params.bikeId },
+    });
+  },
+});
+
+export const bikeComponentsRoute = createRoute({
+  getParentRoute: () => bikeLayoutRoute,
+  path: "/components",
+  component: BikeComponentsTabPage,
+});
+
+export const bikeOverviewRoute = createRoute({
+  getParentRoute: () => bikeLayoutRoute,
+  path: "/overview",
+  component: BikeOverviewTabPage,
+});
+
+export const bikeMaintenanceRoute = createRoute({
+  getParentRoute: () => bikeLayoutRoute,
+  path: "/maintenance",
+  validateSearch: (search: Record<string, unknown>): MaintenanceTabSearch => ({
+    category: typeof search.category === "string" ? search.category : undefined,
+  }),
+  component: BikeMaintenanceTabPage,
+});
+
+export const bikeActivitiesRoute = createRoute({
+  getParentRoute: () => bikeLayoutRoute,
+  path: "/activities",
+  component: BikeActivitiesTabPage,
+});
+
+const bikeRoute = bikeLayoutRoute.addChildren([
+  bikeIndexRoute,
+  bikeComponentsRoute,
+  bikeOverviewRoute,
+  bikeMaintenanceRoute,
+  bikeActivitiesRoute,
+]);
 
 const integrationsRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
@@ -34,11 +87,6 @@ const apiKeysRoute = createRoute({
   path: "/settings/api-keys",
   component: ApiKeysPage,
 });
-
-function BikeDetailWrapper() {
-  const { bikeId } = bikeRoute.useParams();
-  return <BikeDetailPage bikeId={bikeId} />;
-}
 
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,

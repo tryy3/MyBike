@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { Component } from "shared";
 import { groupCategoriesBySystem } from "shared";
 
+import type { MaintenanceTaskGql } from "@/lib/graphql/operations";
 import { CategoryDetailDialog } from "./CategoryDetailDialog";
 import { CategoryDetailPanel } from "./CategoryDetailPanel";
 import { ComponentsNav } from "./ComponentsNav";
@@ -20,6 +21,8 @@ interface ComponentsSplitViewProps {
   showEmptyCategories: boolean;
   categoriesUsed: number;
   wearByComponentId?: WearByComponentId;
+  maintenanceAlertByCategory?: Map<string, number>;
+  dueTasksByCategory?: Map<string, MaintenanceTaskGql[]>;
 }
 
 function buildCategoryMap(components: Component[]): Map<string, Component[]> {
@@ -44,6 +47,8 @@ export function ComponentsSplitView({
   showEmptyCategories,
   categoriesUsed,
   wearByComponentId,
+  maintenanceAlertByCategory,
+  dueTasksByCategory,
 }: ComponentsSplitViewProps) {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [mobileDialogOpen, setMobileDialogOpen] = useState(false);
@@ -72,11 +77,14 @@ export function ComponentsSplitView({
     <>
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(280px,440px)] lg:items-start lg:gap-6">
         <ComponentsNav
+          bikeId={bikeId}
           groups={groups}
           selectedCategoryId={selectedCategoryId}
           showEmptyCategories={showEmptyCategories}
           categoriesUsed={categoriesUsed}
           wearByComponentId={wearByComponentId}
+          maintenanceAlertByCategory={maintenanceAlertByCategory}
+          dueTasksByCategory={dueTasksByCategory}
           onSelectCategory={handleSelectCategory}
         />
         <CategoryDetailPanel

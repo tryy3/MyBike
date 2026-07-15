@@ -15,6 +15,7 @@ import { queryKeys } from "@/lib/api";
 
 export type BikeDetailWithStats = ReturnType<typeof toBikeDetailGql> & {
   rideStats: BikeDetailGql["rideStats"];
+  maintenanceAlertCount: number;
 };
 
 export function useBikes() {
@@ -32,7 +33,11 @@ export function useBike(id: string) {
     queryKey: queryKeys.bike(id),
     queryFn: async (): Promise<BikeDetailWithStats> => {
       const data = await graphqlFetch<{ bike: BikeDetailGql }>(BIKE_DETAIL_QUERY, { id });
-      return { ...toBikeDetailGql(data.bike), rideStats: data.bike.rideStats };
+      return {
+        ...toBikeDetailGql(data.bike),
+        rideStats: data.bike.rideStats,
+        maintenanceAlertCount: data.bike.maintenanceAlertCount,
+      };
     },
     enabled: !!id,
   });
@@ -77,6 +82,7 @@ export function useDeleteBike() {
     onSuccess: (_data, id) => {
       void qc.invalidateQueries({ queryKey: queryKeys.bikes });
       qc.removeQueries({ queryKey: queryKeys.bike(id) });
+      qc.removeQueries({ queryKey: queryKeys.bikeMaintenance(id) });
     },
   });
 }

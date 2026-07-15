@@ -13,3 +13,4 @@ server/data/
 *.db-wal
 *.db-shm
 tmp/
+.superpowers/

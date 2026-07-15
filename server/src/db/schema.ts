@@ -170,3 +170,76 @@ export type BikeRow = typeof bikes.$inferSelect;
 export type ComponentRow = typeof components.$inferSelect;
 export type StravaBikeRow = typeof stravaBikes.$inferSelect;
 export type StravaActivityRow = typeof stravaActivities.$inferSelect;
+
+export const maintenanceTasks = sqliteTable(
+  "maintenance_tasks",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => uuid()),
+    bikeId: text("bike_id")
+      .notNull()
+      .references(() => bikes.id, { onDelete: "cascade" }),
+    source: text("source").notNull(),
+    templateKey: text("template_key"),
+    kind: text("kind").notNull(),
+    title: text("title").notNull(),
+    description: text("description"),
+    componentCategory: text("component_category"),
+    triggerMode: text("trigger_mode"),
+    distanceMeters: integer("distance_meters"),
+    intervalDays: integer("interval_days"),
+    guideUrl: text("guide_url"),
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+    customized: integer("customized", { mode: "boolean" }).notNull().default(false),
+    sortOrder: integer("sort_order").notNull().default(0),
+    snoozedUntilDistanceMeters: integer("snoozed_until_distance_meters"),
+    snoozedUntilAt: integer("snoozed_until_at"),
+    createdAt: integer("created_at").notNull().$defaultFn(nowMs),
+    updatedAt: integer("updated_at").notNull().$defaultFn(nowMs).$onUpdateFn(nowMs),
+  },
+  (t) => [
+    index("idx_maintenance_tasks_bike").on(t.bikeId),
+    uniqueIndex("idx_maintenance_tasks_bike_template")
+      .on(t.bikeId, t.templateKey)
+      .where(sql`${t.templateKey} IS NOT NULL`),
+  ],
+);
+
+export const serviceRecords = sqliteTable(
+  "service_records",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => uuid()),
+    taskId: text("task_id")
+      .notNull()
+      .references(() => maintenanceTasks.id, { onDelete: "cascade" }),
+    bikeId: text("bike_id")
+      .notNull()
+      .references(() => bikes.id, { onDelete: "cascade" }),
+    componentId: text("component_id").references(() => components.id, { onDelete: "set null" }),
+    action: text("action").notNull(),
+    completedAt: integer("completed_at").notNull().$defaultFn(nowMs),
+    notes: text("notes"),
+    cost: real("cost"),
+    wearDistanceMeters: integer("wear_distance_meters"),
+    wearMovingTimeMinutes: integer("wear_moving_time_minutes"),
+    createdAt: integer("created_at").notNull().$defaultFn(nowMs),
+  },
+  (t) => [
+    index("idx_service_records_bike_completed").on(t.bikeId, t.completedAt),
+    index("idx_service_records_task_completed").on(t.taskId, t.completedAt),
+  ],
+);
+
+export const maintenanceChecklistState = sqliteTable("maintenance_checklist_state", {
+  taskId: text("task_id")
+    .primaryKey()
+    .references(() => maintenanceTasks.id, { onDelete: "cascade" }),
+  lastCheckedAt: integer("last_checked_at"),
+});
+
+export type MaintenanceTaskRow = typeof maintenanceTasks.$inferSelect;
+export type ServiceRecordRow = typeof serviceRecords.$inferSelect;
+export type MaintenanceChecklistStateRow = typeof maintenanceChecklistState.$inferSelect;

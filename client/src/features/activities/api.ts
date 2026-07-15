@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, queryKeys } from "@/lib/api";
+import { invalidateWearDependentBikeQueries } from "@/features/maintenance/cache-sync";
 import type { ActivityUpdate } from "shared";
 
 export function useBikeActivities(bikeId: string) {
@@ -18,8 +19,8 @@ export function useUpdateActivity(bikeId: string) {
     mutationFn: ({ id, data }: { id: string; data: ActivityUpdate }) =>
       api.updateActivity(id, data),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: queryKeys.bikeActivities(bikeId) });
-      void qc.invalidateQueries({ queryKey: queryKeys.bike(bikeId) });
+      void qc.invalidateQueries({ queryKey: queryKeys.bikeActivities(bikeId), exact: true });
+      invalidateWearDependentBikeQueries(qc, bikeId);
     },
   });
 }
