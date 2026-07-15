@@ -330,6 +330,92 @@ describe("MCP server", () => {
     expect(a.id).not.toBe(b.id);
   });
 
+  it("replace_component logs EOL replace and activates new cassette", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    const writeKey = await createApiKeyForTestUser(testUser, permissionsForScope("write"));
+    const bike = await createBikeViaGraphql(agent, "EOL Replace Bike");
+    await createComponentViaGraphql(agent, bike.id, {
+      category: "cassette",
+      name: "Worn Cassette",
+      brand: "Shimano",
+      model: "Old",
+      isActive: true,
+    });
+
+    const created = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 60,
+      method: "tools/call",
+      params: {
+        name: "create_component",
+        arguments: {
+          bikeId: bike.id,
+          category: "cassette",
+          name: "Fresh Cassette",
+          brand: "SRAM",
+          model: "XXXX",
+        },
+      },
+    });
+    const newId = (jsonRpcResult(created.body)?.structuredContent as { component: { id: string } })
+      ?.component.id;
+
+    const replaced = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 61,
+      method: "tools/call",
+      params: {
+        name: "replace_component",
+        arguments: {
+          bikeId: bike.id,
+          category: "cassette",
+          newComponentId: newId,
+          resetWear: true,
+        },
+      },
+    });
+    expect(replaced.status).toBe(200);
+    const record = (
+      jsonRpcResult(replaced.body)?.structuredContent as {
+        serviceRecord: { action: string; componentId: string | null };
+      }
+    )?.serviceRecord;
+    expect(record?.action).toBe("replaced");
+
+    const list = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 62,
+      method: "tools/call",
+      params: {
+        name: "get_bike_components",
+        arguments: { bikeId: bike.id, activeOnly: true, filter: { categories: ["cassette"] } },
+      },
+    });
+    const active = (jsonRpcResult(list.body)?.structuredContent as { components: { id: string }[] })
+      ?.components;
+    expect(active?.[0]?.id).toBe(newId);
+  });
+
+  it("replace_component denies read-only API keys", async () => {
+    const { user: testUser } = await createAuthenticatedAgent(app);
+    const readKey = await createApiKeyForTestUser(testUser);
+
+    const denied = await mcpRequest(readKey, {
+      jsonrpc: "2.0",
+      id: 63,
+      method: "tools/call",
+      params: {
+        name: "replace_component",
+        arguments: {
+          taskId: "00000000-0000-4000-8000-000000000001",
+          newComponentId: "00000000-0000-4000-8000-000000000002",
+        },
+      },
+    });
+
+    expect(jsonRpcResult(denied.body)?.isError).toBe(true);
+  });
+
   it("list_component_categories returns all categories", async () => {
     const { user: testUser } = await createAuthenticatedAgent(app);
     const readKey = await createApiKeyForTestUser(testUser);
