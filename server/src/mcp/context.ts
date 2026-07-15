@@ -39,6 +39,14 @@ export function requireReadPermission(auth: McpAuthContext): string {
   return auth.userId;
 }
 
+export function requireWritePermission(auth: McpAuthContext): string {
+  const actions = auth.permissions?.graphql ?? [];
+  if (!actions.includes("write")) {
+    throw new HttpError(403, "API key lacks required permission");
+  }
+  return auth.userId;
+}
+
 export function toGraphQLContext(auth: McpAuthContext) {
   return {
     userId: auth.userId,
