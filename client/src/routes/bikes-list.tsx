@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useEffect } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
   ChevronRightIcon,
@@ -8,6 +8,7 @@ import {
   PencilIcon,
   PlusIcon,
   Trash2Icon,
+  TriangleAlertIcon,
 } from "lucide-react";
 import type { BikeListItemGql } from "@/lib/graphql/operations";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -17,6 +18,7 @@ import { formatStatsLine } from "@/lib/format-stats";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
@@ -43,6 +45,7 @@ import {
 } from "@/components/ui/table";
 
 export function BikesListPage() {
+  const navigate = useNavigate();
   const { data, isPending, isError, error, refetch, isFetching } = useBikes();
   const deleteBike = useDeleteBike();
   const [creating, setCreating] = useState(false);
@@ -131,19 +134,41 @@ export function BikesListPage() {
               {data.map((bike) => (
                 <TableRow key={bike.id} className={cn(isFetching && "opacity-60")}>
                   <TableCell>
-                    <Link
-                      to="/bikes/$bikeId"
-                      params={{ bikeId: bike.id }}
-                      className="flex flex-col gap-0.5 font-medium hover:underline"
-                    >
-                      <span>{bike.name}</span>
+                    <div className="flex flex-col gap-0.5 font-medium">
+                      <span className="flex items-center gap-1.5">
+                        <Link
+                          to="/bikes/$bikeId/components"
+                          params={{ bikeId: bike.id }}
+                          className="cursor-pointer hover:underline"
+                        >
+                          {bike.name}
+                        </Link>
+                        {bike.maintenanceAlertCount > 0 ? (
+                          <button
+                            type="button"
+                            className="shrink-0 cursor-pointer rounded-md transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            aria-label={`${bike.maintenanceAlertCount} maintenance alert${bike.maintenanceAlertCount === 1 ? "" : "s"} — open maintenance`}
+                            onClick={() =>
+                              void navigate({
+                                to: "/bikes/$bikeId/maintenance",
+                                params: { bikeId: bike.id },
+                              })
+                            }
+                          >
+                            <Badge variant="destructive" className="tabular-nums">
+                              <TriangleAlertIcon className="size-3.5" aria-hidden="true" />
+                              {bike.maintenanceAlertCount}
+                            </Badge>
+                          </button>
+                        ) : null}
+                      </span>
                       <span className="text-xs font-normal text-muted-foreground">
                         {[bike.year].filter(Boolean).join(" · ")}
                       </span>
                       <span className="text-xs font-normal text-muted-foreground tabular-nums lg:hidden">
                         {statsByBikeId.get(bike.id) ?? "—"}
                       </span>
-                    </Link>
+                    </div>
                   </TableCell>
                   <TableCell className="hidden sm:table-cell text-muted-foreground">
                     {[bike.brand, bike.model].filter(Boolean).join(" · ") || "—"}
@@ -162,7 +187,7 @@ export function BikesListPage() {
                         asChild
                         aria-label={`Open ${bike.name}`}
                       >
-                        <Link to="/bikes/$bikeId" params={{ bikeId: bike.id }}>
+                        <Link to="/bikes/$bikeId/components" params={{ bikeId: bike.id }}>
                           <ChevronRightIcon />
                         </Link>
                       </Button>

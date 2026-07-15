@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import {
+  Link,
+  Outlet,
+  useNavigate,
+  useParams,
+  useRouterState,
+  useSearch,
+} from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
   ArrowLeftIcon,
@@ -8,6 +15,7 @@ import {
   SheetIcon,
   Trash2Icon,
   UploadIcon,
+  WrenchIcon,
 } from "lucide-react";
 import { CATEGORIES, categoryLabel } from "shared";
 import type { Component } from "shared";
@@ -23,7 +31,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { BikeForm } from "@/features/bikes/BikeForm";
 import { useBike, useDeleteBike } from "@/features/bikes/api";
@@ -34,13 +42,12 @@ import {
 import { ImportComponentsDialog } from "@/features/components/ImportComponentsDialog";
 import { buildTemplateCsv, downloadCsv } from "@/features/components/csv";
 import { ActivityList } from "@/features/activities/ActivityList";
+import { MaintenanceTab } from "@/features/maintenance/MaintenanceTab";
+import { dueTasksByCategoryFromTasks, useBikeMaintenance } from "@/features/maintenance/api";
 import { ComponentStats } from "@/features/stats/ComponentStats";
 import { formatDistance, formatMovingTime, hasStats } from "@/lib/format-stats";
 import { api } from "@/lib/api";
-
-interface BikeDetailPageProps {
-  bikeId: string;
-}
+import { type BikeTabId, type MaintenanceTabSearch, bikeTabPaths } from "./bike-routes";
 
 function groupByCategory(components: Component[]): Map<string, Component[]> {
   const map = new Map<string, Component[]>();
@@ -52,14 +59,77 @@ function groupByCategory(components: Component[]): Map<string, Component[]> {
   return map;
 }
 
-export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
+function useActiveBikeTab(): BikeTabId {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  if (pathname.endsWith("/maintenance")) return "maintenance";
+  if (pathname.endsWith("/overview")) return "overview";
+  if (pathname.endsWith("/activities")) return "activities";
+  return "components";
+}
+
+function BikeDetailTabs({
+  bikeId,
+  componentCount,
+  maintenanceAlertCount,
+  activityCount,
+}: {
+  bikeId: string;
+  componentCount: number;
+  maintenanceAlertCount: number;
+  activityCount: number;
+}) {
+  const activeTab = useActiveBikeTab();
+
+  return (
+    <Tabs value={activeTab} className="flex flex-col gap-4">
+      <TabsList>
+        <TabsTrigger value="components" asChild>
+          <Link to={bikeTabPaths.components} params={{ bikeId }}>
+            Components
+            <Badge variant="secondary" className="ml-2">
+              {componentCount}
+            </Badge>
+          </Link>
+        </TabsTrigger>
+        <TabsTrigger value="overview" asChild>
+          <Link to={bikeTabPaths.overview} params={{ bikeId }}>
+            Overview
+          </Link>
+        </TabsTrigger>
+        <TabsTrigger value="maintenance" asChild>
+          <Link to={bikeTabPaths.maintenance} params={{ bikeId }}>
+            <WrenchIcon className="size-3.5" />
+            Maintenance
+            {maintenanceAlertCount > 0 ? (
+              <Badge variant="destructive" className="ml-2 tabular-nums">
+                {maintenanceAlertCount}
+              </Badge>
+            ) : null}
+          </Link>
+        </TabsTrigger>
+        <TabsTrigger value="activities" asChild>
+          <Link to={bikeTabPaths.activities} params={{ bikeId }}>
+            Activities
+            {activityCount > 0 ? (
+              <Badge variant="secondary" className="ml-2">
+                {activityCount}
+              </Badge>
+            ) : null}
+          </Link>
+        </TabsTrigger>
+      </TabsList>
+      <Outlet />
+    </Tabs>
+  );
+}
+
+export function BikeDetailLayout() {
+  const bikeIdParam = useParams({ strict: false }).bikeId;
   const navigate = useNavigate();
-  const { data, isPending, isError, error, refetch } = useBike(bikeId);
   const deleteBike = useDeleteBike();
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [importing, setImporting] = useState(false);
-  const [showEmptyCategories, setShowEmptyCategories] = useState(false);
+  const { data, isPending, isError, error, refetch } = useBike(bikeIdParam ?? "__missing__");
 
   useEffect(() => {
     if (data?.name) {
@@ -70,23 +140,15 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
     };
   }, [data?.name]);
 
-  const wearByComponentId = useMemo((): WearByComponentId => {
-    const map: WearByComponentId = new Map();
-    for (const c of data?.components ?? []) {
-      map.set(c.id, {
-        distanceMeters: c.distanceMeters,
-        movingTimeMinutes: c.movingTimeMinutes,
-      });
-    }
-    return map;
-  }, [data?.components]);
-
-  function handleDownloadTemplate(): void {
-    downloadCsv("mybike-components-template.csv", buildTemplateCsv());
-    toast.message("Template downloaded", {
-      description: "Fill in rows and import here. Leave id empty for new parts.",
-    });
+  if (!bikeIdParam) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-sm text-destructive">Missing bike ID in URL.</CardContent>
+      </Card>
+    );
   }
+
+  const bikeId = bikeIdParam;
 
   if (isPending) {
     return (
@@ -118,13 +180,6 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
     );
   }
 
-  const grouped = groupByCategory(data.components);
-  const categoriesUsed = grouped.size;
-  const emptyCategoryCount = CATEGORIES.length - categoriesUsed;
-  const wearComponents =
-    data.components.filter((c) => c.isActive && hasStats(c.distanceMeters, c.movingTimeMinutes)) ??
-    [];
-
   return (
     <div className="flex flex-col gap-6">
       <Button asChild variant="ghost" size="sm" className="w-max text-muted-foreground">
@@ -137,7 +192,20 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
         <CardHeader>
           <div className="flex items-start justify-between gap-3">
             <div className="flex flex-col gap-1">
-              <h1 className="text-2xl font-semibold text-balance">{data.name}</h1>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl font-semibold text-balance">{data.name}</h1>
+                {data.maintenanceAlertCount > 0 ? (
+                  <Link
+                    to={bikeTabPaths.maintenance}
+                    params={{ bikeId }}
+                    className="cursor-pointer rounded-md transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <Badge variant="destructive" className="tabular-nums">
+                      {data.maintenanceAlertCount} maintenance
+                    </Badge>
+                  </Link>
+                ) : null}
+              </div>
               <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
                 {[data.brand, data.model, data.year].filter(Boolean).join(" · ")}
               </div>
@@ -170,141 +238,13 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
         )}
       </Card>
 
-      <Tabs defaultValue="components">
-        <TabsList>
-          <TabsTrigger value="components">
-            Components
-            <Badge variant="secondary" className="ml-2">
-              {data.components.length}
-            </Badge>
-          </TabsTrigger>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="activities">
-            Activities
-            {data.rideStats?.activityCount ? (
-              <Badge variant="secondary" className="ml-2">
-                {data.rideStats.activityCount}
-              </Badge>
-            ) : null}
-          </TabsTrigger>
-        </TabsList>
+      <BikeDetailTabs
+        bikeId={bikeId}
+        componentCount={data.components.length}
+        maintenanceAlertCount={data.maintenanceAlertCount}
+        activityCount={data.rideStats?.activityCount ?? 0}
+      />
 
-        <TabsContent value="components" className="flex flex-col gap-4">
-          {data.components.length === 0 ? (
-            <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-              No components yet. Add parts to any of the categories below — they are always
-              available.
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              {data.components.length} component
-              {data.components.length === 1 ? "" : "s"} across {categoriesUsed} categor
-              {categoriesUsed === 1 ? "y" : "ies"}.
-            </p>
-          )}
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setImporting(true)}>
-              <UploadIcon />
-              Import CSV
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <a href={api.exportComponentsUrl(bikeId)} download>
-                <DownloadIcon />
-                Export CSV
-              </a>
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleDownloadTemplate}>
-              <SheetIcon />
-              Template
-            </Button>
-            {emptyCategoryCount > 0 && categoriesUsed > 0 && (
-              <Button variant="ghost" size="sm" onClick={() => setShowEmptyCategories((v) => !v)}>
-                {showEmptyCategories
-                  ? "Hide empty categories"
-                  : `Show empty categories (${emptyCategoryCount})`}
-              </Button>
-            )}
-          </div>
-          <ComponentsSplitView
-            bikeId={bikeId}
-            components={data.components}
-            showEmptyCategories={showEmptyCategories}
-            categoriesUsed={categoriesUsed}
-            wearByComponentId={wearByComponentId}
-          />
-        </TabsContent>
-
-        <TabsContent value="overview" className="flex flex-col gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Ride summary</CardTitle>
-              <CardDescription>Strava-synced totals for this bike.</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3 text-sm">
-              <OverviewRow label="Total distance">
-                {data.rideStats ? formatDistance(data.rideStats.distanceMeters) : "—"}
-              </OverviewRow>
-              <OverviewRow label="Moving time">
-                {data.rideStats ? formatMovingTime(data.rideStats.movingTimeMinutes) : "—"}
-              </OverviewRow>
-              <OverviewRow label="Rides synced">{data.rideStats?.activityCount ?? "—"}</OverviewRow>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Component wear</CardTitle>
-              <CardDescription>Active components with recorded mileage.</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3 text-sm">
-              {wearComponents.length === 0 ? (
-                <p className="text-muted-foreground">
-                  No component mileage yet — sync Strava or enter usage in a component's edit form.
-                </p>
-              ) : (
-                <ul className="flex flex-col divide-y">
-                  {wearComponents.map((component) => (
-                    <li
-                      key={component.id}
-                      className="flex items-center justify-between gap-3 py-2 first:pt-0 last:pb-0"
-                    >
-                      <div className="min-w-0">
-                        <span className="text-muted-foreground">
-                          {categoryLabel(component.category)}
-                        </span>
-                        <span className="text-muted-foreground"> · </span>
-                        <span className="font-medium">{component.name}</span>
-                      </div>
-                      <ComponentStats
-                        distanceMeters={component.distanceMeters}
-                        movingTimeMinutes={component.movingTimeMinutes}
-                        className="shrink-0 text-muted-foreground"
-                      />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="activities" className="flex flex-col gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Synced rides</CardTitle>
-              <CardDescription>
-                Strava activities for this bike. Edit a ride to correct distance or linked
-                components.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ActivityList bikeId={bikeId} components={data.components} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      {/* Edit bike dialog */}
       <Dialog open={editing} onOpenChange={setEditing}>
         <DialogContent>
           <DialogHeader>
@@ -315,7 +255,6 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Delete bike dialog */}
       <ConfirmDialog
         open={deleting}
         onOpenChange={setDeleting}
@@ -336,9 +275,202 @@ export function BikeDetailPage({ bikeId }: BikeDetailPageProps) {
           }
         }}
       />
+    </div>
+  );
+}
 
-      {/* Import components from CSV (upload + confirmation gate). */}
+export function BikeComponentsTabPage() {
+  const bikeIdParam = useParams({ strict: false }).bikeId;
+  const { data } = useBike(bikeIdParam ?? "__missing__");
+  const [importing, setImporting] = useState(false);
+  const [showEmptyCategories, setShowEmptyCategories] = useState(false);
+
+  const { data: maintenance } = useBikeMaintenance(bikeIdParam ?? "__missing__", {
+    enabled: !!bikeIdParam && (data?.maintenanceAlertCount ?? 0) > 0,
+  });
+
+  const dueTasksByCategory = useMemo(
+    () => dueTasksByCategoryFromTasks(maintenance?.maintenanceTasks ?? []),
+    [maintenance?.maintenanceTasks],
+  );
+
+  const wearByComponentId = useMemo((): WearByComponentId => {
+    const map: WearByComponentId = new Map();
+    for (const c of data?.components ?? []) {
+      map.set(c.id, {
+        distanceMeters: c.distanceMeters,
+        movingTimeMinutes: c.movingTimeMinutes,
+      });
+    }
+    return map;
+  }, [data?.components]);
+
+  if (!bikeIdParam || !data) return null;
+
+  const bikeId = bikeIdParam;
+
+  const grouped = groupByCategory(data.components);
+  const categoriesUsed = grouped.size;
+  const emptyCategoryCount = CATEGORIES.length - categoriesUsed;
+
+  function handleDownloadTemplate(): void {
+    downloadCsv("mybike-components-template.csv", buildTemplateCsv());
+    toast.message("Template downloaded", {
+      description: "Fill in rows and import here. Leave id empty for new parts.",
+    });
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {data.components.length === 0 ? (
+        <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+          No components yet. Add parts to any of the categories below — they are always available.
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          {data.components.length} component
+          {data.components.length === 1 ? "" : "s"} across {categoriesUsed} categor
+          {categoriesUsed === 1 ? "y" : "ies"}.
+        </p>
+      )}
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="outline" size="sm" onClick={() => setImporting(true)}>
+          <UploadIcon />
+          Import CSV
+        </Button>
+        <Button asChild variant="outline" size="sm">
+          <a href={api.exportComponentsUrl(bikeId)} download>
+            <DownloadIcon />
+            Export CSV
+          </a>
+        </Button>
+        <Button variant="ghost" size="sm" onClick={handleDownloadTemplate}>
+          <SheetIcon />
+          Template
+        </Button>
+        {emptyCategoryCount > 0 && categoriesUsed > 0 && (
+          <Button variant="ghost" size="sm" onClick={() => setShowEmptyCategories((v) => !v)}>
+            {showEmptyCategories
+              ? "Hide empty categories"
+              : `Show empty categories (${emptyCategoryCount})`}
+          </Button>
+        )}
+      </div>
+      <ComponentsSplitView
+        bikeId={bikeId}
+        components={data.components}
+        showEmptyCategories={showEmptyCategories}
+        categoriesUsed={categoriesUsed}
+        wearByComponentId={wearByComponentId}
+        maintenanceAlertByCategory={data.maintenanceAlertByCategory}
+        dueTasksByCategory={dueTasksByCategory}
+      />
       <ImportComponentsDialog bikeId={bikeId} open={importing} onOpenChange={setImporting} />
+    </div>
+  );
+}
+
+export function BikeOverviewTabPage() {
+  const bikeIdParam = useParams({ strict: false }).bikeId;
+  const { data } = useBike(bikeIdParam ?? "__missing__");
+
+  if (!bikeIdParam || !data) return null;
+
+  const wearComponents =
+    data.components.filter((c) => c.isActive && hasStats(c.distanceMeters, c.movingTimeMinutes)) ??
+    [];
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Ride summary</CardTitle>
+          <CardDescription>Strava-synced totals for this bike.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3 text-sm">
+          <OverviewRow label="Total distance">
+            {data.rideStats ? formatDistance(data.rideStats.distanceMeters) : "—"}
+          </OverviewRow>
+          <OverviewRow label="Moving time">
+            {data.rideStats ? formatMovingTime(data.rideStats.movingTimeMinutes) : "—"}
+          </OverviewRow>
+          <OverviewRow label="Rides synced">{data.rideStats?.activityCount ?? "—"}</OverviewRow>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Component wear</CardTitle>
+          <CardDescription>Active components with recorded mileage.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3 text-sm">
+          {wearComponents.length === 0 ? (
+            <p className="text-muted-foreground">
+              No component mileage yet — sync Strava or enter usage in a component's edit form.
+            </p>
+          ) : (
+            <ul className="flex flex-col divide-y">
+              {wearComponents.map((component) => (
+                <li
+                  key={component.id}
+                  className="flex items-center justify-between gap-3 py-2 first:pt-0 last:pb-0"
+                >
+                  <div className="min-w-0">
+                    <span className="text-muted-foreground">
+                      {categoryLabel(component.category)}
+                    </span>
+                    <span className="text-muted-foreground"> · </span>
+                    <span className="font-medium">{component.name}</span>
+                  </div>
+                  <ComponentStats
+                    distanceMeters={component.distanceMeters}
+                    movingTimeMinutes={component.movingTimeMinutes}
+                    className="shrink-0 text-muted-foreground"
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+export function BikeMaintenanceTabPage() {
+  const bikeIdParam = useParams({ strict: false }).bikeId;
+  const { category } = useSearch({ strict: false }) as MaintenanceTabSearch;
+
+  if (!bikeIdParam) return null;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <MaintenanceTab bikeId={bikeIdParam} focusCategory={category} />
+    </div>
+  );
+}
+
+export function BikeActivitiesTabPage() {
+  const bikeIdParam = useParams({ strict: false }).bikeId;
+  const { data } = useBike(bikeIdParam ?? "__missing__");
+
+  if (!bikeIdParam || !data) return null;
+
+  const bikeId = bikeIdParam;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Synced rides</CardTitle>
+          <CardDescription>
+            Strava activities for this bike. Edit a ride to correct distance or linked components.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ActivityList bikeId={bikeId} components={data.components} />
+        </CardContent>
+      </Card>
     </div>
   );
 }

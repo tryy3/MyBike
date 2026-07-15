@@ -12,10 +12,11 @@ import {
   type BikeDetailGql,
 } from "@/lib/graphql/operations";
 import type { BikeDetailWithStats } from "@/features/bikes/api";
+import { invalidateWearDependentBikeQueries } from "@/features/maintenance/cache-sync";
 
 function invalidateComponentQueries(qc: QueryClient, bikeId: string) {
-  void qc.invalidateQueries({ queryKey: queryKeys.bike(bikeId) });
-  void qc.invalidateQueries({ queryKey: queryKeys.fieldSuggestions });
+  invalidateWearDependentBikeQueries(qc, bikeId);
+  void qc.invalidateQueries({ queryKey: queryKeys.fieldSuggestions, exact: true });
 }
 
 export function useFieldSuggestions() {

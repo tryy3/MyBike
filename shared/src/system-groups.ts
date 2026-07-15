@@ -122,3 +122,57 @@ export function groupCategoriesBySystem(components: Component[]): SystemGroupNav
 export function getActiveComponent(components: Component[]): Component | undefined {
   return components.find((c) => c.isActive) ?? components[0];
 }
+
+export interface MaintenanceTaskGroupable {
+  kind: string;
+  componentCategory: string | null;
+  status: string;
+  sortOrder: number;
+}
+
+export interface SystemGroupTasks<T extends MaintenanceTaskGroupable> {
+  group: SystemGroupDef;
+  tasks: T[];
+}
+
+function compareMaintenanceTasks<T extends MaintenanceTaskGroupable>(a: T, b: T): number {
+  const rank = (task: T) => {
+    if (task.status === "due" || task.status === "overdue") return 0;
+    if (task.status === "snoozed") return 1;
+    return 2;
+  };
+  const byStatus = rank(a) - rank(b);
+  if (byStatus !== 0) return byStatus;
+  return a.sortOrder - b.sortOrder;
+}
+
+/** Group periodic/EOL maintenance tasks by bike subsystem (touch-ups excluded). */
+export function groupMaintenanceTasksBySystem<T extends MaintenanceTaskGroupable>(
+  tasks: readonly T[],
+): SystemGroupTasks<T>[] {
+  const byGroupId = new Map<string, T[]>();
+
+  for (const task of tasks) {
+    if (task.kind === "touch_up") continue;
+    const group = task.componentCategory ? getSystemGroup(task.componentCategory) : undefined;
+    const groupId = group?.id ?? "other";
+    const list = byGroupId.get(groupId) ?? [];
+    list.push(task);
+    byGroupId.set(groupId, list);
+  }
+
+  const result: SystemGroupTasks<T>[] = [];
+  for (const group of SYSTEM_GROUPS) {
+    const groupTasks = byGroupId.get(group.id);
+    if (!groupTasks || groupTasks.length === 0) continue;
+    groupTasks.sort(compareMaintenanceTasks);
+    result.push({ group, tasks: groupTasks });
+  }
+  return result;
+}
+
+export function groupHasDueMaintenanceTasks<T extends { status: string }>(
+  tasks: readonly T[],
+): boolean {
+  return tasks.some((task) => task.status === "due" || task.status === "overdue");
+}

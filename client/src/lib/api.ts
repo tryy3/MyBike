@@ -113,7 +113,9 @@ export interface ImportRowError {
 
 export const queryKeys = {
   bikes: ["bikes"] as const,
-  bike: (id: string) => ["bikes", id] as const,
+  /** Singular prefix so invalidating `bikes` does not cascade to bike detail queries. */
+  bike: (id: string) => ["bike", id] as const,
+  bikeMaintenance: (id: string) => ["bike", id, "maintenance"] as const,
   fieldSuggestions: ["field-suggestions"] as const,
   stravaStatus: ["strava", "status"] as const,
   stravaConfig: ["strava", "config"] as const,
