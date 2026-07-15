@@ -188,7 +188,9 @@ git config core.hooksPath .vite-hooks   # enable pre-commit/pre-push hooks
 
 ## Cursor Cloud specific instructions
 
-Cloud agents run on a snapshot-managed environment (the previous `.cursor/environment.json` + Dockerfile were removed) that already has **Node 26** available. The startup update script runs `npm install`, builds `shared`, and applies DB migrations so a fresh agent is ready for dev servers and typecheck.
+Cloud agents run on a snapshot-managed environment (the previous `.cursor/environment.json` + Dockerfile were removed) that already has **Node 26** available. The startup update script runs `npm install` and builds the `shared` + `logging` packages via `npm run build:packages` (both are consumed as compiled `dist/`, and `dist/` is gitignored — so a fresh checkout has no build output and **must** build both before running/typechecking/migrating; building only `shared` and skipping `logging` causes `ERR_MODULE_NOT_FOUND` for `logging/dist/index.js` the moment server code imports `logging`).
+
+The local DB (`server/data/mybike.db`) is **not** committed (`server/data/` is gitignored); it is created at runtime by `npm run -w server db:migrate` and persisted in the snapshot. Run `db:migrate` manually if the DB is missing or the schema changed (it is idempotent, but requires `logging`/`shared` to be built first because the migrate runner imports the server logging module). A `.env` is not committed — copy `.env.example` to `.env` and set `BETTER_AUTH_SECRET` if you want non-fallback auth.
 
 If you edit anything under `shared/src`, rebuild with `npm run -w shared build` before running server/client dev or typecheck — `tsx watch` does **not** recompile `shared`.
 
