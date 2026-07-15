@@ -22,11 +22,16 @@ const inputSchema = z
   .strict()
   .superRefine((data, ctx) => {
     const hasTask = data.taskId != null;
-    const hasBikeCat = data.bikeId != null && data.category != null;
-    if (hasTask === hasBikeCat) {
+    const hasBike = data.bikeId != null;
+    const hasCategory = data.category != null;
+
+    const byTask = hasTask && !hasBike && !hasCategory;
+    const byBikeCat = !hasTask && hasBike && hasCategory;
+
+    if (!byTask && !byBikeCat) {
       ctx.addIssue({
         code: "custom",
-        message: "Provide either taskId, or both bikeId and category",
+        message: "Provide either taskId alone, or both bikeId and category",
       });
     }
   });

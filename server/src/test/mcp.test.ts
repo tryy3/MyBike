@@ -396,6 +396,27 @@ describe("MCP server", () => {
     expect(active?.[0]?.id).toBe(newId);
   });
 
+  it("replace_component rejects mixed locator fields", async () => {
+    const { user: testUser } = await createAuthenticatedAgent(app);
+    const writeKey = await createApiKeyForTestUser(testUser, permissionsForScope("write"));
+
+    const mixed = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 64,
+      method: "tools/call",
+      params: {
+        name: "replace_component",
+        arguments: {
+          taskId: "00000000-0000-4000-8000-000000000001",
+          bikeId: "00000000-0000-4000-8000-000000000002",
+          newComponentId: "00000000-0000-4000-8000-000000000003",
+        },
+      },
+    });
+
+    expect(jsonRpcResult(mixed.body)?.isError).toBe(true);
+  });
+
   it("replace_component denies read-only API keys", async () => {
     const { user: testUser } = await createAuthenticatedAgent(app);
     const readKey = await createApiKeyForTestUser(testUser);
