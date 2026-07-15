@@ -75,6 +75,7 @@ export const MAINTENANCE_TASK_FIELDS = [
 
 export const DEFAULT_BIKE_FIELDS = ["id", "name", "brand", "model", "componentCount"] as const;
 export const DEFAULT_COMPONENT_FIELDS = [
+  "id",
   "category",
   "categoryLabel",
   "name",

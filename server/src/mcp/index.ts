@@ -9,6 +9,7 @@ import { registerGraphqlQueryTool } from "./tools/graphql-query.js";
 import { registerListBikesTool } from "./tools/list-bikes.js";
 import { registerListComponentCategoriesTool } from "./tools/list-component-categories.js";
 import { registerListMaintenanceTasksTool } from "./tools/list-maintenance-tasks.js";
+import { registerSetActiveComponentTool } from "./tools/set-active-component.js";
 import { registerUpdateComponentTool } from "./tools/update-component.js";
 
 export function createMcpServer(): McpServer {
@@ -41,6 +42,7 @@ export function createMcpServer(): McpServer {
   registerFindBikeTool(server);
   registerCreateComponentTool(server);
   registerUpdateComponentTool(server);
+  registerSetActiveComponentTool(server);
   registerGetBikeTool(server);
   registerListComponentCategoriesTool(server);
   registerGetBikeComponentsTool(server);

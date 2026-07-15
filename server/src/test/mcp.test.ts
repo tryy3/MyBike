@@ -284,6 +284,52 @@ describe("MCP server", () => {
     expect(jsonRpcResult(rejected.body)?.isError).toBe(true);
   });
 
+  it("set_active_component rotates active chain", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    const writeKey = await createApiKeyForTestUser(testUser, permissionsForScope("write"));
+    const bike = await createBikeViaGraphql(agent, "Swap Chain Bike");
+    const a = await createComponentViaGraphql(agent, bike.id, {
+      category: "chain",
+      name: "Chain A",
+      brand: "KMC",
+      model: "A",
+      isActive: true,
+    });
+    const b = await createComponentViaGraphql(agent, bike.id, {
+      category: "chain",
+      name: "Chain B",
+      brand: "KMC",
+      model: "B",
+      isActive: false,
+    });
+
+    const res = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 50,
+      method: "tools/call",
+      params: { name: "set_active_component", arguments: { componentId: b.id } },
+    });
+    const component = (
+      jsonRpcResult(res.body)?.structuredContent as { component: { id: string; isActive: boolean } }
+    )?.component;
+    expect(component).toMatchObject({ id: b.id, isActive: true });
+
+    // verify via get_bike_components activeOnly
+    const list = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 51,
+      method: "tools/call",
+      params: {
+        name: "get_bike_components",
+        arguments: { bikeId: bike.id, activeOnly: true, filter: { categories: ["chain"] } },
+      },
+    });
+    const active = (jsonRpcResult(list.body)?.structuredContent as { components: { id: string }[] })
+      ?.components;
+    expect(active?.map((c) => c.id)).toEqual([b.id]);
+    expect(a.id).not.toBe(b.id);
+  });
+
   it("list_component_categories returns all categories", async () => {
     const { user: testUser } = await createAuthenticatedAgent(app);
     const readKey = await createApiKeyForTestUser(testUser);
