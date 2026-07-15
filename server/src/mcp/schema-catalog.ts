@@ -49,6 +49,30 @@ export const COMPONENT_FILTER_FIELDS = [
   "modelContains",
 ] as const;
 
+export const MAINTENANCE_TASK_FIELDS = [
+  "id",
+  "bikeId",
+  "source",
+  "templateKey",
+  "kind",
+  "title",
+  "description",
+  "componentCategory",
+  "triggerMode",
+  "distanceMeters",
+  "intervalDays",
+  "guideUrl",
+  "enabled",
+  "customized",
+  "sortOrder",
+  "status",
+  "progress",
+  "lastCheckedAt",
+  "canDelete",
+  "createdAt",
+  "updatedAt",
+] as const;
+
 export const DEFAULT_BIKE_FIELDS = ["id", "name", "brand", "model", "componentCount"] as const;
 export const DEFAULT_COMPONENT_FIELDS = [
   "category",
@@ -59,6 +83,16 @@ export const DEFAULT_COMPONENT_FIELDS = [
   "isActive",
 ] as const;
 export const DEFAULT_CATEGORY_FIELDS = ["id", "label"] as const;
+export const DEFAULT_MAINTENANCE_TASK_FIELDS = [
+  "id",
+  "kind",
+  "title",
+  "componentCategory",
+  "status",
+  "progress",
+  "enabled",
+  "templateKey",
+] as const;
 
 export function getSchemaCatalog() {
   return {
@@ -68,6 +102,8 @@ export function getSchemaCatalog() {
     wearFields: [...WEAR_FIELDS],
     categoryFields: [...CATEGORY_FIELDS],
     componentFilterFields: [...COMPONENT_FILTER_FIELDS],
+    maintenanceTaskFields: [...MAINTENANCE_TASK_FIELDS],
+    defaultMaintenanceTaskFields: [...DEFAULT_MAINTENANCE_TASK_FIELDS],
     componentCategories: CATEGORIES.map((category) => ({
       id: category.id,
       label: category.label,

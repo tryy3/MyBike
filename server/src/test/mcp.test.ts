@@ -159,6 +159,31 @@ describe("MCP server", () => {
     expect(empty).toEqual([]);
   });
 
+  it("list_maintenance_tasks returns seeded EOL tasks", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    const readKey = await createApiKeyForTestUser(testUser);
+    const bike = await createBikeViaGraphql(agent, "Maint Bike");
+
+    const res = await mcpRequest(readKey, {
+      jsonrpc: "2.0",
+      id: 22,
+      method: "tools/call",
+      params: {
+        name: "list_maintenance_tasks",
+        arguments: { bikeId: bike.id, kind: "eol", category: "cassette" },
+      },
+    });
+
+    expect(res.status).toBe(200);
+    const tasks = (
+      jsonRpcResult(res.body)?.structuredContent as {
+        tasks: { kind: string; componentCategory: string | null; templateKey: string | null }[];
+      }
+    )?.tasks;
+    expect(tasks?.length).toBeGreaterThanOrEqual(1);
+    expect(tasks!.every((t) => t.kind === "eol" && t.componentCategory === "cassette")).toBe(true);
+  });
+
   it("list_component_categories returns all categories", async () => {
     const { user: testUser } = await createAuthenticatedAgent(app);
     const readKey = await createApiKeyForTestUser(testUser);

@@ -7,6 +7,7 @@ import { registerGetBikeComponentsTool } from "./tools/get-bike-components.js";
 import { registerGraphqlQueryTool } from "./tools/graphql-query.js";
 import { registerListBikesTool } from "./tools/list-bikes.js";
 import { registerListComponentCategoriesTool } from "./tools/list-component-categories.js";
+import { registerListMaintenanceTasksTool } from "./tools/list-maintenance-tasks.js";
 
 export function createMcpServer(): McpServer {
   const server = new McpServer({
@@ -39,6 +40,7 @@ export function createMcpServer(): McpServer {
   registerGetBikeTool(server);
   registerListComponentCategoriesTool(server);
   registerGetBikeComponentsTool(server);
+  registerListMaintenanceTasksTool(server);
   registerGraphqlQueryTool(server);
 
   return server;
