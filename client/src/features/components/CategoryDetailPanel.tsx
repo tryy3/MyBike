@@ -27,7 +27,13 @@ export function CategoryDetailPanel({
 }: CategoryDetailPanelProps) {
   if (!selectedCategoryId) {
     return (
-      <Card className={cn("lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)]", className)}>
+      <Card
+        className={cn(
+          // Clear sticky app header (h-14) + 1rem gap; max-h leaves matching bottom space
+          "lg:sticky lg:top-18 lg:max-h-[calc(100vh-5.5rem)]",
+          className,
+        )}
+      >
         <CardContent className="flex min-h-48 items-center justify-center p-6">
           <p className="text-center text-sm text-muted-foreground text-balance">
             Select a category to view parts, swap alternates, or add components.
@@ -42,7 +48,10 @@ export function CategoryDetailPanel({
 
   return (
     <Card
-      className={cn("lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto", className)}
+      className={cn(
+        "lg:sticky lg:top-18 lg:max-h-[calc(100vh-5.5rem)] lg:overflow-y-auto",
+        className,
+      )}
     >
       <CardHeader>
         <CardTitle className="text-base">{label}</CardTitle>
