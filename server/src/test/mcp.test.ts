@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import request from "supertest";
+import { permissionsForScope } from "shared";
 import { createApp } from "../app.js";
 import { createApiKeyForTestUser, graphqlRequestWithApiKey } from "./api-key-helper.js";
 import { createAuthenticatedAgent } from "./auth-helper.js";
@@ -182,6 +183,61 @@ describe("MCP server", () => {
     )?.tasks;
     expect(tasks?.length).toBeGreaterThanOrEqual(1);
     expect(tasks!.every((t) => t.kind === "eol" && t.componentCategory === "cassette")).toBe(true);
+  });
+
+  it("create_component requires write scope and creates inactive when sibling exists", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    const readKey = await createApiKeyForTestUser(testUser);
+    const writeKey = await createApiKeyForTestUser(testUser, permissionsForScope("write"));
+    const bike = await createBikeViaGraphql(agent, "Create Comp Bike");
+    await createComponentViaGraphql(agent, bike.id, {
+      category: "cassette",
+      name: "Old Cassette",
+      brand: "Shimano",
+      model: "CS-Old",
+      isActive: true,
+    });
+
+    const denied = await mcpRequest(readKey, {
+      jsonrpc: "2.0",
+      id: 30,
+      method: "tools/call",
+      params: {
+        name: "create_component",
+        arguments: {
+          bikeId: bike.id,
+          category: "cassette",
+          name: "New Cassette",
+          brand: "SRAM",
+          model: "XG-1270",
+        },
+      },
+    });
+    expect(jsonRpcResult(denied.body)?.isError).toBe(true);
+
+    const ok = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 31,
+      method: "tools/call",
+      params: {
+        name: "create_component",
+        arguments: {
+          bikeId: bike.id,
+          category: "cassette",
+          name: "New Cassette",
+          brand: "SRAM",
+          model: "XG-1270",
+        },
+      },
+    });
+    expect(ok.status).toBe(200);
+    const component = (
+      jsonRpcResult(ok.body)?.structuredContent as {
+        component: { isActive: boolean; model: string };
+      }
+    )?.component;
+    expect(component?.model).toBe("XG-1270");
+    expect(component?.isActive).toBe(false);
   });
 
   it("list_component_categories returns all categories", async () => {

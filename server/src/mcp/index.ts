@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { getSchemaCatalog } from "./schema-catalog.js";
+import { registerCreateComponentTool } from "./tools/create-component.js";
 import { registerDescribeDataModelTool } from "./tools/describe-data-model.js";
 import { registerFindBikeTool } from "./tools/find-bike.js";
 import { registerGetBikeTool } from "./tools/get-bike.js";
@@ -37,6 +38,7 @@ export function createMcpServer(): McpServer {
   registerDescribeDataModelTool(server);
   registerListBikesTool(server);
   registerFindBikeTool(server);
+  registerCreateComponentTool(server);
   registerGetBikeTool(server);
   registerListComponentCategoriesTool(server);
   registerGetBikeComponentsTool(server);
