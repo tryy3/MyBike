@@ -47,36 +47,47 @@ export function registerReplaceComponentTool(server: McpServer): void {
     },
     async (args, ctx) => {
       const auth = getMcpAuth(ctx);
-      return withMcpToolLog("replace_component", auth, args, async () => {
-        const userId = requireWritePermission(auth);
-        const data = inputSchema.parse(args);
-        let taskId = data.taskId;
+      return withMcpToolLog(
+        "replace_component",
+        auth,
+        args,
+        async () => {
+          const userId = requireWritePermission(auth);
+          const data = inputSchema.parse(args);
+          let taskId = data.taskId;
 
-        if (!taskId) {
-          const tasks = await listMaintenanceTasksForBike(data.bikeId!, userId);
-          const matches = tasks.filter(
-            (task) =>
-              task.enabled && task.kind === "eol" && task.componentCategory === data.category,
-          );
-          if (matches.length !== 1) {
-            throw badRequest(
-              `Expected exactly one enabled EOL task for ${data.category}; found ${matches.length}`,
+          if (!taskId) {
+            const tasks = await listMaintenanceTasksForBike(data.bikeId!, userId);
+            const matches = tasks.filter(
+              (task) =>
+                task.enabled && task.kind === "eol" && task.componentCategory === data.category,
             );
+            if (matches.length !== 1) {
+              throw badRequest(
+                `Expected exactly one enabled EOL task for ${data.category}; found ${matches.length}`,
+              );
+            }
+            taskId = matches[0]!.id;
           }
-          taskId = matches[0]!.id;
-        }
 
-        const record = await replaceComponentMaintenance(taskId, userId, {
-          newComponentId: data.newComponentId,
-          notes: data.notes ?? null,
-          cost: data.cost,
-          resetWear: data.resetWear ?? true,
-        });
-        return {
-          content: [{ type: "text" as const, text: JSON.stringify(record, null, 2) }],
-          structuredContent: { serviceRecord: record },
-        };
-      });
+          const record = await replaceComponentMaintenance(taskId, userId, {
+            newComponentId: data.newComponentId,
+            notes: data.notes ?? null,
+            cost: data.cost,
+            resetWear: data.resetWear ?? true,
+          });
+          return {
+            content: [{ type: "text" as const, text: JSON.stringify(record, null, 2) }],
+            structuredContent: { serviceRecord: record },
+          };
+        },
+        (result) => ({
+          serviceRecordId: result.structuredContent.serviceRecord.id,
+          taskId: result.structuredContent.serviceRecord.taskId,
+          componentId: result.structuredContent.serviceRecord.componentId,
+          newComponentId: args.newComponentId,
+        }),
+      );
     },
   );
 }

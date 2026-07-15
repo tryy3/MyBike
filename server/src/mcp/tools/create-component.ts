@@ -30,20 +30,26 @@ export function registerCreateComponentTool(server: McpServer): void {
     },
     async (args, ctx) => {
       const auth = getMcpAuth(ctx);
-      return withMcpToolLog("create_component", auth, args, async () => {
-        const userId = requireWritePermission(auth);
-        const { bikeId, ...argsWithoutBikeId } = args;
-        const parsed = componentInsertSchema.parse({
-          ...argsWithoutBikeId,
-          isActive: false,
-        });
-        const row = await createComponent(bikeId, userId, parsed);
-        const component = await serializeComponent(row);
-        return {
-          content: [{ type: "text" as const, text: JSON.stringify(component, null, 2) }],
-          structuredContent: { component },
-        };
-      });
+      return withMcpToolLog(
+        "create_component",
+        auth,
+        args,
+        async () => {
+          const userId = requireWritePermission(auth);
+          const { bikeId, ...argsWithoutBikeId } = args;
+          const parsed = componentInsertSchema.parse({
+            ...argsWithoutBikeId,
+            isActive: false,
+          });
+          const row = await createComponent(bikeId, userId, parsed);
+          const component = await serializeComponent(row);
+          return {
+            content: [{ type: "text" as const, text: JSON.stringify(component, null, 2) }],
+            structuredContent: { component },
+          };
+        },
+        (result) => ({ componentId: result.structuredContent.component.id }),
+      );
     },
   );
 }

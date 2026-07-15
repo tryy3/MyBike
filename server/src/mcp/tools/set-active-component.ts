@@ -20,15 +20,21 @@ export function registerSetActiveComponentTool(server: McpServer): void {
     },
     async (args, ctx) => {
       const auth = getMcpAuth(ctx);
-      return withMcpToolLog("set_active_component", auth, args, async () => {
-        const userId = requireWritePermission(auth);
-        const row = await activateComponent(args.componentId, userId);
-        const component = await serializeComponent(row);
-        return {
-          content: [{ type: "text" as const, text: JSON.stringify(component, null, 2) }],
-          structuredContent: { component },
-        };
-      });
+      return withMcpToolLog(
+        "set_active_component",
+        auth,
+        args,
+        async () => {
+          const userId = requireWritePermission(auth);
+          const row = await activateComponent(args.componentId, userId);
+          const component = await serializeComponent(row);
+          return {
+            content: [{ type: "text" as const, text: JSON.stringify(component, null, 2) }],
+            structuredContent: { component },
+          };
+        },
+        (result) => ({ componentId: result.structuredContent.component.id }),
+      );
     },
   );
 }

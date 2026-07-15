@@ -1,7 +1,9 @@
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it, vi } from "vite-plus/test";
 import request from "supertest";
 import { permissionsForScope } from "shared";
 import { createApp } from "../app.js";
+import { logger } from "../lib/logging/index.js";
+import { withMcpToolLog } from "../mcp/tool-log.js";
 import { createApiKeyForTestUser, graphqlRequestWithApiKey } from "./api-key-helper.js";
 import { createAuthenticatedAgent } from "./auth-helper.js";
 import { createBikeViaGraphql, createComponentViaGraphql } from "./graphql-helper.js";
@@ -310,6 +312,55 @@ describe("MCP server", () => {
       },
     });
     expect(jsonRpcResult(rejected.body)?.isError).toBe(true);
+  });
+
+  it("write tools isolate components between users", async () => {
+    const { agent: agentA } = await createAuthenticatedAgent(app);
+    const { user: userB } = await createAuthenticatedAgent(app);
+    const bikeA = await createBikeViaGraphql(agentA, "User A Write Isolation");
+    const componentA = await createComponentViaGraphql(agentA, bikeA.id, {
+      category: "chain",
+      name: "User A Chain",
+      brand: "KMC",
+      model: "A",
+      isActive: true,
+    });
+    const writeKeyB = await createApiKeyForTestUser(userB, permissionsForScope("write"));
+
+    const res = await mcpRequest(writeKeyB, {
+      jsonrpc: "2.0",
+      id: 42,
+      method: "tools/call",
+      params: {
+        name: "update_component",
+        arguments: { componentId: componentA.id, brand: "User B Brand" },
+      },
+    });
+
+    expect(res.status).toBe(200);
+    expect(jsonRpcResult(res.body)?.isError).toBe(true);
+  });
+
+  it("withMcpToolLog includes summarized result fields in success logs", async () => {
+    const info = vi.spyOn(logger, "info").mockImplementation(() => undefined);
+
+    await withMcpToolLog(
+      "test_write",
+      { userId: "user-1", permissions: permissionsForScope("write"), token: "test-token" },
+      { notes: "not logged as result data" },
+      async () => ({ structuredContent: { component: { id: "component-1" } } }),
+      (result) => ({ componentId: result.structuredContent.component.id }),
+    );
+
+    expect(info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "mcp.tool",
+        outcome: "ok",
+        componentId: "component-1",
+      }),
+      "MCP tool test_write ok",
+    );
+    info.mockRestore();
   });
 
   it("set_active_component rotates active chain", async () => {

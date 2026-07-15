@@ -21,6 +21,7 @@ export async function withMcpToolLog<TArgs, TResult>(
   auth: McpAuthContext,
   args: TArgs,
   fn: () => Promise<TResult>,
+  getLogExtra?: (result: TResult) => Record<string, unknown>,
 ): Promise<TResult> {
   const started = Date.now();
   try {
@@ -33,6 +34,7 @@ export async function withMcpToolLog<TArgs, TResult>(
         outcome: "ok",
         durationMs: Date.now() - started,
         args: summarizeMcpArgs(args),
+        ...getLogExtra?.(result),
       },
       `MCP tool ${tool} ok`,
     );
