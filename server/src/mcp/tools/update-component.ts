@@ -27,7 +27,7 @@ export function registerUpdateComponentTool(server: McpServer): void {
     {
       title: "Update component",
       description:
-        "Updates a component's brand, model, notes, and purchase details. The component name cannot be changed.",
+        "Partially updates a component's brand, model, notes, and purchase details. Only fields you include are changed; omit a field to leave it unchanged. Pass null (or empty string for text/date fields) to clear a value. The component name cannot be changed.",
       inputSchema: mcpComponentUpdateSchema,
     },
     async (args, ctx) => {

@@ -33,6 +33,32 @@ const purchaseDateSchema = z
   .nullish()
   .transform((v) => (v == null || v.trim() === "" ? null : v));
 
+/** Patch field: omitted → leave unchanged; null/"" → clear; value → set. */
+const patchNotes = z
+  .union([z.string().max(5000), z.null()])
+  .optional()
+  .transform((v) => (v === undefined ? undefined : v == null || v.trim() === "" ? null : v));
+
+const patchOptionalString = z
+  .union([z.string().max(200), z.null()])
+  .optional()
+  .transform((v) => (v === undefined ? undefined : v == null || v.trim() === "" ? null : v.trim()));
+
+const patchOptionalInt = z.union([z.number().int().min(0), z.null()]).optional();
+
+const patchOptionalCost = z.union([z.number().min(0), z.null()]).optional();
+
+const patchPurchaseDate = z
+  .union([
+    z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD")
+      .or(z.literal("")),
+    z.null(),
+  ])
+  .optional()
+  .transform((v) => (v === undefined ? undefined : v == null || v.trim() === "" ? null : v));
+
 const componentOptionalFields = {
   distanceMeters: optionalInt,
   movingTimeMinutes: optionalInt,
@@ -60,12 +86,12 @@ export const componentUpdateSchema = z.object({
   name: requiredString.optional(),
   brand: requiredString.optional(),
   model: requiredString.optional(),
-  notes: optionalNotes,
-  distanceMeters: optionalInt,
-  movingTimeMinutes: optionalInt,
-  purchaseDate: purchaseDateSchema,
-  purchaseCost: optionalCost,
-  purchaseStore: optionalString,
+  notes: patchNotes,
+  distanceMeters: patchOptionalInt,
+  movingTimeMinutes: patchOptionalInt,
+  purchaseDate: patchPurchaseDate,
+  purchaseCost: patchOptionalCost,
+  purchaseStore: patchOptionalString,
 });
 
 export const componentSchema = componentBaseSchema.extend({

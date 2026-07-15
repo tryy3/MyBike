@@ -314,6 +314,77 @@ describe("MCP server", () => {
     expect(jsonRpcResult(rejected.body)?.isError).toBe(true);
   });
 
+  it("update_component patches only provided fields", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    const writeKey = await createApiKeyForTestUser(testUser, permissionsForScope("write"));
+    const bike = await createBikeViaGraphql(agent, "Patch Comp Bike");
+    const created = await createComponentViaGraphql(agent, bike.id, {
+      category: "cassette",
+      name: "Patch Cassette",
+      brand: "Shimano",
+      model: "HG",
+      isActive: true,
+      purchaseDate: "2026-01-10",
+      purchaseCost: 55,
+      purchaseStore: "Local Bike Shop",
+      notes: "Keep me",
+    });
+
+    const costOnly = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 43,
+      method: "tools/call",
+      params: {
+        name: "update_component",
+        arguments: { componentId: created.id, purchaseCost: 60 },
+      },
+    });
+    const afterCost = (
+      jsonRpcResult(costOnly.body)?.structuredContent as {
+        component: {
+          purchaseCost: number | null;
+          purchaseDate: string | null;
+          purchaseStore: string | null;
+          notes: string | null;
+          brand: string;
+        };
+      }
+    )?.component;
+    expect(afterCost).toMatchObject({
+      brand: "Shimano",
+      purchaseCost: 60,
+      purchaseDate: "2026-01-10",
+      purchaseStore: "Local Bike Shop",
+      notes: "Keep me",
+    });
+
+    const clearStore = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 44,
+      method: "tools/call",
+      params: {
+        name: "update_component",
+        arguments: { componentId: created.id, purchaseStore: null },
+      },
+    });
+    const afterClear = (
+      jsonRpcResult(clearStore.body)?.structuredContent as {
+        component: {
+          purchaseCost: number | null;
+          purchaseDate: string | null;
+          purchaseStore: string | null;
+          notes: string | null;
+        };
+      }
+    )?.component;
+    expect(afterClear).toMatchObject({
+      purchaseCost: 60,
+      purchaseDate: "2026-01-10",
+      purchaseStore: null,
+      notes: "Keep me",
+    });
+  });
+
   it("write tools isolate components between users", async () => {
     const { agent: agentA } = await createAuthenticatedAgent(app);
     const { user: userB } = await createAuthenticatedAgent(app);
