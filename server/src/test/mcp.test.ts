@@ -64,6 +64,7 @@ describe("MCP server", () => {
       expect.arrayContaining([
         "describe_data_model",
         "list_bikes",
+        "find_bike",
         "get_bike",
         "list_component_categories",
         "get_bike_components",
@@ -128,6 +129,34 @@ describe("MCP server", () => {
         ?.bikes ?? []
     ).find((entry) => entry.id === bike.id);
     expect(trimmedBike).toEqual({ id: bike.id, name: "MCP Bike A" });
+  });
+
+  it("find_bike matches name substring", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    const readKey = await createApiKeyForTestUser(testUser);
+    const bike = await createBikeViaGraphql(agent, "City Hybrid");
+
+    const res = await mcpRequest(readKey, {
+      jsonrpc: "2.0",
+      id: 20,
+      method: "tools/call",
+      params: { name: "find_bike", arguments: { nameContains: "hybrid" } },
+    });
+
+    expect(res.status).toBe(200);
+    const bikes = (
+      jsonRpcResult(res.body)?.structuredContent as { bikes: { id: string; name: string }[] }
+    )?.bikes;
+    expect(bikes?.some((b) => b.id === bike.id && b.name === "City Hybrid")).toBe(true);
+
+    const none = await mcpRequest(readKey, {
+      jsonrpc: "2.0",
+      id: 21,
+      method: "tools/call",
+      params: { name: "find_bike", arguments: { nameContains: "no-such-bike-zzz" } },
+    });
+    const empty = (jsonRpcResult(none.body)?.structuredContent as { bikes: unknown[] })?.bikes;
+    expect(empty).toEqual([]);
   });
 
   it("list_component_categories returns all categories", async () => {
