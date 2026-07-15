@@ -1,6 +1,9 @@
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it, vi } from "vite-plus/test";
 import request from "supertest";
+import { permissionsForScope } from "shared";
 import { createApp } from "../app.js";
+import { logger } from "../lib/logging/index.js";
+import { withMcpToolLog } from "../mcp/tool-log.js";
 import { createApiKeyForTestUser, graphqlRequestWithApiKey } from "./api-key-helper.js";
 import { createAuthenticatedAgent } from "./auth-helper.js";
 import { createBikeViaGraphql, createComponentViaGraphql } from "./graphql-helper.js";
@@ -68,8 +71,37 @@ describe("MCP server", () => {
         "list_component_categories",
         "get_bike_components",
         "graphql_query",
+        "find_bike",
+        "list_maintenance_tasks",
+        "create_component",
+        "update_component",
+        "set_active_component",
+        "replace_component",
       ]),
     );
+
+    const catalogResponse = await mcpRequest(readKey, {
+      jsonrpc: "2.0",
+      id: 3,
+      method: "tools/call",
+      params: { name: "describe_data_model", arguments: {} },
+    });
+    const catalog = jsonRpcResult(catalogResponse.body)?.structuredContent as {
+      notes: Record<string, string>;
+    };
+    expect(catalog.notes).toEqual({
+      typedTools:
+        "Use fields[] on list/get tools to request only needed data. Write tools: create_component (inactive when sibling exists), update_component (brand/model/purchase/notes only — not name), set_active_component (rotate spares), replace_component (EOL service record + activate).",
+      workflows:
+        "EOL replace: find_bike → create_component → replace_component(bikeId+category+newComponentId). Spare rotation: find_bike → get_bike_components → set_active_component.",
+      graphqlQuery:
+        "Use graphql_query for ad-hoc read queries when typed tools are not enough. Mutations are rejected.",
+      categoryIds:
+        "Typed tools use hyphenated category ids (rear-derailleur). Raw GraphQL filter enums use underscores (rear_derailleur).",
+      filters:
+        "Component filters: categories, activeOnly, isActive, brands, nameContains, brandContains, modelContains.",
+      auth: "Read tools need graphql:read. Write tools need graphql:write on the API key.",
+    });
   });
 
   it("rejects missing and invalid API keys", async () => {
@@ -128,6 +160,360 @@ describe("MCP server", () => {
         ?.bikes ?? []
     ).find((entry) => entry.id === bike.id);
     expect(trimmedBike).toEqual({ id: bike.id, name: "MCP Bike A" });
+  });
+
+  it("find_bike matches name substring", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    const readKey = await createApiKeyForTestUser(testUser);
+    const bike = await createBikeViaGraphql(agent, "City Hybrid");
+
+    const res = await mcpRequest(readKey, {
+      jsonrpc: "2.0",
+      id: 20,
+      method: "tools/call",
+      params: { name: "find_bike", arguments: { nameContains: "hybrid" } },
+    });
+
+    expect(res.status).toBe(200);
+    const bikes = (
+      jsonRpcResult(res.body)?.structuredContent as { bikes: { id: string; name: string }[] }
+    )?.bikes;
+    expect(bikes?.some((b) => b.id === bike.id && b.name === "City Hybrid")).toBe(true);
+
+    const none = await mcpRequest(readKey, {
+      jsonrpc: "2.0",
+      id: 21,
+      method: "tools/call",
+      params: { name: "find_bike", arguments: { nameContains: "no-such-bike-zzz" } },
+    });
+    const empty = (jsonRpcResult(none.body)?.structuredContent as { bikes: unknown[] })?.bikes;
+    expect(empty).toEqual([]);
+  });
+
+  it("list_maintenance_tasks returns seeded EOL tasks", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    const readKey = await createApiKeyForTestUser(testUser);
+    const bike = await createBikeViaGraphql(agent, "Maint Bike");
+
+    const res = await mcpRequest(readKey, {
+      jsonrpc: "2.0",
+      id: 22,
+      method: "tools/call",
+      params: {
+        name: "list_maintenance_tasks",
+        arguments: { bikeId: bike.id, kind: "eol", category: "cassette" },
+      },
+    });
+
+    expect(res.status).toBe(200);
+    const tasks = (
+      jsonRpcResult(res.body)?.structuredContent as {
+        tasks: { kind: string; componentCategory: string | null; templateKey: string | null }[];
+      }
+    )?.tasks;
+    expect(tasks?.length).toBeGreaterThanOrEqual(1);
+    expect(tasks!.every((t) => t.kind === "eol" && t.componentCategory === "cassette")).toBe(true);
+  });
+
+  it("create_component requires write scope and creates inactive when sibling exists", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    const readKey = await createApiKeyForTestUser(testUser);
+    const writeKey = await createApiKeyForTestUser(testUser, permissionsForScope("write"));
+    const bike = await createBikeViaGraphql(agent, "Create Comp Bike");
+    await createComponentViaGraphql(agent, bike.id, {
+      category: "cassette",
+      name: "Old Cassette",
+      brand: "Shimano",
+      model: "CS-Old",
+      isActive: true,
+    });
+
+    const denied = await mcpRequest(readKey, {
+      jsonrpc: "2.0",
+      id: 30,
+      method: "tools/call",
+      params: {
+        name: "create_component",
+        arguments: {
+          bikeId: bike.id,
+          category: "cassette",
+          name: "New Cassette",
+          brand: "SRAM",
+          model: "XG-1270",
+        },
+      },
+    });
+    expect(jsonRpcResult(denied.body)?.isError).toBe(true);
+
+    const ok = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 31,
+      method: "tools/call",
+      params: {
+        name: "create_component",
+        arguments: {
+          bikeId: bike.id,
+          category: "cassette",
+          name: "New Cassette",
+          brand: "SRAM",
+          model: "XG-1270",
+        },
+      },
+    });
+    expect(ok.status).toBe(200);
+    const component = (
+      jsonRpcResult(ok.body)?.structuredContent as {
+        component: { isActive: boolean; model: string };
+      }
+    )?.component;
+    expect(component?.model).toBe("XG-1270");
+    expect(component?.isActive).toBe(false);
+  });
+
+  it("update_component updates brand/model and rejects name", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    const writeKey = await createApiKeyForTestUser(testUser, permissionsForScope("write"));
+    const bike = await createBikeViaGraphql(agent, "Update Comp Bike");
+    const created = await createComponentViaGraphql(agent, bike.id, {
+      category: "chain",
+      name: "Keep This Name",
+      brand: "OldBrand",
+      model: "OldModel",
+      isActive: true,
+    });
+
+    const ok = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 40,
+      method: "tools/call",
+      params: {
+        name: "update_component",
+        arguments: { componentId: created.id, brand: "NewBrand", model: "NewModel" },
+      },
+    });
+    const component = (
+      jsonRpcResult(ok.body)?.structuredContent as {
+        component: { name: string; brand: string; model: string };
+      }
+    )?.component;
+    expect(component).toMatchObject({
+      name: "Keep This Name",
+      brand: "NewBrand",
+      model: "NewModel",
+    });
+
+    const rejected = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 41,
+      method: "tools/call",
+      params: {
+        name: "update_component",
+        arguments: { componentId: created.id, name: "Hacked" },
+      },
+    });
+    expect(jsonRpcResult(rejected.body)?.isError).toBe(true);
+  });
+
+  it("write tools isolate components between users", async () => {
+    const { agent: agentA } = await createAuthenticatedAgent(app);
+    const { user: userB } = await createAuthenticatedAgent(app);
+    const bikeA = await createBikeViaGraphql(agentA, "User A Write Isolation");
+    const componentA = await createComponentViaGraphql(agentA, bikeA.id, {
+      category: "chain",
+      name: "User A Chain",
+      brand: "KMC",
+      model: "A",
+      isActive: true,
+    });
+    const writeKeyB = await createApiKeyForTestUser(userB, permissionsForScope("write"));
+
+    const res = await mcpRequest(writeKeyB, {
+      jsonrpc: "2.0",
+      id: 42,
+      method: "tools/call",
+      params: {
+        name: "update_component",
+        arguments: { componentId: componentA.id, brand: "User B Brand" },
+      },
+    });
+
+    expect(res.status).toBe(200);
+    expect(jsonRpcResult(res.body)?.isError).toBe(true);
+  });
+
+  it("withMcpToolLog includes summarized result fields in success logs", async () => {
+    const info = vi.spyOn(logger, "info").mockImplementation(() => undefined);
+
+    await withMcpToolLog(
+      "test_write",
+      { userId: "user-1", permissions: permissionsForScope("write"), token: "test-token" },
+      { notes: "not logged as result data" },
+      async () => ({ structuredContent: { component: { id: "component-1" } } }),
+      (result) => ({ componentId: result.structuredContent.component.id }),
+    );
+
+    expect(info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "mcp.tool",
+        outcome: "ok",
+        componentId: "component-1",
+      }),
+      "MCP tool test_write ok",
+    );
+    info.mockRestore();
+  });
+
+  it("set_active_component rotates active chain", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    const writeKey = await createApiKeyForTestUser(testUser, permissionsForScope("write"));
+    const bike = await createBikeViaGraphql(agent, "Swap Chain Bike");
+    const a = await createComponentViaGraphql(agent, bike.id, {
+      category: "chain",
+      name: "Chain A",
+      brand: "KMC",
+      model: "A",
+      isActive: true,
+    });
+    const b = await createComponentViaGraphql(agent, bike.id, {
+      category: "chain",
+      name: "Chain B",
+      brand: "KMC",
+      model: "B",
+      isActive: false,
+    });
+
+    const res = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 50,
+      method: "tools/call",
+      params: { name: "set_active_component", arguments: { componentId: b.id } },
+    });
+    const component = (
+      jsonRpcResult(res.body)?.structuredContent as { component: { id: string; isActive: boolean } }
+    )?.component;
+    expect(component).toMatchObject({ id: b.id, isActive: true });
+
+    // verify via get_bike_components activeOnly
+    const list = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 51,
+      method: "tools/call",
+      params: {
+        name: "get_bike_components",
+        arguments: { bikeId: bike.id, activeOnly: true, filter: { categories: ["chain"] } },
+      },
+    });
+    const active = (jsonRpcResult(list.body)?.structuredContent as { components: { id: string }[] })
+      ?.components;
+    expect(active?.map((c) => c.id)).toEqual([b.id]);
+    expect(a.id).not.toBe(b.id);
+  });
+
+  it("replace_component logs EOL replace and activates new cassette", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    const writeKey = await createApiKeyForTestUser(testUser, permissionsForScope("write"));
+    const bike = await createBikeViaGraphql(agent, "EOL Replace Bike");
+    await createComponentViaGraphql(agent, bike.id, {
+      category: "cassette",
+      name: "Worn Cassette",
+      brand: "Shimano",
+      model: "Old",
+      isActive: true,
+    });
+
+    const created = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 60,
+      method: "tools/call",
+      params: {
+        name: "create_component",
+        arguments: {
+          bikeId: bike.id,
+          category: "cassette",
+          name: "Fresh Cassette",
+          brand: "SRAM",
+          model: "XXXX",
+        },
+      },
+    });
+    const newId = (jsonRpcResult(created.body)?.structuredContent as { component: { id: string } })
+      ?.component.id;
+
+    const replaced = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 61,
+      method: "tools/call",
+      params: {
+        name: "replace_component",
+        arguments: {
+          bikeId: bike.id,
+          category: "cassette",
+          newComponentId: newId,
+          resetWear: true,
+        },
+      },
+    });
+    expect(replaced.status).toBe(200);
+    const record = (
+      jsonRpcResult(replaced.body)?.structuredContent as {
+        serviceRecord: { action: string; componentId: string | null };
+      }
+    )?.serviceRecord;
+    expect(record?.action).toBe("replaced");
+
+    const list = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 62,
+      method: "tools/call",
+      params: {
+        name: "get_bike_components",
+        arguments: { bikeId: bike.id, activeOnly: true, filter: { categories: ["cassette"] } },
+      },
+    });
+    const active = (jsonRpcResult(list.body)?.structuredContent as { components: { id: string }[] })
+      ?.components;
+    expect(active?.[0]?.id).toBe(newId);
+  });
+
+  it("replace_component rejects mixed locator fields", async () => {
+    const { user: testUser } = await createAuthenticatedAgent(app);
+    const writeKey = await createApiKeyForTestUser(testUser, permissionsForScope("write"));
+
+    const mixed = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 64,
+      method: "tools/call",
+      params: {
+        name: "replace_component",
+        arguments: {
+          taskId: "00000000-0000-4000-8000-000000000001",
+          bikeId: "00000000-0000-4000-8000-000000000002",
+          newComponentId: "00000000-0000-4000-8000-000000000003",
+        },
+      },
+    });
+
+    expect(jsonRpcResult(mixed.body)?.isError).toBe(true);
+  });
+
+  it("replace_component denies read-only API keys", async () => {
+    const { user: testUser } = await createAuthenticatedAgent(app);
+    const readKey = await createApiKeyForTestUser(testUser);
+
+    const denied = await mcpRequest(readKey, {
+      jsonrpc: "2.0",
+      id: 63,
+      method: "tools/call",
+      params: {
+        name: "replace_component",
+        arguments: {
+          taskId: "00000000-0000-4000-8000-000000000001",
+          newComponentId: "00000000-0000-4000-8000-000000000002",
+        },
+      },
+    });
+
+    expect(jsonRpcResult(denied.body)?.isError).toBe(true);
   });
 
   it("list_component_categories returns all categories", async () => {

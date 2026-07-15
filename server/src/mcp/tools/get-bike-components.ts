@@ -10,6 +10,7 @@ import {
   DEFAULT_COMPONENT_FIELDS,
 } from "../schema-catalog.js";
 import { serializeComponent } from "../serialize.js";
+import { withMcpToolLog } from "../tool-log.js";
 
 const componentFilterSchema = z
   .object({
@@ -38,24 +39,26 @@ export function registerGetBikeComponentsTool(server: McpServer): void {
     },
     async (args, ctx) => {
       const auth = getMcpAuth(ctx);
-      const userId = requireReadPermission(auth);
-      const fields = assertAllowedFields(args.fields, COMPONENT_FIELDS, "component");
-      const effectiveFields =
-        args.fields && args.fields.length > 0 ? fields : [...DEFAULT_COMPONENT_FIELDS];
+      return withMcpToolLog("get_bike_components", auth, args, async () => {
+        const userId = requireReadPermission(auth);
+        const fields = assertAllowedFields(args.fields, COMPONENT_FIELDS, "component");
+        const effectiveFields =
+          args.fields && args.fields.length > 0 ? fields : [...DEFAULT_COMPONENT_FIELDS];
 
-      const parsedFilter = args.filter ? parseComponentFilterInput(args.filter) : undefined;
-      const mergedFilter = mergeMcpComponentFilter(args.activeOnly ?? false, parsedFilter);
-      const components = await Promise.all(
-        (await listComponentsForBike(args.bikeId, userId, { filter: mergedFilter })).map(
-          serializeComponent,
-        ),
-      );
-      const result = pickFieldsList(components, effectiveFields);
+        const parsedFilter = args.filter ? parseComponentFilterInput(args.filter) : undefined;
+        const mergedFilter = mergeMcpComponentFilter(args.activeOnly ?? false, parsedFilter);
+        const components = await Promise.all(
+          (await listComponentsForBike(args.bikeId, userId, { filter: mergedFilter })).map(
+            serializeComponent,
+          ),
+        );
+        const result = pickFieldsList(components, effectiveFields);
 
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-        structuredContent: { bikeId: args.bikeId, components: result },
-      };
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
+          structuredContent: { bikeId: args.bikeId, components: result },
+        };
+      });
     },
   );
 }

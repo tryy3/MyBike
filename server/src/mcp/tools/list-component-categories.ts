@@ -8,6 +8,7 @@ import {
   CATEGORY_FIELDS,
   DEFAULT_CATEGORY_FIELDS,
 } from "../schema-catalog.js";
+import { withMcpToolLog } from "../tool-log.js";
 
 export function registerListComponentCategoriesTool(server: McpServer): void {
   server.registerTool(
@@ -21,22 +22,24 @@ export function registerListComponentCategoriesTool(server: McpServer): void {
     },
     async (args, ctx) => {
       const auth = getMcpAuth(ctx);
-      requireReadPermission(auth);
-      const fields = assertAllowedFields(args.fields, CATEGORY_FIELDS, "category");
-      const effectiveFields =
-        args.fields && args.fields.length > 0 ? fields : [...DEFAULT_CATEGORY_FIELDS];
+      return withMcpToolLog("list_component_categories", auth, args, async () => {
+        requireReadPermission(auth);
+        const fields = assertAllowedFields(args.fields, CATEGORY_FIELDS, "category");
+        const effectiveFields =
+          args.fields && args.fields.length > 0 ? fields : [...DEFAULT_CATEGORY_FIELDS];
 
-      const categories = CATEGORIES.map((category) => ({
-        id: category.id,
-        label: category.label,
-        order: category.order,
-      }));
-      const result = pickFieldsList(categories, effectiveFields);
+        const categories = CATEGORIES.map((category) => ({
+          id: category.id,
+          label: category.label,
+          order: category.order,
+        }));
+        const result = pickFieldsList(categories, effectiveFields);
 
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-        structuredContent: { categories: result },
-      };
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
+          structuredContent: { categories: result },
+        };
+      });
     },
   );
 }
