@@ -5,7 +5,6 @@ import { getMcpAuth, requireReadPermission } from "../context.js";
 import { pickFieldsList } from "../field-selection.js";
 import { withRideStatsIfNeeded } from "../serialize.js";
 import { assertAllowedFields, BIKE_FIELDS, DEFAULT_BIKE_FIELDS } from "../schema-catalog.js";
-import { withMcpToolLog } from "../tool-log.js";
 
 export function registerListBikesTool(server: McpServer): void {
   server.registerTool(
@@ -19,23 +18,21 @@ export function registerListBikesTool(server: McpServer): void {
     },
     async (args, ctx) => {
       const auth = getMcpAuth(ctx);
-      return withMcpToolLog("list_bikes", auth, args, async () => {
-        const userId = requireReadPermission(auth);
-        const fields = assertAllowedFields(args.fields, BIKE_FIELDS, "bike");
-        const effectiveFields =
-          args.fields && args.fields.length > 0 ? fields : [...DEFAULT_BIKE_FIELDS];
+      const userId = requireReadPermission(auth);
+      const fields = assertAllowedFields(args.fields, BIKE_FIELDS, "bike");
+      const effectiveFields =
+        args.fields && args.fields.length > 0 ? fields : [...DEFAULT_BIKE_FIELDS];
 
-        const bikes = await listBikes(userId);
-        const serialized = await Promise.all(
-          bikes.map((bike) => withRideStatsIfNeeded(userId, bike, effectiveFields)),
-        );
-        const result = pickFieldsList(serialized, effectiveFields);
+      const bikes = await listBikes(userId);
+      const serialized = await Promise.all(
+        bikes.map((bike) => withRideStatsIfNeeded(userId, bike, effectiveFields)),
+      );
+      const result = pickFieldsList(serialized, effectiveFields);
 
-        return {
-          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
-          structuredContent: { bikes: result },
-        };
-      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        structuredContent: { bikes: result },
+      };
     },
   );
 }

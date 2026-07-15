@@ -12,7 +12,6 @@ import {
   DEFAULT_COMPONENT_FIELDS,
 } from "../schema-catalog.js";
 import { serializeComponent, withRideStatsIfNeeded } from "../serialize.js";
-import { withMcpToolLog } from "../tool-log.js";
 
 const componentFilterSchema = z
   .object({
@@ -43,44 +42,42 @@ export function registerGetBikeTool(server: McpServer): void {
     },
     async (args, ctx) => {
       const auth = getMcpAuth(ctx);
-      return withMcpToolLog("get_bike", auth, args, async () => {
-        const userId = requireReadPermission(auth);
-        const bikeFields = assertAllowedFields(args.fields, BIKE_FIELDS, "bike");
-        const effectiveBikeFields =
-          args.fields && args.fields.length > 0 ? bikeFields : [...DEFAULT_BIKE_FIELDS];
+      const userId = requireReadPermission(auth);
+      const bikeFields = assertAllowedFields(args.fields, BIKE_FIELDS, "bike");
+      const effectiveBikeFields =
+        args.fields && args.fields.length > 0 ? bikeFields : [...DEFAULT_BIKE_FIELDS];
 
-        const bike = await requireBike(args.bikeId, userId);
-        const serializedBike = await withRideStatsIfNeeded(userId, bike, effectiveBikeFields);
-        const result = pickFields(serializedBike, effectiveBikeFields);
+      const bike = await requireBike(args.bikeId, userId);
+      const serializedBike = await withRideStatsIfNeeded(userId, bike, effectiveBikeFields);
+      const result = pickFields(serializedBike, effectiveBikeFields);
 
-        if (args.includeComponents) {
-          const componentFields = assertAllowedFields(
-            args.componentFields,
-            COMPONENT_FIELDS,
-            "component",
-          );
-          const effectiveComponentFields =
-            args.componentFields && args.componentFields.length > 0
-              ? componentFields
-              : [...DEFAULT_COMPONENT_FIELDS];
+      if (args.includeComponents) {
+        const componentFields = assertAllowedFields(
+          args.componentFields,
+          COMPONENT_FIELDS,
+          "component",
+        );
+        const effectiveComponentFields =
+          args.componentFields && args.componentFields.length > 0
+            ? componentFields
+            : [...DEFAULT_COMPONENT_FIELDS];
 
-          const parsedFilter = args.componentFilter
-            ? parseComponentFilterInput(args.componentFilter)
-            : undefined;
-          const mergedFilter = mergeMcpComponentFilter(args.activeOnly ?? false, parsedFilter);
-          const components = await Promise.all(
-            (await listComponentsForBike(bike.id, userId, { filter: mergedFilter })).map(
-              serializeComponent,
-            ),
-          );
-          result.components = pickFieldsList(components, effectiveComponentFields);
-        }
+        const parsedFilter = args.componentFilter
+          ? parseComponentFilterInput(args.componentFilter)
+          : undefined;
+        const mergedFilter = mergeMcpComponentFilter(args.activeOnly ?? false, parsedFilter);
+        const components = await Promise.all(
+          (await listComponentsForBike(bike.id, userId, { filter: mergedFilter })).map(
+            serializeComponent,
+          ),
+        );
+        result.components = pickFieldsList(components, effectiveComponentFields);
+      }
 
-        return {
-          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
-          structuredContent: { bike: result },
-        };
-      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        structuredContent: { bike: result },
+      };
     },
   );
 }

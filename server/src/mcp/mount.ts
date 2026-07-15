@@ -2,7 +2,6 @@ import type { RequestHandler } from "express";
 import { NodeStreamableHTTPServerTransport } from "@modelcontextprotocol/node";
 import type { Express } from "express";
 import { extractApiKeyFromHeaders, verifyGraphQLApiKey } from "../lib/api-key-auth.js";
-import { logger } from "../lib/logging/index.js";
 import { toAuthInfo } from "./context.js";
 import { createMcpServer } from "./index.js";
 
@@ -30,14 +29,12 @@ export const mcpAuthMiddleware: RequestHandler = async (req, res, next) => {
   });
 
   if (!token) {
-    logger.warn({ event: "mcp.auth", reason: "missing_key" }, "MCP unauthorized");
     unauthorizedResponse(res);
     return;
   }
 
   const verified = await verifyGraphQLApiKey(token);
   if (!verified) {
-    logger.warn({ event: "mcp.auth", reason: "invalid_key" }, "MCP unauthorized");
     unauthorizedResponse(res);
     return;
   }
@@ -63,8 +60,7 @@ export function mountMcp(app: Express): void {
     void (async () => {
       await server.connect(transport);
       await transport.handleRequest(req, res, req.body);
-    })().catch((err) => {
-      logger.error({ event: "mcp.transport", err }, "MCP request failed");
+    })().catch(() => {
       if (!res.headersSent) {
         res.status(500).json({
           jsonrpc: "2.0",

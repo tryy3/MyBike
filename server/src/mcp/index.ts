@@ -1,17 +1,11 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { getSchemaCatalog } from "./schema-catalog.js";
-import { registerCreateComponentTool } from "./tools/create-component.js";
 import { registerDescribeDataModelTool } from "./tools/describe-data-model.js";
-import { registerFindBikeTool } from "./tools/find-bike.js";
 import { registerGetBikeTool } from "./tools/get-bike.js";
 import { registerGetBikeComponentsTool } from "./tools/get-bike-components.js";
 import { registerGraphqlQueryTool } from "./tools/graphql-query.js";
 import { registerListBikesTool } from "./tools/list-bikes.js";
 import { registerListComponentCategoriesTool } from "./tools/list-component-categories.js";
-import { registerListMaintenanceTasksTool } from "./tools/list-maintenance-tasks.js";
-import { registerReplaceComponentTool } from "./tools/replace-component.js";
-import { registerSetActiveComponentTool } from "./tools/set-active-component.js";
-import { registerUpdateComponentTool } from "./tools/update-component.js";
 
 export function createMcpServer(): McpServer {
   const server = new McpServer({
@@ -40,15 +34,9 @@ export function createMcpServer(): McpServer {
 
   registerDescribeDataModelTool(server);
   registerListBikesTool(server);
-  registerFindBikeTool(server);
-  registerCreateComponentTool(server);
-  registerUpdateComponentTool(server);
-  registerSetActiveComponentTool(server);
-  registerReplaceComponentTool(server);
   registerGetBikeTool(server);
   registerListComponentCategoriesTool(server);
   registerGetBikeComponentsTool(server);
-  registerListMaintenanceTasksTool(server);
   registerGraphqlQueryTool(server);
 
   return server;

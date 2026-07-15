@@ -112,7 +112,7 @@ In GitHub **Settings → Branches** for `master`, require the **CI / Check and t
 
 **GraphQL API keys (LLM / script access):** users create keys at `/settings/api-keys` while logged in (Better Auth `@better-auth/api-key` plugin). Keys authenticate `POST /graphql` and the remote MCP endpoint at `POST /mcp` via `Authorization: Bearer mbk_…` or `x-api-key`; REST routes remain session-only. Default scope is read-only (`graphql: ["read"]`); write and delete scopes are available when creating a key. Permission constants live in `shared/src/schemas/api-key.ts`.
 
-**Remote MCP (AI clients):** Streamable HTTP at `/mcp` on the main server (dev: `http://localhost:3001/mcp`). Authenticate with the same GraphQL API key as Bearer token. Tools: `describe_data_model`, `list_bikes`, `get_bike`, `list_component_categories`, `get_bike_components`, `graphql_query` (read-only escape hatch), `find_bike`, `list_maintenance_tasks`, `create_component`, `update_component`, `set_active_component`, and `replace_component`. Read tools require `graphql:read`; mutation tools require a write-scoped API key with `graphql:write`. MCP tool calls are logged server-side with `event: "mcp.tool"`. Hermes example (`~/.hermes/config.yaml`):
+**Remote MCP (AI clients):** Streamable HTTP at `/mcp` on the main server (dev: `http://localhost:3001/mcp`). Authenticate with the same GraphQL API key as Bearer token. Read-only trial tools: `describe_data_model`, `list_bikes`, `get_bike`, `list_component_categories`, `get_bike_components`, plus read-only `graphql_query` escape hatch. Hermes example (`~/.hermes/config.yaml`):
 
 ```yaml
 mcp_servers:

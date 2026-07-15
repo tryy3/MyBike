@@ -3,7 +3,6 @@ import { z } from "zod";
 import { executeGraphQLReadOnly } from "../../graphql/yoga.js";
 import { getMcpAuth, requireReadPermission } from "../context.js";
 import { stripTypenames } from "../field-selection.js";
-import { withMcpToolLog } from "../tool-log.js";
 
 export function registerGraphqlQueryTool(server: McpServer): void {
   server.registerTool(
@@ -19,24 +18,22 @@ export function registerGraphqlQueryTool(server: McpServer): void {
     },
     async (args, ctx) => {
       const auth = getMcpAuth(ctx);
-      return withMcpToolLog("graphql_query", auth, args, async () => {
-        requireReadPermission(auth);
+      requireReadPermission(auth);
 
-        const result = await executeGraphQLReadOnly(args.query, args.variables, auth.token);
+      const result = await executeGraphQLReadOnly(args.query, args.variables, auth.token);
 
-        const payload = {
-          data: stripTypenames(result.data),
-          errors: result.errors?.map((error) => ({
-            message: error.message,
-            path: error.path,
-          })),
-        };
+      const payload = {
+        data: stripTypenames(result.data),
+        errors: result.errors?.map((error) => ({
+          message: error.message,
+          path: error.path,
+        })),
+      };
 
-        return {
-          content: [{ type: "text" as const, text: JSON.stringify(payload, null, 2) }],
-          structuredContent: payload,
-        };
-      });
+      return {
+        content: [{ type: "text", text: JSON.stringify(payload, null, 2) }],
+        structuredContent: payload,
+      };
     },
   );
 }
