@@ -2,7 +2,7 @@ import { and, asc, desc, eq, inArray, or, sql, type SQL } from "drizzle-orm";
 import type { BikeInsert, BikeUpdate, BikeDetail, BikeListItem, ComponentFilter } from "shared";
 import { db } from "../db/index.js";
 import { affectedRows } from "../db/result.js";
-import { bikes, components } from "../db/schema.js";
+import { bikes, components, maintenanceTasks } from "../db/schema.js";
 import type { BikeRow, ComponentRow } from "../db/schema.js";
 import { HttpError, notFound } from "../lib/errors.js";
 
@@ -119,18 +119,43 @@ export async function listComponentsForBike(
 }
 
 export async function createBike(userId: string, data: BikeInsert): Promise<BikeRow> {
-  return await db
-    .insert(bikes)
-    .values({
-      userId,
-      name: data.name,
-      brand: data.brand ?? null,
-      model: data.model ?? null,
-      year: data.year ?? null,
-      notes: data.notes ?? null,
-    })
-    .returning()
-    .get();
+  const { MAINTENANCE_TEMPLATES } = await import("shared");
+  return await db.transaction(async (tx) => {
+    const bike = await tx
+      .insert(bikes)
+      .values({
+        userId,
+        name: data.name,
+        brand: data.brand ?? null,
+        model: data.model ?? null,
+        year: data.year ?? null,
+        notes: data.notes ?? null,
+      })
+      .returning()
+      .get();
+
+    const seedRows = MAINTENANCE_TEMPLATES.map((template) => ({
+      bikeId: bike.id,
+      source: "builtin" as const,
+      templateKey: template.templateKey,
+      kind: template.kind,
+      title: template.title,
+      description: template.description,
+      componentCategory: template.componentCategory,
+      triggerMode: template.triggerMode,
+      distanceMeters: template.distanceMeters,
+      intervalDays: template.intervalDays,
+      guideUrl: template.guideUrl,
+      enabled: true,
+      customized: false,
+      sortOrder: template.sortOrder,
+    }));
+    if (seedRows.length > 0) {
+      await tx.insert(maintenanceTasks).values(seedRows).run();
+    }
+
+    return bike;
+  });
 }
 
 export async function updateBike(

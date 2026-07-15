@@ -1,3 +1,4 @@
+import type { MaintenanceTaskView } from "shared";
 import type { YogaInitialContext } from "graphql-yoga";
 import { auth } from "../lib/auth.js";
 import { extractApiKeyFromHeaders, verifyGraphQLApiKey } from "../lib/api-key-auth.js";
@@ -9,6 +10,8 @@ export interface GraphQLContext {
   userId: string | null;
   authMethod: GraphQLAuthMethod | null;
   permissions: Record<string, string[]> | null;
+  /** Dedupes maintenance task enrichment within a single GraphQL request. */
+  maintenanceTasksByBikeId?: Map<string, Promise<MaintenanceTaskView[]>>;
 }
 
 export async function createContext(initialContext: YogaInitialContext): Promise<GraphQLContext> {

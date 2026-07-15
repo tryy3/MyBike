@@ -1,8 +1,18 @@
-import type { SystemGroupColorToken, SystemGroupNav } from "shared";
+import type { SystemGroupNav } from "shared";
 import { getActiveComponent } from "shared";
+import { Link } from "@tanstack/react-router";
 
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  GROUP_DOT_CLASS,
+  GROUP_HOVER_TINT_CLASS,
+  GROUP_SELECTED_TINT_CLASS,
+} from "@/lib/system-group-styles";
 import { cn } from "@/lib/utils";
+import { TriangleAlertIcon } from "lucide-react";
+import type { MaintenanceTaskGql } from "@/lib/graphql/operations";
+import { bikeTabPaths } from "@/routes/bike-routes";
 import { componentBrandModel } from "./component-display";
 import {
   ComponentDetailTier,
@@ -13,51 +23,79 @@ import {
 } from "./component-list-layout";
 import type { WearByComponentId } from "./ComponentsSplitView";
 
-const GROUP_DOT_CLASS: Record<SystemGroupColorToken, string> = {
-  "chart-1": "bg-chart-1",
-  "chart-2": "bg-chart-2",
-  "chart-3": "bg-chart-3",
-  "chart-4": "bg-chart-4",
-  "chart-5": "bg-chart-5",
-  "chart-6": "bg-chart-6",
-  "chart-7": "bg-chart-7",
-};
-
-const GROUP_SELECTED_TINT_CLASS: Record<SystemGroupColorToken, string> = {
-  "chart-1": "bg-chart-1/15",
-  "chart-2": "bg-chart-2/15",
-  "chart-3": "bg-chart-3/15",
-  "chart-4": "bg-chart-4/15",
-  "chart-5": "bg-chart-5/15",
-  "chart-6": "bg-chart-6/15",
-  "chart-7": "bg-chart-7/15",
-};
-
-const GROUP_HOVER_TINT_CLASS: Record<SystemGroupColorToken, string> = {
-  "chart-1": "hover:bg-chart-1/10",
-  "chart-2": "hover:bg-chart-2/10",
-  "chart-3": "hover:bg-chart-3/10",
-  "chart-4": "hover:bg-chart-4/10",
-  "chart-5": "hover:bg-chart-5/10",
-  "chart-6": "hover:bg-chart-6/10",
-  "chart-7": "hover:bg-chart-7/10",
-};
-
 interface ComponentsNavProps {
+  bikeId: string;
   groups: SystemGroupNav[];
   selectedCategoryId: string | null;
   showEmptyCategories: boolean;
   categoriesUsed: number;
   wearByComponentId?: WearByComponentId;
+  maintenanceAlertByCategory?: Map<string, number>;
+  dueTasksByCategory?: Map<string, MaintenanceTaskGql[]>;
   onSelectCategory: (categoryId: string) => void;
 }
 
+function maintenanceTaskKindLabel(kind: MaintenanceTaskGql["kind"]): string {
+  if (kind === "eol") return "Replace";
+  return "Service";
+}
+
+function MaintenanceAlertLink({
+  bikeId,
+  categoryId,
+  alertCount,
+  dueTasks,
+}: {
+  bikeId: string;
+  categoryId: string;
+  alertCount: number;
+  dueTasks: MaintenanceTaskGql[];
+}) {
+  const tooltipContent =
+    dueTasks.length > 0 ? (
+      <ul className="flex flex-col gap-1">
+        {dueTasks.map((task) => (
+          <li key={task.id}>
+            <span className="font-medium">{maintenanceTaskKindLabel(task.kind)}:</span> {task.title}
+          </li>
+        ))}
+      </ul>
+    ) : (
+      "View due maintenance tasks"
+    );
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Link
+          to={bikeTabPaths.maintenance}
+          params={{ bikeId }}
+          search={{ category: categoryId }}
+          className="flex shrink-0 cursor-pointer items-center self-center rounded-md px-1 py-2 transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={`${alertCount} due maintenance task${alertCount === 1 ? "" : "s"} — open maintenance`}
+        >
+          <Badge variant="destructive" className="tabular-nums pt-0.5">
+            <TriangleAlertIcon className="size-3" aria-hidden="true" />
+            {alertCount}
+          </Badge>
+        </Link>
+      </TooltipTrigger>
+      <TooltipContent side="left" className="max-w-xs">
+        {tooltipContent}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 export function ComponentsNav({
+  bikeId,
   groups,
   selectedCategoryId,
   showEmptyCategories,
   categoriesUsed,
   wearByComponentId,
+  maintenanceAlertByCategory,
+  dueTasksByCategory,
   onSelectCategory,
 }: ComponentsNavProps) {
   return (
@@ -97,14 +135,17 @@ export function ComponentsNav({
                     })
                   : null;
 
+                const alertCount = maintenanceAlertByCategory?.get(category.id) ?? 0;
+                const dueTasks = dueTasksByCategory?.get(category.id) ?? [];
+
                 return (
-                  <li key={category.id}>
+                  <li key={category.id} className="flex items-stretch gap-0.5">
                     <button
                       type="button"
                       aria-current={selected ? "true" : undefined}
                       onClick={() => onSelectCategory(category.id)}
                       className={cn(
-                        "flex w-full items-start gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-colors",
+                        "flex min-w-0 flex-1 cursor-pointer items-start gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-colors",
                         GROUP_HOVER_TINT_CLASS[group.colorToken],
                         selected && GROUP_SELECTED_TINT_CLASS[group.colorToken],
                         selected ? "border-ring ring-2 ring-ring/30" : "border-transparent",
@@ -146,6 +187,14 @@ export function ComponentsNav({
                         </Badge>
                       ) : null}
                     </button>
+                    {alertCount > 0 ? (
+                      <MaintenanceAlertLink
+                        bikeId={bikeId}
+                        categoryId={category.id}
+                        alertCount={alertCount}
+                        dueTasks={dueTasks}
+                      />
+                    ) : null}
                   </li>
                 );
               })}

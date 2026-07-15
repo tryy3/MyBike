@@ -21,8 +21,8 @@ MyBike/
 │   └── drizzle.config.ts
 ├── client/          # React + Vite + TypeScript frontend
 │   └── src/
-│       ├── routes/        # TanStack Router route components
-│       ├── features/      # bikes & components (api + forms + cards)
+│       ├── routes/        # TanStack Router route components (incl. nested bike tabs)
+│       ├── features/      # bikes, components, maintenance, activities, stats, …
 │       ├── components/ui/ # shadcn primitives
 │       └── lib/          # api client, graphql client, query client, utils
 ├── strava-webhook-proxy/  # Public Strava webhook relay + pull API (separate deploy)
@@ -92,6 +92,7 @@ In GitHub **Settings → Branches** for `master`, require the **CI / Check and t
 | Component CRUD + `activateComponent` + `reorderComponents` | `POST/PATCH/DELETE /api/components`, `PATCH .../activate` |
 | `Query.garageStats`, `Bike.rideStats`, `Component.wear`    | `GET /api/stats/garage`, `GET /api/stats/bikes/:id`       |
 | `Query.fieldSuggestions`                                   | `GET /api/field-suggestions`                              |
+| `Bike.maintenanceTasks`, maintenance mutations (see below) | _(GraphQL-only — no legacy REST)_                         |
 
 **Stay on REST when:**
 
@@ -153,6 +154,23 @@ query ($id: ID!) {
 ```
 
 Validation schema: `shared/src/schemas/component-filter.ts`.
+
+**Maintenance (GraphQL-only):** tasks live in `maintenance_tasks` with kinds `touch_up`, `periodic`, and `eol`. Built-ins seed from `shared/src/maintenance-templates.ts` on bike create; users customize/disable built-ins or add custom tasks. Due logic is in `server/src/lib/maintenance-due.ts`; progress ratios and thresholds (`75%` “due soon” UI band, `125%` overdue) are in `shared/src/maintenance-progress.ts`.
+
+| GraphQL field / mutation                                                     | Purpose                                                    |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `Bike.maintenanceTasks`, `Bike.maintenanceAlertCount`, `Bike.serviceRecords` | Read tasks + alert count + history                         |
+| `createMaintenanceTask`, `updateMaintenanceTask`, `toggleMaintenanceTask`    | Custom/built-in task CRUD                                  |
+| `deleteMaintenanceTask`                                                      | Custom tasks only                                          |
+| `resetMaintenanceTaskToDefault`                                              | Built-ins with `customized: true`                          |
+| `completeMaintenanceTask`                                                    | Mark periodic/EOL serviced                                 |
+| `replaceComponentMaintenance`                                                | EOL: log replacement + optional swap to existing component |
+| `snoozeMaintenanceTask`                                                      | Defer due periodic/EOL                                     |
+| `toggleTouchUpCheckItem`, `clearTouchUpChecklist`                            | Touch-up checklist                                         |
+
+Client: `client/src/features/maintenance/` (`MaintenanceTab.tsx`, `api.ts`, `cache-sync.ts`). Bike detail uses nested routes under `/bikes/$bikeId/` — `components` (default), `overview`, `maintenance` (`?category=` deep-links to a due task), `activities`. Component nav shows per-category alert badges linking to maintenance.
+
+Schemas: `shared/src/schemas/maintenance.ts`. Tests: `server/src/test/maintenance.test.ts`, `server/src/test/maintenance-due.test.ts`. After maintenance GraphQL/schema changes, run `npm run verify` and apply migrations (`npm run -w server db:migrate`).
 
 **After GraphQL changes:** run `npm run verify`; add or update tests in `server/src/test/graphql.test.ts`. Tests that need bike/component setup should use helpers in `server/src/test/graphql-helper.ts`. API key tests live in `server/src/test/api-key-graphql.test.ts`.
 

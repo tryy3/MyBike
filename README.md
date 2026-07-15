@@ -68,6 +68,10 @@ Sensitive fields (`authorization`, `accessToken`, `refreshToken`, cookies, passw
 
 Register at `/register`, then sign in at `/login`. Email/password and Strava OAuth are both supported when `STRAVA_CLIENT_ID` and `STRAVA_CLIENT_SECRET` are set (see `.env.example`). Strava login and the integrations connect flow share the same stored tokens — signing in with Strava counts as connected for sync and import.
 
+## Features
+
+**Maintenance** — each bike gets built-in touch-up checklists, periodic service reminders, and replacement/EOL alerts (seeded on create). Open a bike → **Maintenance** tab, or follow alert badges on the garage list / component categories. Tasks track distance and/or time since last service; statuses include due soon (75%+), due, overdue (125%+), and snoozed. EOL **Replace** can swap to an existing component in that category (add the part on **Components** first).
+
 ## Build
 
 ```bash

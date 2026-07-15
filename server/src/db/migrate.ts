@@ -77,4 +77,9 @@ export async function applyMigrations(): Promise<void> {
   }
   await runDrizzleMigrations(db, migrationsFolder);
   await importLocalSqliteIfNeeded();
+  const { syncMaintenanceTemplates } = await import("../services/maintenance.js");
+  const syncResult = await syncMaintenanceTemplates();
+  if (syncResult.inserted > 0 || syncResult.updated > 0) {
+    log.info({ syncResult }, "Synced maintenance templates");
+  }
 }

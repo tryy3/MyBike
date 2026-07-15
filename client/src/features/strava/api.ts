@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import type { StravaImportCommit } from "shared";
 import { api, queryKeys } from "@/lib/api";
+import { invalidateAllBikeWearQueries } from "@/features/maintenance/cache-sync";
 
 function invalidateStravaDerivedQueries(qc: QueryClient) {
   void qc.invalidateQueries({ queryKey: queryKeys.stravaStatus });
-  void qc.invalidateQueries({ queryKey: queryKeys.bikes });
+  invalidateAllBikeWearQueries(qc);
   void qc.invalidateQueries({ queryKey: ["activities", "bike"] });
 }
 

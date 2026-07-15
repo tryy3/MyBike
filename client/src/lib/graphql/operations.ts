@@ -23,6 +23,7 @@ export interface BikeListItemGql {
   updatedAt: number;
   componentCount: number;
   rideStats: RideStatsGql | null;
+  maintenanceAlertCount: number;
 }
 
 export interface BikeDetailGql {
@@ -36,6 +37,7 @@ export interface BikeDetailGql {
   createdAt: number;
   updatedAt: number;
   rideStats: RideStatsGql | null;
+  maintenanceAlertCount: number;
   components: ComponentGql[];
 }
 
@@ -56,6 +58,7 @@ export interface ComponentGql {
   createdAt: number;
   updatedAt: number;
   wear: WearGql;
+  maintenanceAlertCount: number;
 }
 
 export const BIKES_LIST_QUERY = /* GraphQL */ `
@@ -76,6 +79,7 @@ export const BIKES_LIST_QUERY = /* GraphQL */ `
         movingTimeMinutes
         activityCount
       }
+      maintenanceAlertCount
     }
   }
 `;
@@ -97,6 +101,7 @@ export const BIKE_DETAIL_QUERY = /* GraphQL */ `
         movingTimeMinutes
         activityCount
       }
+      maintenanceAlertCount
       components {
         id
         bikeId
@@ -117,6 +122,7 @@ export const BIKE_DETAIL_QUERY = /* GraphQL */ `
           distanceMeters
           movingTimeMinutes
         }
+        maintenanceAlertCount
       }
     }
   }
@@ -267,8 +273,207 @@ export function toComponentRow(c: ComponentGql): Component {
 }
 
 export function toBikeDetailGql(bike: BikeDetailGql) {
+  const maintenanceAlertByCategory = new Map<string, number>();
+  for (const c of bike.components) {
+    if (c.maintenanceAlertCount > 0) {
+      maintenanceAlertByCategory.set(c.category, c.maintenanceAlertCount);
+    }
+  }
   return {
     ...bike,
     components: bike.components.map(toComponentRow),
+    maintenanceAlertByCategory,
   };
 }
+
+export type MaintenanceTaskKindGql = "touch_up" | "periodic" | "eol";
+export type MaintenanceTaskStatusGql = "ok" | "due" | "overdue" | "snoozed";
+
+export interface MaintenanceTaskProgressGql {
+  distanceUsedMeters: number | null;
+  distanceLimitMeters: number | null;
+  daysUsed: number | null;
+  daysLimit: number | null;
+  needsComponent: boolean;
+}
+
+export interface MaintenanceTaskGql {
+  id: string;
+  bikeId: string;
+  source: "builtin" | "custom";
+  templateKey: string | null;
+  kind: MaintenanceTaskKindGql;
+  title: string;
+  description: string | null;
+  componentCategory: string | null;
+  triggerMode: "distance" | "time" | "both" | null;
+  distanceMeters: number | null;
+  intervalDays: number | null;
+  guideUrl: string | null;
+  enabled: boolean;
+  customized: boolean;
+  sortOrder: number;
+  status: MaintenanceTaskStatusGql;
+  progress: MaintenanceTaskProgressGql | null;
+  lastCheckedAt: number | null;
+  canDelete: boolean;
+}
+
+export interface ServiceRecordGql {
+  id: string;
+  taskId: string;
+  action: "serviced" | "replaced";
+  completedAt: number;
+  notes: string | null;
+  cost: number | null;
+  wearDistanceMeters: number | null;
+  component: { id: string; name: string; categoryLabel: string } | null;
+}
+
+export const BIKE_MAINTENANCE_QUERY = /* GraphQL */ `
+  query BikeMaintenance($id: ID!) {
+    bike(id: $id) {
+      id
+      maintenanceTasks {
+        id
+        bikeId
+        source
+        templateKey
+        kind
+        title
+        description
+        componentCategory
+        triggerMode
+        distanceMeters
+        intervalDays
+        guideUrl
+        enabled
+        customized
+        sortOrder
+        status
+        lastCheckedAt
+        canDelete
+        progress {
+          distanceUsedMeters
+          distanceLimitMeters
+          daysUsed
+          daysLimit
+          needsComponent
+        }
+      }
+      serviceRecords(limit: 30) {
+        id
+        taskId
+        action
+        completedAt
+        notes
+        cost
+        wearDistanceMeters
+        component {
+          id
+          name
+          categoryLabel
+        }
+      }
+    }
+  }
+`;
+
+export const CREATE_MAINTENANCE_TASK_MUTATION = /* GraphQL */ `
+  mutation CreateMaintenanceTask($bikeId: ID!, $input: MaintenanceTaskInsertInput!) {
+    createMaintenanceTask(bikeId: $bikeId, input: $input) {
+      id
+    }
+  }
+`;
+
+export const UPDATE_MAINTENANCE_TASK_MUTATION = /* GraphQL */ `
+  mutation UpdateMaintenanceTask($id: ID!, $input: MaintenanceTaskUpdateInput!) {
+    updateMaintenanceTask(id: $id, input: $input) {
+      id
+    }
+  }
+`;
+
+export const TOGGLE_MAINTENANCE_TASK_MUTATION = /* GraphQL */ `
+  mutation ToggleMaintenanceTask($id: ID!, $enabled: Boolean!) {
+    toggleMaintenanceTask(id: $id, enabled: $enabled) {
+      id
+      enabled
+      status
+      kind
+      componentCategory
+      progress {
+        distanceUsedMeters
+        distanceLimitMeters
+        daysUsed
+        daysLimit
+        needsComponent
+      }
+    }
+  }
+`;
+
+export const DELETE_MAINTENANCE_TASK_MUTATION = /* GraphQL */ `
+  mutation DeleteMaintenanceTask($id: ID!) {
+    deleteMaintenanceTask(id: $id)
+  }
+`;
+
+export const RESET_MAINTENANCE_TASK_MUTATION = /* GraphQL */ `
+  mutation ResetMaintenanceTask($id: ID!) {
+    resetMaintenanceTaskToDefault(id: $id) {
+      id
+    }
+  }
+`;
+
+export const COMPLETE_MAINTENANCE_TASK_MUTATION = /* GraphQL */ `
+  mutation CompleteMaintenanceTask($id: ID!, $input: CompleteMaintenanceInput) {
+    completeMaintenanceTask(id: $id, input: $input) {
+      id
+    }
+  }
+`;
+
+export const REPLACE_MAINTENANCE_TASK_MUTATION = /* GraphQL */ `
+  mutation ReplaceMaintenanceTask($id: ID!, $input: ReplaceMaintenanceInput!) {
+    replaceComponentMaintenance(id: $id, input: $input) {
+      id
+    }
+  }
+`;
+
+export const SNOOZE_MAINTENANCE_TASK_MUTATION = /* GraphQL */ `
+  mutation SnoozeMaintenanceTask($id: ID!, $input: SnoozeMaintenanceInput!) {
+    snoozeMaintenanceTask(id: $id, input: $input) {
+      id
+    }
+  }
+`;
+
+export const TOGGLE_TOUCH_UP_MUTATION = /* GraphQL */ `
+  mutation ToggleTouchUp($taskId: ID!) {
+    toggleTouchUpCheckItem(taskId: $taskId) {
+      id
+      lastCheckedAt
+      enabled
+      status
+      kind
+      componentCategory
+    }
+  }
+`;
+
+export const CLEAR_TOUCH_UP_CHECKLIST_MUTATION = /* GraphQL */ `
+  mutation ClearTouchUpChecklist($bikeId: ID!) {
+    clearTouchUpChecklist(bikeId: $bikeId) {
+      id
+      lastCheckedAt
+      enabled
+      status
+      kind
+      componentCategory
+    }
+  }
+`;
