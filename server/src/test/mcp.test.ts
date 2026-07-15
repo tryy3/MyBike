@@ -65,13 +65,41 @@ describe("MCP server", () => {
       expect.arrayContaining([
         "describe_data_model",
         "list_bikes",
-        "find_bike",
         "get_bike",
         "list_component_categories",
         "get_bike_components",
         "graphql_query",
+        "find_bike",
+        "list_maintenance_tasks",
+        "create_component",
+        "update_component",
+        "set_active_component",
+        "replace_component",
       ]),
     );
+
+    const catalogResponse = await mcpRequest(readKey, {
+      jsonrpc: "2.0",
+      id: 3,
+      method: "tools/call",
+      params: { name: "describe_data_model", arguments: {} },
+    });
+    const catalog = jsonRpcResult(catalogResponse.body)?.structuredContent as {
+      notes: Record<string, string>;
+    };
+    expect(catalog.notes).toEqual({
+      typedTools:
+        "Use fields[] on list/get tools to request only needed data. Write tools: create_component (inactive when sibling exists), update_component (brand/model/purchase/notes only — not name), set_active_component (rotate spares), replace_component (EOL service record + activate).",
+      workflows:
+        "EOL replace: find_bike → create_component → replace_component(bikeId+category+newComponentId). Spare rotation: find_bike → get_bike_components → set_active_component.",
+      graphqlQuery:
+        "Use graphql_query for ad-hoc read queries when typed tools are not enough. Mutations are rejected.",
+      categoryIds:
+        "Typed tools use hyphenated category ids (rear-derailleur). Raw GraphQL filter enums use underscores (rear_derailleur).",
+      filters:
+        "Component filters: categories, activeOnly, isActive, brands, nameContains, brandContains, modelContains.",
+      auth: "Read tools need graphql:read. Write tools need graphql:write on the API key.",
+    });
   });
 
   it("rejects missing and invalid API keys", async () => {
