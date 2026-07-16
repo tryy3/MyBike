@@ -3,7 +3,7 @@
     <circle cx="15" cy="17" r="10"/>
     <circle cx="15" cy="17" r="2"/>
     <path d="M15 7v8M25 17h-8M15 27v-8M5 17h8M8 10l5 5m9 9-5-5m5-9-5 5m-9 9 5-5"/>
-    <path d="M24 7h4v5h-4z"/>
+    <path d="M24 1h7v7h-7z"/>
   </g>
-  <text x="25" y="11" fill="currentColor" font-size="4" font-family="sans-serif" font-weight="700">F</text>
+  <text x="24.5" y="7" fill="currentColor" font-size="6" font-family="sans-serif" font-weight="700">F</text>
 </svg>
