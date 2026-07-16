@@ -1,0 +1,9 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="15" cy="17" r="10"/>
+    <circle cx="15" cy="17" r="2"/>
+    <path d="M15 7v8M25 17h-8M15 27v-8M5 17h8M8 10l5 5m9 9-5-5m5-9-5 5m-9 9 5-5"/>
+    <path d="M24 1h7v7h-7z"/>
+  </g>
+  <text x="24.5" y="7" fill="currentColor" font-size="6" font-family="sans-serif" font-weight="700">F</text>
+</svg>
