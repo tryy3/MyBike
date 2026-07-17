@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Road diamond: head, seat, BB, stays -->
+  <path d="M7 23 L15 7 L25 23" />
+  <path d="M15 7 L15 23" />
+  <path d="M7 23 L25 23" />
+  <path d="M7 23 L4 18" />
+  <path d="M25 23 L29 18" />
+  <circle cx="15" cy="23" r="1.5" fill="currentColor" stroke="none" />
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Post tube with clamp and saddle rail mount -->
+  <path d="M16 10 V28" />
+  <path d="M12 14 H20" />
+  <path d="M10 8 H22" />
+  <path d="M12 8 V12" />
+  <path d="M20 8 V12" />
+</svg>
