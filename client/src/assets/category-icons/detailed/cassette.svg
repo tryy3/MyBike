@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Side/3q cassette: large cog with teeth down to small cog + freehub + lockring -->
+  <ellipse cx="32" cy="12" rx="22" ry="5" />
+  <!-- teeth on large cog -->
+  <path d="M12 12 L10 8" />
+  <path d="M18 8 L17 11" />
+  <path d="M32 7 V11" />
+  <path d="M46 8 L47 11" />
+  <path d="M52 12 L54 8" />
+  <path d="M10 12 V18" />
+  <path d="M54 12 V18" />
+  <ellipse cx="32" cy="18" rx="19" ry="4.5" />
+  <path d="M13 18 V24" />
+  <path d="M51 18 V24" />
+  <ellipse cx="32" cy="24" rx="16" ry="4" />
+  <path d="M16 24 V30" />
+  <path d="M48 24 V30" />
+  <ellipse cx="32" cy="30" rx="13" ry="3.5" />
+  <path d="M19 30 V36" />
+  <path d="M45 30 V36" />
+  <ellipse cx="32" cy="36" rx="10" ry="3" />
+  <path d="M22 36 V42" />
+  <path d="M42 36 V42" />
+  <ellipse cx="32" cy="42" rx="7" ry="2.5" />
+  <path d="M26 42 V48" />
+  <path d="M38 42 V48" />
+  <ellipse cx="32" cy="48" rx="5" ry="2" />
+  <!-- freehub body -->
+  <path d="M27 48 V56" />
+  <path d="M37 48 V56" />
+  <ellipse cx="32" cy="56" rx="5" ry="2" />
+  <path d="M29 56 H35" />
+</svg>

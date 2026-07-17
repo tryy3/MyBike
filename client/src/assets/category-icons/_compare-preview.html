@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Simple 32 vs Detailed 64</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        background: #f3f1ec;
+        color: #1c1917;
+        padding: 24px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 22px;
+      }
+      p {
+        margin: 0 0 20px;
+        color: #78716c;
+      }
+      table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 10px;
+      }
+      th {
+        text-align: left;
+        font-size: 12px;
+        color: #78716c;
+        font-weight: 600;
+        padding: 0 12px 4px;
+      }
+      td {
+        background: #fff;
+        border: 1px solid #ddd6cb;
+        padding: 12px;
+        vertical-align: middle;
+      }
+      td:first-child {
+        border-radius: 10px 0 0 10px;
+        width: 160px;
+        font-weight: 600;
+        font-size: 13px;
+      }
+      td:last-child {
+        border-radius: 0 10px 10px 0;
+      }
+      td + td {
+        border-left: none;
+      }
+      .icon {
+        width: 72px;
+        height: 72px;
+        display: grid;
+        place-items: center;
+        background: #f5f3ee;
+        border-radius: 8px;
+      }
+      .icon img.s32 {
+        width: 32px;
+        height: 32px;
+      }
+      .icon img.s64 {
+        width: 64px;
+        height: 64px;
+      }
+      .id {
+        display: block;
+        margin-top: 2px;
+        font-size: 10px;
+        color: #78716c;
+        font-family: ui-monospace, monospace;
+        font-weight: 400;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Simple 32×32 vs Detailed 64×64</h1>
+    <p>Same category ids — pick which set to wire up later</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Simple (32)</th>
+          <th>Detailed (64)</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <script>
+      const categories = [
+        ["frame", "Frame"],
+        ["fork", "Fork"],
+        ["headset", "Headset"],
+        ["handlebar", "Handlebar"],
+        ["stem", "Stem"],
+        ["bar-tape", "Bar tape / Grips"],
+        ["shift-levers", "Shift levers"],
+        ["brake-levers", "Brake levers"],
+        ["front-derailleur", "Front derailleur"],
+        ["rear-derailleur", "Rear derailleur"],
+        ["crankset", "Crankset"],
+        ["bottom-bracket", "Bottom bracket"],
+        ["cassette", "Cassette"],
+        ["chain", "Chain"],
+        ["brakes", "Brakes"],
+        ["front-wheel", "Front wheel"],
+        ["rear-wheel", "Rear wheel"],
+        ["hubs", "Hubs"],
+        ["rims", "Rims"],
+        ["spokes", "Spokes"],
+        ["front-tire", "Front tire"],
+        ["rear-tire", "Rear tire"],
+        ["saddle", "Saddle"],
+        ["seatpost", "Seatpost"],
+        ["pedals", "Pedals"],
+        ["other", "Other"],
+      ];
+      const rows = document.getElementById("rows");
+      for (const [id, label] of categories) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${label}<span class="id">${id}</span></td>
+          <td><div class="icon"><img class="s32" src="./${id}.svg" alt="" /></div></td>
+          <td><div class="icon"><img class="s64" src="./detailed/${id}.svg" alt="" /></div></td>
+        `;
+        rows.appendChild(tr);
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Double chainrings + FD clamp, parallelogram, outer/inner cage plates -->
+  <circle cx="22" cy="40" r="14" />
+  <circle cx="22" cy="40" r="9" />
+  <circle cx="22" cy="40" r="3" />
+  <path d="M36 12 H48" />
+  <path d="M42 12 V22" />
+  <path d="M36 22 H50" />
+  <path d="M38 22 L36 34 H52 L50 22" />
+  <path d="M36 34 V50" />
+  <path d="M52 34 V50" />
+  <path d="M36 50 H52" />
+  <path d="M36 42 H52" />
+</svg>

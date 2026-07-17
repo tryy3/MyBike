@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Faceplate stem: steerer clamp, extension, bar clamp with bolts -->
+  <rect x="8" y="22" width="14" height="20" rx="2" />
+  <path d="M15 18 V22" />
+  <path d="M15 42 V46" />
+  <circle cx="15" cy="28" r="1.5" fill="currentColor" stroke="none" />
+  <circle cx="15" cy="36" r="1.5" fill="currentColor" stroke="none" />
+  <path d="M22 30 H42" />
+  <path d="M22 34 H42" />
+  <rect x="42" y="18" width="14" height="28" rx="2" />
+  <path d="M49 14 V18" />
+  <path d="M45 14 H53" />
+  <circle cx="49" cy="26" r="1.5" fill="currentColor" stroke="none" />
+  <circle cx="49" cy="38" r="1.5" fill="currentColor" stroke="none" />
+</svg>
