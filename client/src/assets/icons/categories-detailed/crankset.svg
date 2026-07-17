@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <title>Crankset icon</title>
+  <circle cx="26.00" cy="34.00" r="16.00" />
+  <polygon points="41.97,33.00 41.97,35.00 44.40,34.00" fill="currentColor" stroke="none" />
+  <polygon points="41.50,37.98 40.88,39.89 43.50,39.69" fill="currentColor" stroke="none" />
+  <polygon points="39.51,42.57 38.33,44.20 40.89,44.82" fill="currentColor" stroke="none" />
+  <polygon points="36.20,46.33 34.57,47.51 36.82,48.89" fill="currentColor" stroke="none" />
+  <polygon points="31.89,48.88 29.98,49.50 31.69,51.50" fill="currentColor" stroke="none" />
+  <polygon points="27.00,49.97 25.00,49.97 26.00,52.40" fill="currentColor" stroke="none" />
+  <polygon points="22.02,49.50 20.11,48.88 20.31,51.50" fill="currentColor" stroke="none" />
+  <polygon points="17.43,47.51 15.80,46.33 15.18,48.89" fill="currentColor" stroke="none" />
+  <polygon points="13.67,44.20 12.49,42.57 11.11,44.82" fill="currentColor" stroke="none" />
+  <polygon points="11.12,39.89 10.50,37.98 8.50,39.69" fill="currentColor" stroke="none" />
+  <polygon points="10.03,35.00 10.03,33.00 7.60,34.00" fill="currentColor" stroke="none" />
+  <polygon points="10.50,30.02 11.12,28.11 8.50,28.31" fill="currentColor" stroke="none" />
+  <polygon points="12.49,25.43 13.67,23.80 11.11,23.18" fill="currentColor" stroke="none" />
+  <polygon points="15.80,21.67 17.43,20.49 15.18,19.11" fill="currentColor" stroke="none" />
+  <polygon points="20.11,19.12 22.02,18.50 20.31,16.50" fill="currentColor" stroke="none" />
+  <polygon points="25.00,18.03 27.00,18.03 26.00,15.60" fill="currentColor" stroke="none" />
+  <polygon points="29.98,18.50 31.89,19.12 31.69,16.50" fill="currentColor" stroke="none" />
+  <polygon points="34.57,20.49 36.20,21.67 36.82,19.11" fill="currentColor" stroke="none" />
+  <polygon points="38.33,23.80 39.51,25.43 40.89,23.18" fill="currentColor" stroke="none" />
+  <polygon points="40.88,28.11 41.50,30.02 43.50,28.31" fill="currentColor" stroke="none" />
+  <line x1="26.00" y1="34.00" x2="38.36" y2="38.02" />
+  <line x1="26.00" y1="34.00" x2="26.00" y2="47.00" />
+  <line x1="26.00" y1="34.00" x2="13.64" y2="38.02" />
+  <line x1="26.00" y1="34.00" x2="18.36" y2="23.48" />
+  <line x1="26.00" y1="34.00" x2="33.64" y2="23.48" />
+  <circle cx="26.00" cy="34.00" r="4.50" />
+  <line x1="30.50" y1="34.00" x2="31.60" y2="34.00" />
+  <line x1="29.18" y1="37.18" x2="29.96" y2="37.96" />
+  <line x1="26.00" y1="38.50" x2="26.00" y2="39.60" />
+  <line x1="22.82" y1="37.18" x2="22.04" y2="37.96" />
+  <line x1="21.50" y1="34.00" x2="20.40" y2="34.00" />
+  <line x1="22.82" y1="30.82" x2="22.04" y2="30.04" />
+  <line x1="26.00" y1="29.50" x2="26.00" y2="28.40" />
+  <line x1="29.18" y1="30.82" x2="29.96" y2="30.04" />
+  <rect x="27.59" y="21.75" width="22.83" height="5.50" rx="2.75" transform="rotate(-28.81 39.00 24.50)" />
+  <circle cx="49.00" cy="19.50" r="3.40" />
+  <line x1="46.60" y1="19.50" x2="51.40" y2="19.50" />
+  <line x1="49.00" y1="17.10" x2="49.00" y2="21.90" />
+</svg>

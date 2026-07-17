@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <title>Headset icon</title>
+  <rect x="27.00" y="5.00" width="10.00" height="4.00" rx="2.00" />
+  <circle cx="32.00" cy="7.00" r="1.10" fill="currentColor" stroke="none" />
+  <rect x="9.00" y="30.30" width="46.00" height="3.40" rx="1.70" transform="rotate(90.00 32.00 32.00)" />
+  <ellipse cx="32.00" cy="12.50" rx="6.00" ry="1.50" />
+  <ellipse cx="32.00" cy="15.50" rx="6.00" ry="1.50" />
+  <ellipse cx="32.00" cy="20.00" rx="9.00" ry="2.60" />
+  <circle cx="25.00" cy="20.00" r="0.90" fill="currentColor" stroke="none" />
+  <circle cx="28.50" cy="20.00" r="0.90" fill="currentColor" stroke="none" />
+  <circle cx="32.00" cy="20.00" r="0.90" fill="currentColor" stroke="none" />
+  <circle cx="35.50" cy="20.00" r="0.90" fill="currentColor" stroke="none" />
+  <circle cx="39.00" cy="20.00" r="0.90" fill="currentColor" stroke="none" />
+  <rect x="22.00" y="23.00" width="20.00" height="18.00" rx="2.00" />
+  <rect x="24.50" y="25.50" width="15.00" height="13.00" rx="1.00" />
+  <ellipse cx="32.00" cy="44.00" rx="9.00" ry="2.60" />
+  <circle cx="25.00" cy="44.00" r="0.90" fill="currentColor" stroke="none" />
+  <circle cx="28.50" cy="44.00" r="0.90" fill="currentColor" stroke="none" />
+  <circle cx="32.00" cy="44.00" r="0.90" fill="currentColor" stroke="none" />
+  <circle cx="35.50" cy="44.00" r="0.90" fill="currentColor" stroke="none" />
+  <circle cx="39.00" cy="44.00" r="0.90" fill="currentColor" stroke="none" />
+  <ellipse cx="32.00" cy="50.00" rx="6.50" ry="1.80" />
+</svg>

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <title>Rear tire icon</title>
+  <path d="M14,50 C10,38 10,22 22,14 C34,6 46,10 50,20" stroke-width="2.2" />
+  <path d="M14,50 L20,50 C20,50 21,46 21,44" stroke-width="2.2" />
+  <path d="M50,20 L54,26 C54,26 50,28 48,28" stroke-width="2.2" />
+  <path d="M18,44 C14,34 15,22 25,15 C34,9 43,11 47,18" stroke-width="1.4" />
+  <rect x="12.38" y="13.52" width="4.00" height="3.40" rx="1.70" transform="rotate(-140.00 14.38 15.22)" fill="currentColor" stroke="none" />
+  <rect x="15.22" y="10.68" width="4.00" height="3.40" rx="1.70" transform="rotate(-130.00 17.22 12.38)" fill="currentColor" stroke="none" />
+  <rect x="18.50" y="8.38" width="4.00" height="3.40" rx="1.70" transform="rotate(-120.00 20.50 10.08)" fill="currentColor" stroke="none" />
+  <rect x="22.13" y="6.69" width="4.00" height="3.40" rx="1.70" transform="rotate(-110.00 24.13 8.39)" fill="currentColor" stroke="none" />
+  <rect x="26.01" y="5.65" width="4.00" height="3.40" rx="1.70" transform="rotate(-100.00 28.01 7.35)" fill="currentColor" stroke="none" />
+  <rect x="30.00" y="5.30" width="4.00" height="3.40" rx="1.70" transform="rotate(-90.00 32.00 7.00)" fill="currentColor" stroke="none" />
+  <rect x="33.99" y="5.65" width="4.00" height="3.40" rx="1.70" transform="rotate(-80.00 35.99 7.35)" fill="currentColor" stroke="none" />
+  <rect x="37.87" y="6.69" width="4.00" height="3.40" rx="1.70" transform="rotate(-70.00 39.87 8.39)" fill="currentColor" stroke="none" />
+  <rect x="41.50" y="8.38" width="4.00" height="3.40" rx="1.70" transform="rotate(-60.00 43.50 10.08)" fill="currentColor" stroke="none" />
+  <rect x="44.78" y="10.68" width="4.00" height="3.40" rx="1.70" transform="rotate(-50.00 46.78 12.38)" fill="currentColor" stroke="none" />
+  <rect x="47.62" y="13.52" width="4.00" height="3.40" rx="1.70" transform="rotate(-40.00 49.62 15.22)" fill="currentColor" stroke="none" />
+  <rect x="49.92" y="16.80" width="4.00" height="3.40" rx="1.70" transform="rotate(-30.00 51.92 18.50)" fill="currentColor" stroke="none" />
+</svg>

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <title>Brakes icon</title>
+  <circle cx="26.00" cy="32.00" r="18.00" />
+  <circle cx="32.00" cy="32.00" r="1.10" fill="currentColor" stroke="none" />
+  <circle cx="29.00" cy="37.20" r="1.10" fill="currentColor" stroke="none" />
+  <circle cx="23.00" cy="37.20" r="1.10" fill="currentColor" stroke="none" />
+  <circle cx="20.00" cy="32.00" r="1.10" fill="currentColor" stroke="none" />
+  <circle cx="23.00" cy="26.80" r="1.10" fill="currentColor" stroke="none" />
+  <circle cx="29.00" cy="26.80" r="1.10" fill="currentColor" stroke="none" />
+  <circle cx="26.00" cy="32.00" r="3.00" />
+  <rect x="35.00" y="31.10" width="6.50" height="1.80" rx="0.90" transform="rotate(0.00 38.25 32.00)" fill="currentColor" stroke="none" />
+  <rect x="31.41" y="39.76" width="6.50" height="1.80" rx="0.90" transform="rotate(45.00 34.66 40.66)" fill="currentColor" stroke="none" />
+  <rect x="22.75" y="43.35" width="6.50" height="1.80" rx="0.90" transform="rotate(90.00 26.00 44.25)" fill="currentColor" stroke="none" />
+  <rect x="14.09" y="39.76" width="6.50" height="1.80" rx="0.90" transform="rotate(135.00 17.34 40.66)" fill="currentColor" stroke="none" />
+  <rect x="10.50" y="31.10" width="6.50" height="1.80" rx="0.90" transform="rotate(180.00 13.75 32.00)" fill="currentColor" stroke="none" />
+  <rect x="14.09" y="22.44" width="6.50" height="1.80" rx="0.90" transform="rotate(-135.00 17.34 23.34)" fill="currentColor" stroke="none" />
+  <rect x="22.75" y="18.85" width="6.50" height="1.80" rx="0.90" transform="rotate(-90.00 26.00 19.75)" fill="currentColor" stroke="none" />
+  <rect x="31.41" y="22.44" width="6.50" height="1.80" rx="0.90" transform="rotate(-45.00 34.66 23.34)" fill="currentColor" stroke="none" />
+  <rect x="40.00" y="24.00" width="14.00" height="16.00" rx="3.00" />
+  <circle cx="43.00" cy="21.50" r="1.00" fill="currentColor" stroke="none" />
+  <circle cx="51.00" cy="21.50" r="1.00" fill="currentColor" stroke="none" />
+  <rect x="42.00" y="26.00" width="3.20" height="5.00" rx="1.00" fill="currentColor" stroke="none" />
+  <rect x="42.00" y="39.00" width="3.20" height="5.00" rx="1.00" fill="currentColor" stroke="none" />
+  <path d="M47,24 C47,18 42,14 36,12" />
+</svg>

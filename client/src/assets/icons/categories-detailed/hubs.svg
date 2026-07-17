@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <title>Hubs icon</title>
+  <line x1="2.00" y1="32.00" x2="62.00" y2="32.00" stroke-width="2.2" />
+  <rect x="21.00" y="22.00" width="22.00" height="20.00" rx="8.00" />
+  <ellipse cx="25.00" cy="32.00" rx="2.40" ry="11.00" />
+  <ellipse cx="39.00" cy="32.00" rx="2.40" ry="11.00" />
+  <circle cx="25.00" cy="24.00" r="0.80" fill="currentColor" stroke="none" />
+  <circle cx="39.00" cy="24.00" r="0.80" fill="currentColor" stroke="none" />
+  <circle cx="25.00" cy="28.00" r="0.80" fill="currentColor" stroke="none" />
+  <circle cx="39.00" cy="28.00" r="0.80" fill="currentColor" stroke="none" />
+  <circle cx="25.00" cy="36.00" r="0.80" fill="currentColor" stroke="none" />
+  <circle cx="39.00" cy="36.00" r="0.80" fill="currentColor" stroke="none" />
+  <circle cx="25.00" cy="40.00" r="0.80" fill="currentColor" stroke="none" />
+  <circle cx="39.00" cy="40.00" r="0.80" fill="currentColor" stroke="none" />
+  <line x1="25.00" y1="21.50" x2="21.00" y2="14.00" stroke-width="1.6" />
+  <line x1="25.00" y1="42.50" x2="21.00" y2="50.00" stroke-width="1.6" />
+  <line x1="39.00" y1="21.50" x2="43.00" y2="14.00" stroke-width="1.6" />
+  <line x1="39.00" y1="42.50" x2="43.00" y2="50.00" stroke-width="1.6" />
+  <circle cx="6.00" cy="32.00" r="1.60" fill="currentColor" stroke="none" />
+  <circle cx="58.00" cy="32.00" r="1.60" fill="currentColor" stroke="none" />
+</svg>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <title>Handlebar icon</title>
+  <path d="M32,17 L32,24" stroke-width="4.5" />
+  <path d="M18,24 L46,24" stroke-width="4.5" />
+  <path d="M18,24 C13,25 10,30 11,36 C12,42 17,45 21,46" stroke-width="4.5" />
+  <path d="M46,24 C51,25 54,30 53,36 C52,42 47,45 43,46" stroke-width="4.5" />
+  <line x1="28.00" y1="19.00" x2="36.00" y2="19.00" stroke-width="2" />
+  <line x1="28.00" y1="21.50" x2="36.00" y2="21.50" stroke-width="2" />
+  <circle cx="30.00" cy="20.20" r="1.00" fill="currentColor" stroke="none" />
+  <circle cx="34.00" cy="20.20" r="1.00" fill="currentColor" stroke="none" />
+  <line x1="9.00" y1="31.00" x2="9.00" y2="35.00" stroke-width="1.8" />
+  <line x1="55.00" y1="31.00" x2="55.00" y2="35.00" stroke-width="1.8" />
+  <circle cx="21.00" cy="46.00" r="2.20" fill="currentColor" stroke="none" />
+  <circle cx="43.00" cy="46.00" r="2.20" fill="currentColor" stroke="none" />
+</svg>

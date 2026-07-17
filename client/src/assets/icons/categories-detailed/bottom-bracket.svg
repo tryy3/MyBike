@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <title>Bottom bracket icon</title>
+  <line x1="3.00" y1="32.00" x2="61.00" y2="32.00" stroke-width="2.4" />
+  <rect x="18.00" y="25.00" width="28.00" height="14.00" rx="6.00" />
+  <ellipse cx="20.00" cy="32.00" rx="3.00" ry="7.00" />
+  <ellipse cx="44.00" cy="32.00" rx="3.00" ry="7.00" />
+  <circle cx="18.00" cy="27.00" r="0.90" fill="currentColor" stroke="none" />
+  <circle cx="22.00" cy="27.00" r="0.90" fill="currentColor" stroke="none" />
+  <circle cx="18.00" cy="37.00" r="0.90" fill="currentColor" stroke="none" />
+  <circle cx="22.00" cy="37.00" r="0.90" fill="currentColor" stroke="none" />
+  <circle cx="42.00" cy="27.00" r="0.90" fill="currentColor" stroke="none" />
+  <circle cx="46.00" cy="27.00" r="0.90" fill="currentColor" stroke="none" />
+  <circle cx="42.00" cy="37.00" r="0.90" fill="currentColor" stroke="none" />
+  <circle cx="46.00" cy="37.00" r="0.90" fill="currentColor" stroke="none" />
+  <line x1="22.00" y1="25.00" x2="22.00" y2="22.50" stroke-width="1.5" />
+  <line x1="22.00" y1="39.00" x2="22.00" y2="41.50" stroke-width="1.5" />
+  <line x1="26.00" y1="25.00" x2="26.00" y2="22.50" stroke-width="1.5" />
+  <line x1="26.00" y1="39.00" x2="26.00" y2="41.50" stroke-width="1.5" />
+  <line x1="30.00" y1="25.00" x2="30.00" y2="22.50" stroke-width="1.5" />
+  <line x1="30.00" y1="39.00" x2="30.00" y2="41.50" stroke-width="1.5" />
+  <line x1="34.00" y1="25.00" x2="34.00" y2="22.50" stroke-width="1.5" />
+  <line x1="34.00" y1="39.00" x2="34.00" y2="41.50" stroke-width="1.5" />
+  <line x1="38.00" y1="25.00" x2="38.00" y2="22.50" stroke-width="1.5" />
+  <line x1="38.00" y1="39.00" x2="38.00" y2="41.50" stroke-width="1.5" />
+  <line x1="42.00" y1="25.00" x2="42.00" y2="22.50" stroke-width="1.5" />
+  <line x1="42.00" y1="39.00" x2="42.00" y2="41.50" stroke-width="1.5" />
+  <line x1="6.00" y1="30.00" x2="6.00" y2="34.00" stroke-width="1.5" />
+  <line x1="9.00" y1="30.00" x2="9.00" y2="34.00" stroke-width="1.5" />
+  <line x1="12.00" y1="30.00" x2="12.00" y2="34.00" stroke-width="1.5" />
+  <line x1="52.00" y1="30.00" x2="52.00" y2="34.00" stroke-width="1.5" />
+  <line x1="55.00" y1="30.00" x2="55.00" y2="34.00" stroke-width="1.5" />
+  <line x1="58.00" y1="30.00" x2="58.00" y2="34.00" stroke-width="1.5" />
+</svg>
