@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+
+  <path fill="currentColor" d="M6 30 C10 18 22 16 32 24 C42 14 54 16 58 28 C52 42 40 44 32 36 C24 44 12 42 6 30 Z"/>
+  <path fill="#fff" d="M18 28 C24 32 40 32 46 28 C42 34 36 36 32 32 C28 36 22 34 18 28 Z"/>
+  <rect fill="currentColor" x="22" y="36" width="4" height="14" rx="1"/>
+  <rect fill="currentColor" x="38" y="36" width="4" height="14" rx="1"/>
+  <rect fill="currentColor" x="20" y="48" width="24" height="4" rx="1"/>
+</svg>

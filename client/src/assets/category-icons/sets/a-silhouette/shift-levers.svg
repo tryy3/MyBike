@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+
+  <path fill="currentColor" d="M14 8 H36 C44 8 48 14 48 22 V32 H40 V24 C40 20 38 16 34 16 H22 V32 H14 Z"/>
+  <path fill="currentColor" d="M22 30 H30 V58 H22 Z"/>
+  <path fill="currentColor" d="M32 28 L52 52 H42 L30 36 Z"/>
+  <path fill="#fff" d="M18 12 H32 V18 H18 Z"/>
+</svg>

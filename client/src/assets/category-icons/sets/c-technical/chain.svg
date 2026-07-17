@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+
+  <defs>
+    <pattern id="hatch" patternUnits="userSpaceOnUse" width="4" height="4">
+      <path d="M0 4 L4 0" stroke="currentColor" stroke-width="0.7" opacity="0.35"/>
+    </pattern>
+    <pattern id="hatch2" patternUnits="userSpaceOnUse" width="3" height="3">
+      <path d="M0 3 L3 0" stroke="currentColor" stroke-width="0.6" opacity="0.25"/>
+    </pattern>
+  </defs>
+  <g stroke="currentColor" stroke-width="1.5">
+    <rect x="2" y="24" width="16" height="16" rx="4" fill="url(#hatch)"/>
+    <rect x="14" y="28" width="12" height="8" rx="2" fill="url(#hatch2)"/>
+    <rect x="22" y="24" width="16" height="16" rx="4" fill="url(#hatch)"/>
+    <rect x="34" y="28" width="12" height="8" rx="2" fill="url(#hatch2)"/>
+    <rect x="42" y="24" width="16" height="16" rx="4" fill="url(#hatch)"/>
+    <rect x="54" y="28" width="8" height="8" rx="2" fill="url(#hatch2)"/>
+  </g>
+  <g fill="currentColor">
+    <circle cx="10" cy="32" r="2"/><circle cx="30" cy="32" r="2"/><circle cx="50" cy="32" r="2"/>
+  </g>
+  <path stroke="currentColor" stroke-width="1" opacity="0.5" d="M8 28 V36 M28 28 V36 M48 28 V36"/>
+</svg>
