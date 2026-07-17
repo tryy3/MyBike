@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- STI hood, brake lever blade, and shift paddle behind -->
+  <path d="M16 10 H34 C40 10 44 14 44 20 V30" />
+  <path d="M20 14 H32" />
+  <path d="M26 30 V54" />
+  <path d="M22 30 H30" />
+  <path d="M34 28 L48 46" />
+  <path d="M42 46 H50 V38" />
+  <path d="M16 18 C14 22 14 26 16 30" />
+  <circle cx="26" cy="22" r="2" />
+</svg>

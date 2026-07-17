@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Pick category icons — 3 style sets</title>
+    <style>
+      :root {
+        --ink: #1a1a1a;
+        --muted: #6b6560;
+        --bg: #efeae3;
+        --card: #fffdf9;
+        --line: #d9d0c4;
+        --a: #1f3d2b;
+        --b: #3b2f55;
+        --c: #5c3b1e;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+        color: var(--ink);
+        background:
+          radial-gradient(ellipse at 10% 0%, #f7f1e8 0%, transparent 45%),
+          radial-gradient(ellipse at 90% 20%, #e7efe8 0%, transparent 40%),
+          var(--bg);
+        padding: 28px 24px 80px;
+      }
+      header {
+        max-width: 1100px;
+        margin: 0 auto 28px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+        letter-spacing: -0.02em;
+      }
+      .lede {
+        margin: 0;
+        color: var(--muted);
+        font-family: system-ui, sans-serif;
+        font-size: 14px;
+        line-height: 1.5;
+        max-width: 70ch;
+      }
+      .styles {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        max-width: 1100px;
+        margin: 18px auto 28px;
+      }
+      .style-card {
+        border: 1px solid var(--line);
+        background: var(--card);
+        border-radius: 12px;
+        padding: 14px 14px 12px;
+        font-family: system-ui, sans-serif;
+      }
+      .style-card strong {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 4px;
+      }
+      .style-card span {
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.4;
+      }
+      .style-card.a {
+        border-top: 3px solid var(--a);
+      }
+      .style-card.b {
+        border-top: 3px solid var(--b);
+      }
+      .style-card.c {
+        border-top: 3px solid var(--c);
+      }
+      .list {
+        max-width: 1100px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 160px 1fr 1fr 1fr;
+        gap: 10px;
+        align-items: stretch;
+      }
+      .name {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+      .name .label {
+        font-size: 15px;
+        font-weight: 700;
+      }
+      .name .id {
+        margin-top: 4px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .opt {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px;
+        text-align: center;
+      }
+      .opt .badge {
+        font-family: system-ui, sans-serif;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        margin-bottom: 8px;
+      }
+      .opt.a .badge {
+        color: var(--a);
+      }
+      .opt.b .badge {
+        color: var(--b);
+      }
+      .opt.c .badge {
+        color: var(--c);
+      }
+      .icon {
+        width: 88px;
+        height: 88px;
+        margin: 0 auto;
+        display: grid;
+        place-items: center;
+        border-radius: 10px;
+        background: #f4efe7;
+        color: var(--ink);
+      }
+      .icon img {
+        width: 64px;
+        height: 64px;
+        display: block;
+      }
+      @media (max-width: 900px) {
+        .row {
+          grid-template-columns: 1fr;
+        }
+        .styles {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Choose 1–3 icons per category</h1>
+      <p class="lede">
+        Three creative styles for every bike component. Reply with your picks using the letters
+        A / B / C for each category (you can mix styles). Example:
+        <code>frame:A, fork:C, cassette:B</code>
+      </p>
+    </header>
+
+    <div class="styles">
+      <div class="style-card a">
+        <strong>A — Silhouette</strong>
+        <span>Bold filled shapes with cutouts. High contrast, logo-like, reads at a glance.</span>
+      </div>
+      <div class="style-card b">
+        <strong>B — Isometric</strong>
+        <span>Workshop ¾ views with depth and soft fills. Feels like assembly drawings.</span>
+      </div>
+      <div class="style-card c">
+        <strong>C — Technical</strong>
+        <span>Fine-line parts illustration with hatching. Closest to a catalog diagram.</span>
+      </div>
+    </div>
+
+    <div class="list" id="list"></div>
+
+    <script>
+      const categories = [
+        ["frame", "Frame"],
+        ["fork", "Fork"],
+        ["headset", "Headset"],
+        ["handlebar", "Handlebar"],
+        ["stem", "Stem"],
+        ["bar-tape", "Bar tape / Grips"],
+        ["shift-levers", "Shift levers"],
+        ["brake-levers", "Brake levers"],
+        ["front-derailleur", "Front derailleur"],
+        ["rear-derailleur", "Rear derailleur"],
+        ["crankset", "Crankset"],
+        ["bottom-bracket", "Bottom bracket"],
+        ["cassette", "Cassette"],
+        ["chain", "Chain"],
+        ["brakes", "Brakes"],
+        ["front-wheel", "Front wheel"],
+        ["rear-wheel", "Rear wheel"],
+        ["hubs", "Hubs"],
+        ["rims", "Rims"],
+        ["spokes", "Spokes"],
+        ["front-tire", "Front tire"],
+        ["rear-tire", "Rear tire"],
+        ["saddle", "Saddle"],
+        ["seatpost", "Seatpost"],
+        ["pedals", "Pedals"],
+        ["other", "Other"],
+      ];
+      const list = document.getElementById("list");
+      for (const [id, label] of categories) {
+        const row = document.createElement("div");
+        row.className = "row";
+        row.innerHTML = `
+          <div class="name">
+            <div class="label">${label}</div>
+            <div class="id">${id}</div>
+          </div>
+          <div class="opt a">
+            <div class="badge">A · SILHOUETTE</div>
+            <div class="icon"><img src="./a-silhouette/${id}.svg" alt="A ${label}" /></div>
+          </div>
+          <div class="opt b">
+            <div class="badge">B · ISOMETRIC</div>
+            <div class="icon"><img src="./b-isometric/${id}.svg" alt="B ${label}" /></div>
+          </div>
+          <div class="opt c">
+            <div class="badge">C · TECHNICAL</div>
+            <div class="icon"><img src="./c-technical/${id}.svg" alt="C ${label}" /></div>
+          </div>
+        `;
+        list.appendChild(row);
+      }
+    </script>
+  </body>
+</html>

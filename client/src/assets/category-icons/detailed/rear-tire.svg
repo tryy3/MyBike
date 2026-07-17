@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Tire with denser center tread strip for drive traction -->
+  <circle cx="32" cy="32" r="26" />
+  <circle cx="32" cy="32" r="18" />
+  <path d="M32 6 V12" />
+  <path d="M32 52 V58" />
+  <path d="M6 32 H12" />
+  <path d="M52 32 H58" />
+  <path d="M14 14 L18 18" />
+  <path d="M46 46 L50 50" />
+  <path d="M50 14 L46 18" />
+  <path d="M18 46 L14 50" />
+  <!-- denser center row -->
+  <path d="M30 10 V14" />
+  <path d="M34 10 V14" />
+  <path d="M30 50 V54" />
+  <path d="M34 50 V54" />
+  <path d="M10 30 H14" />
+  <path d="M10 34 H14" />
+  <path d="M50 30 H54" />
+  <path d="M50 34 H54" />
+  <path d="M24 24 H40" />
+  <path d="M24 32 H40" />
+  <path d="M24 40 H40" />
+</svg>

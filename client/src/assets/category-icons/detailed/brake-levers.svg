@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Handlebar clamp + long curved brake lever + pivot & cable -->
+  <path d="M6 16 H40" />
+  <path d="M6 20 H36" />
+  <rect x="22" y="12" width="12" height="12" rx="2" />
+  <path d="M30 24 C40 24 48 32 48 42 L44 56" />
+  <path d="M28 28 C36 30 42 36 44 44" />
+  <circle cx="28" cy="24" r="2" />
+  <path d="M34 14 V10 H42" />
+</svg>

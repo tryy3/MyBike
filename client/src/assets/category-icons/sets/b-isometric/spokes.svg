@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+
+  <ellipse cx="32" cy="34" rx="8" ry="5" fill="currentColor" fill-opacity="0.25" stroke="currentColor" stroke-width="2"/>
+  <ellipse cx="32" cy="34" rx="3" ry="2" fill="currentColor"/>
+  <g stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+    <path d="M32 12 V28 M32 40 V56 M10 34 H24 M40 34 H54"/>
+    <path d="M14 18 L26 28 M38 40 L50 50 M50 18 L38 28 M26 40 L14 50"/>
+  </g>
+  <ellipse cx="32" cy="12" rx="3" ry="2" fill="currentColor"/>
+  <ellipse cx="32" cy="56" rx="3" ry="2" fill="currentColor"/>
+  <ellipse cx="10" cy="34" rx="3" ry="2" fill="currentColor"/>
+  <ellipse cx="54" cy="34" rx="3" ry="2" fill="currentColor"/>
+</svg>

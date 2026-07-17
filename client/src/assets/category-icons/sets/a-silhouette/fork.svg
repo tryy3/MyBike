@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+
+  <path fill="currentColor" d="M28 6 H36 V18 H28 Z"/>
+  <path fill="currentColor" d="M22 18 H42 L38 24 H26 Z"/>
+  <path fill="currentColor" d="M26 22 L16 54 H24 L30 28 Z"/>
+  <path fill="currentColor" d="M38 22 L48 54 H40 L34 28 Z"/>
+  <path fill="currentColor" d="M12 52 H24 V58 H12 Z"/>
+  <path fill="currentColor" d="M40 52 H52 V58 H40 Z"/>
+  <rect fill="#fff" x="30" y="8" width="4" height="8" rx="1"/>
+</svg>

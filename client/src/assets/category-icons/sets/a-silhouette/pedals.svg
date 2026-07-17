@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+
+  <rect fill="currentColor" x="2" y="28" width="12" height="8" rx="1"/>
+  <rect fill="currentColor" x="12" y="16" width="44" height="32" rx="4"/>
+  <rect fill="#fff" x="18" y="22" width="4" height="20" rx="1"/>
+  <rect fill="#fff" x="28" y="22" width="4" height="20" rx="1"/>
+  <rect fill="#fff" x="38" y="22" width="4" height="20" rx="1"/>
+  <rect fill="#fff" x="48" y="22" width="4" height="20" rx="1"/>
+  <circle fill="currentColor" cx="20" cy="20" r="2"/>
+  <circle fill="currentColor" cx="30" cy="20" r="2"/>
+  <circle fill="currentColor" cx="40" cy="20" r="2"/>
+  <circle fill="currentColor" cx="50" cy="20" r="2"/>
+  <circle fill="currentColor" cx="20" cy="44" r="2"/>
+  <circle fill="currentColor" cx="30" cy="44" r="2"/>
+  <circle fill="currentColor" cx="40" cy="44" r="2"/>
+  <circle fill="currentColor" cx="50" cy="44" r="2"/>
+</svg>

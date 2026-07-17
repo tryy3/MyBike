@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+
+  <circle fill="currentColor" cx="22" cy="40" r="16"/>
+  <circle fill="#fff" cx="22" cy="40" r="10"/>
+  <circle fill="currentColor" cx="22" cy="40" r="4"/>
+  <path fill="currentColor" d="M34 10 H50 V20 H34 Z"/>
+  <path fill="currentColor" d="M36 20 H52 L50 52 H34 L36 20 Z"/>
+  <path fill="#fff" d="M40 28 H48 V44 H40 Z"/>
+</svg>

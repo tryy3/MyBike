@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+
+  <circle fill="currentColor" cx="32" cy="32" r="28"/>
+  <circle fill="#fff" cx="32" cy="32" r="18"/>
+  <path fill="currentColor" d="M32 4 L34 12 H30 Z M48 10 L46 18 L50 16 Z M58 24 L50 26 L52 22 Z M60 32 L52 34 V30 Z M58 40 L50 38 L52 42 Z M48 54 L46 46 L50 48 Z M32 60 L30 52 H34 Z M16 54 L18 46 L14 48 Z M6 40 L14 38 L12 42 Z M4 32 L12 30 V34 Z M6 24 L14 26 L12 22 Z M16 10 L18 18 L14 16 Z"/>
+  <rect fill="currentColor" x="22" y="22" width="20" height="4" rx="1"/>
+  <rect fill="currentColor" x="22" y="30" width="20" height="4" rx="1"/>
+  <rect fill="currentColor" x="22" y="38" width="20" height="4" rx="1"/>
+</svg>
