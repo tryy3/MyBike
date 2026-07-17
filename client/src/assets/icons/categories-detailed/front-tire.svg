@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <title>Front tire icon</title>
+  <path d="M14,50 C10,38 10,22 22,14 C34,6 46,10 50,20" stroke-width="2.2" />
+  <path d="M14,50 L20,50 C20,50 21,46 21,44" stroke-width="2.2" />
+  <path d="M50,20 L54,26 C54,26 50,28 48,28" stroke-width="2.2" />
+  <path d="M18,44 C14,34 15,22 25,15 C34,9 43,11 47,18" stroke-width="1.4" />
+  <rect x="13.26" y="14.24" width="3.00" height="2.60" rx="1.30" transform="rotate(-140.00 14.76 15.54)" fill="currentColor" stroke="none" />
+  <rect x="17.83" y="10.11" width="3.00" height="2.60" rx="1.30" transform="rotate(-124.29 19.33 11.41)" fill="currentColor" stroke="none" />
+  <rect x="23.33" y="7.37" width="3.00" height="2.60" rx="1.30" transform="rotate(-108.57 24.83 8.67)" fill="currentColor" stroke="none" />
+  <rect x="29.38" y="6.23" width="3.00" height="2.60" rx="1.30" transform="rotate(-92.86 30.88 7.53)" fill="currentColor" stroke="none" />
+  <rect x="35.51" y="6.76" width="3.00" height="2.60" rx="1.30" transform="rotate(-77.14 37.01 8.06)" fill="currentColor" stroke="none" />
+  <rect x="41.26" y="8.94" width="3.00" height="2.60" rx="1.30" transform="rotate(-61.43 42.76 10.24)" fill="currentColor" stroke="none" />
+  <rect x="46.21" y="12.59" width="3.00" height="2.60" rx="1.30" transform="rotate(-45.71 47.71 13.89)" fill="currentColor" stroke="none" />
+  <rect x="49.99" y="17.45" width="3.00" height="2.60" rx="1.30" transform="rotate(-30.00 51.49 18.75)" fill="currentColor" stroke="none" />
+</svg>
