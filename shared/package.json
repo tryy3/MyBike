@@ -14,11 +14,11 @@
     "test": "vp test"
   },
   "dependencies": {
-    "drizzle-orm": "1.0.0-rc.4-5d5b77c",
+    "drizzle-orm": "1.0.0-rc.4-de6c356",
     "zod": "^4.0.0"
   },
   "devDependencies": {
     "typescript": "^7.0.0",
-    "vite-plus": "0.2.4"
+    "vite-plus": "0.2.6"
   }
 }
