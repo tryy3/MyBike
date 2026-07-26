@@ -131,6 +131,7 @@ inspection, or point `DB_PATH` at a local copy.
 | ---------------------------------------- | ------------------------------- |
 | Generate a migration from schema changes | `npm run -w server db:generate` |
 | Apply pending migrations                 | `npm run -w server db:migrate`  |
+| Branch Turso Cloud DB for PR testing     | `npm run db:branch`             |
 | Push schema directly (interactive)       | `npm run -w server db:push`     |
 | Inspect local data                       | `npm run -w server db:studio`   |
 

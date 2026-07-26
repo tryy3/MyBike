@@ -35,22 +35,23 @@ MyBike/
 
 Install the Vite+ CLI once: `curl -fsSL https://vite.plus | bash`. Run `vp env off` if vp's Node manager conflicts with nvm/Nix.
 
-| What                        | Command                                                |
-| --------------------------- | ------------------------------------------------------ |
-| Install deps                | `vp install` (or `npm install`)                        |
-| Server dev                  | `npm run -w server dev`                                |
-| Client dev                  | `npm run -w client dev`                                |
-| Webhook proxy dev           | `npm run -w strava-webhook-proxy dev`                  |
-| Format + lint + typecheck   | `vp check`                                             |
-| Auto-fix format/lint        | `vp check --fix`                                       |
-| Run tests                   | `npm test` (runs shared + server via `vp run -r test`) |
-| Full verify (CI equivalent) | `npm run verify`                                       |
-| Generate migration          | `npm run -w server db:generate`                        |
-| Apply migrations            | `npm run -w server db:migrate`                         |
-| Push schema (interactive)   | `npm run -w server db:push`                            |
-| Drizzle Studio              | `npm run -w server db:studio`                          |
-| Proxy migrate               | `npm run -w strava-webhook-proxy db:migrate`           |
-| Strava webhook subscribe    | `npm run -w strava-webhook-proxy subscribe`            |
+| What                        | Command                                                 |
+| --------------------------- | ------------------------------------------------------- |
+| Install deps                | `vp install` (or `npm install`)                         |
+| Server dev                  | `npm run -w server dev`                                 |
+| Client dev                  | `npm run -w client dev`                                 |
+| Webhook proxy dev           | `npm run -w strava-webhook-proxy dev`                   |
+| Format + lint + typecheck   | `vp check`                                              |
+| Auto-fix format/lint        | `vp check --fix`                                        |
+| Run tests                   | `npm test` (runs shared + server via `vp run -r test`)  |
+| Full verify (CI equivalent) | `npm run verify`                                        |
+| Generate migration          | `npm run -w server db:generate`                         |
+| Apply migrations            | `npm run -w server db:migrate`                          |
+| Turso Cloud PR branch       | `npm run db:branch` (prints exports; needs `turso` CLI) |
+| Push schema (interactive)   | `npm run -w server db:push`                             |
+| Drizzle Studio              | `npm run -w server db:studio`                           |
+| Proxy migrate               | `npm run -w strava-webhook-proxy db:migrate`            |
+| Strava webhook subscribe    | `npm run -w strava-webhook-proxy subscribe`             |
 
 ## Quality gates
 

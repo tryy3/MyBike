@@ -1,7 +1,10 @@
 import { cn } from "@/lib/utils";
 import { hasStats } from "@/lib/format-stats";
 import { ComponentStats } from "@/features/stats/ComponentStats";
+import { Badge } from "@/components/ui/badge";
+import type { Component } from "shared";
 import type { ReactNode } from "react";
+import { componentPropertyPills } from "./component-property-pills";
 
 /** Identity block — category, name, and meta; visually recessed vs. detail tier */
 export function ComponentIdentityTier({
@@ -87,6 +90,30 @@ export function ComponentMetaLine({
         />
       ) : null}
     </span>
+  );
+}
+
+/** Property chips (e.g. Lube · Drip wax) — shared by category list and detail rows. */
+export function ComponentPropertiesPills({
+  category,
+  properties,
+  className,
+}: {
+  category: string;
+  properties: Component["properties"] | null | undefined;
+  className?: string;
+}) {
+  const pills = componentPropertyPills(category, properties);
+  if (pills.length === 0) return null;
+
+  return (
+    <div className={cn("flex flex-wrap gap-1.5", className)} aria-label="Component properties">
+      {pills.map((pill) => (
+        <Badge key={pill.key} variant="secondary" className="font-medium">
+          {pill.label} · {pill.value}
+        </Badge>
+      ))}
+    </div>
   );
 }
 

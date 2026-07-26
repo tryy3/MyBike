@@ -20,6 +20,7 @@ import {
   ComponentIdentityTier,
   ComponentMetaLine,
   ComponentNameLabel,
+  ComponentPropertiesPills,
 } from "./component-list-layout";
 import type { WearByComponentId } from "./ComponentsSplitView";
 
@@ -168,6 +169,10 @@ export function ComponentsNav({
                                 brandModel={brandModel}
                                 distanceMeters={displayWear?.distanceMeters}
                                 movingTimeMinutes={displayWear?.movingTimeMinutes}
+                              />
+                              <ComponentPropertiesPills
+                                category={active.category}
+                                properties={active.properties}
                               />
                             </ComponentIdentityTier>
                             <ComponentDetailTier notes={active.notes} lineClamp={2} />

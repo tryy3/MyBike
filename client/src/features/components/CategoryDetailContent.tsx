@@ -18,7 +18,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { LUBE_TYPE_IDS, LUBE_TYPE_LABELS, type Component, type LubeType } from "shared";
+import type { Component } from "shared";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,21 +30,11 @@ import {
   ComponentIdentityTier,
   ComponentMetaLine,
   ComponentNameLabel,
+  ComponentPropertiesPills,
 } from "./component-list-layout";
 import { ComponentForm } from "./ComponentForm";
 import { useActivateComponent, useDeleteComponent, useReorderComponents } from "./api";
 import type { WearByComponentId } from "./ComponentsSplitView";
-
-function componentLubeType(component: Component): LubeType | undefined {
-  const value = component.properties?.lubeType;
-  if (typeof value !== "string") return undefined;
-  return value as LubeType;
-}
-
-function lubeLabel(lubeType: LubeType | undefined): string | null {
-  if (!lubeType) return null;
-  return LUBE_TYPE_LABELS[lubeType] ?? lubeType;
-}
 
 export type CategoryFormMode = "add" | { edit: string } | null;
 
@@ -83,22 +73,13 @@ export function CategoryDetailContent({
   const activate = useActivateComponent(bikeId);
   const deleteComponent = useDeleteComponent(bikeId);
   const [deleting, setDeleting] = useState<Component | null>(null);
-  const [selectedLubeTypes, setSelectedLubeTypes] = useState<LubeType[]>([]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
-  const lubeFilterActive = categoryId === "chain" && selectedLubeTypes.length > 0;
-  const filteredComponents = lubeFilterActive
-    ? components.filter((c) => {
-        const lube = componentLubeType(c);
-        return lube != null && selectedLubeTypes.includes(lube);
-      })
-    : components;
-  // Reorder must use the full category list — disable DnD while a lube filter is active.
-  const sortable = !lubeFilterActive && filteredComponents.length > 1;
-  const sorted = [...filteredComponents].sort((a, b) => a.sortOrder - b.sortOrder);
+  const sortable = components.length > 1;
+  const sorted = [...components].sort((a, b) => a.sortOrder - b.sortOrder);
   const editingComponent =
     formMode && typeof formMode === "object"
       ? components.find((c) => c.id === formMode.edit)
@@ -191,42 +172,11 @@ export function CategoryDetailContent({
   const hasActive = sorted.some((c) => c.isActive);
   const hasAlternates = sorted.some((c) => !c.isActive);
 
-  function toggleLubeFilter(lubeType: LubeType) {
-    setSelectedLubeTypes((current) =>
-      current.includes(lubeType)
-        ? current.filter((value) => value !== lubeType)
-        : [...current, lubeType],
-    );
-  }
-
   return (
     <div className="flex flex-col gap-4">
-      {categoryId === "chain" && components.length > 0 && (
-        <div className="flex flex-wrap gap-2" aria-label="Filter by lube type">
-          {LUBE_TYPE_IDS.map((lubeType) => {
-            const selected = selectedLubeTypes.includes(lubeType);
-            return (
-              <Button
-                key={lubeType}
-                type="button"
-                size="sm"
-                variant={selected ? "secondary" : "outline"}
-                aria-pressed={selected}
-                onClick={() => toggleLubeFilter(lubeType)}
-              >
-                {LUBE_TYPE_LABELS[lubeType]}
-              </Button>
-            );
-          })}
-        </div>
-      )}
       {components.length === 0 ? (
         <p className="py-4 text-center text-sm text-muted-foreground">
           No components in this category yet.
-        </p>
-      ) : sorted.length === 0 ? (
-        <p className="py-4 text-center text-sm text-muted-foreground">
-          No chains match the selected lube types.
         </p>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
@@ -364,12 +314,7 @@ function ComponentRow({
           </button>
         )}
         <div className="flex min-w-0 flex-col gap-1">
-          <ComponentIdentityTier
-            separated={Boolean(
-              component.notes?.trim() ||
-              (component.category === "chain" && componentLubeType(component)),
-            )}
-          >
+          <ComponentIdentityTier separated={Boolean(component.notes?.trim())}>
             <div className="flex items-center gap-2">
               <ComponentNameLabel>{component.name}</ComponentNameLabel>
               {component.isActive && (
@@ -383,12 +328,11 @@ function ComponentRow({
               distanceMeters={displayWear.distanceMeters}
               movingTimeMinutes={displayWear.movingTimeMinutes}
             />
+            <ComponentPropertiesPills
+              category={component.category}
+              properties={component.properties}
+            />
           </ComponentIdentityTier>
-          {component.category === "chain" && (
-            <p className="text-xs text-muted-foreground">
-              Lube: {lubeLabel(componentLubeType(component)) ?? "—"}
-            </p>
-          )}
           <ComponentDetailTier notes={component.notes} lineClamp={3} />
         </div>
       </div>
