@@ -9,6 +9,8 @@ import {
   categoryLabel,
   componentInsertSchema,
   componentUpdateSchema,
+  normalizePropertiesForWrite,
+  type ComponentProperties,
 } from "shared";
 import { db } from "../db/index.js";
 import { bikes, components } from "../db/schema.js";
@@ -44,7 +46,26 @@ function matchCsvHeader(header: string[]): "full" | "legacy" | null {
 
 function padCsvRow(raw: string[], mode: "full" | "legacy"): string[] {
   if (mode === "full") return raw;
-  return [...raw, "", "", "", "", ""];
+  // Legacy header is the first 7 columns; pad usage/purchase/lube columns.
+  return [...raw, "", "", "", "", "", ""];
+}
+
+function propertiesForStorage(properties: ComponentProperties): ComponentProperties | null {
+  return Object.keys(properties).length === 0 ? null : properties;
+}
+
+function propertiesFromLubeTypeCell(
+  category: string,
+  lubeTypeRaw: string,
+): ComponentProperties | "invalid" {
+  if (lubeTypeRaw === "") {
+    return normalizePropertiesForWrite(category, undefined);
+  }
+  try {
+    return normalizePropertiesForWrite(category, { lubeType: lubeTypeRaw });
+  } catch {
+    return "invalid";
+  }
 }
 
 function parseOptionalInt(raw: string): number | null | "invalid" {
@@ -93,6 +114,15 @@ export async function exportComponentsCsv(
     purchaseDate: escapeCsvCell(r.purchaseDate ?? ""),
     purchaseCost: r.purchaseCost ?? "",
     purchaseStore: escapeCsvCell(r.purchaseStore ?? ""),
+    lube_type: escapeCsvCell(
+      r.category === "chain" &&
+        r.properties &&
+        typeof r.properties === "object" &&
+        "lubeType" in r.properties &&
+        typeof r.properties.lubeType === "string"
+        ? r.properties.lubeType
+        : "",
+    ),
   }));
   const csv = stringify(data, {
     header: true,
@@ -120,6 +150,7 @@ interface InsertOp {
   purchaseDate: string | null;
   purchaseCost: number | null;
   purchaseStore: string | null;
+  properties: ComponentProperties | null;
 }
 
 interface UpdateOp {
@@ -138,6 +169,7 @@ interface UpdateOp {
   purchaseDate: string | null;
   purchaseCost: number | null;
   purchaseStore: string | null;
+  properties?: ComponentProperties | null;
 }
 
 export interface ImportComponentsResult {
@@ -210,6 +242,7 @@ export async function importComponentsFromCsv(
       purchaseDateRaw,
       purchaseCostRaw,
       purchaseStoreRaw,
+      lubeTypeRaw,
     ] = raw;
     const id = idRaw;
     const category = categoryRaw;
@@ -251,6 +284,8 @@ export async function importComponentsFromCsv(
     }
 
     if (id === "") {
+      const propertiesInput =
+        lubeTypeRaw === "" ? undefined : { lubeType: lubeTypeRaw };
       const parsed = componentInsertSchema.safeParse({
         category,
         name,
@@ -263,6 +298,7 @@ export async function importComponentsFromCsv(
         purchaseDate,
         purchaseCost,
         purchaseStore,
+        properties: propertiesInput,
       });
       if (!parsed.success) {
         for (const issue of parsed.error.issues) {
@@ -284,6 +320,7 @@ export async function importComponentsFromCsv(
         purchaseDate: parsed.data.purchaseDate ?? null,
         purchaseCost: parsed.data.purchaseCost ?? null,
         purchaseStore: parsed.data.purchaseStore ?? null,
+        properties: propertiesForStorage(parsed.data.properties),
       });
     } else {
       const rowForBike = await db
@@ -307,6 +344,17 @@ export async function importComponentsFromCsv(
         );
         continue;
       }
+      // Legacy CSVs have no lube_type column — leave properties unchanged on update.
+      let propertiesUpdate: ComponentProperties | null | undefined;
+      if (headerMode === "full") {
+        const fromCell = propertiesFromLubeTypeCell(existing.category, lubeTypeRaw);
+        if (fromCell === "invalid") {
+          addError(row, "lube_type is invalid for this component category");
+          continue;
+        }
+        propertiesUpdate = propertiesForStorage(fromCell);
+      }
+
       const parsed = componentUpdateSchema.safeParse({
         name,
         brand,
@@ -317,6 +365,9 @@ export async function importComponentsFromCsv(
         purchaseDate,
         purchaseCost,
         purchaseStore,
+        ...(propertiesUpdate !== undefined
+          ? { properties: propertiesUpdate ?? {} }
+          : {}),
       });
       if (!parsed.success) {
         for (const issue of parsed.error.issues) {
@@ -340,6 +391,7 @@ export async function importComponentsFromCsv(
         purchaseDate: parsed.data.purchaseDate ?? null,
         purchaseCost: parsed.data.purchaseCost ?? null,
         purchaseStore: parsed.data.purchaseStore ?? null,
+        ...(propertiesUpdate !== undefined ? { properties: propertiesUpdate } : {}),
       });
     }
   }
@@ -406,6 +458,7 @@ export async function importComponentsFromCsv(
             brand: op.brand,
             model: op.model,
             notes: op.notes,
+            properties: op.properties,
             distanceMeters: op.distanceMeters,
             movingTimeMinutes: op.movingTimeMinutes,
             purchaseDate: op.purchaseDate,
@@ -427,6 +480,9 @@ export async function importComponentsFromCsv(
           purchaseCost: op.purchaseCost,
           purchaseStore: op.purchaseStore,
         };
+        if (op.properties !== undefined) {
+          updates.properties = op.properties;
+        }
         if (op.isActiveExplicit) {
           updates.isActive = op.isActive;
           if (op.isActive) {

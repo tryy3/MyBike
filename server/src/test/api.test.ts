@@ -32,9 +32,10 @@ function csvRow(values: Partial<Record<string, string>> = {}) {
     purchaseDate: "",
     purchaseCost: "",
     purchaseStore: "",
+    lube_type: "",
   };
   const row = { ...defaults, ...values };
-  return COMPONENT_CSV_COLUMNS.map((col) => row[col]).join(",");
+  return COMPONENT_CSV_COLUMNS.map((col) => row[col] ?? "").join(",");
 }
 
 describe("CSV import (REST)", () => {
@@ -101,5 +102,42 @@ describe("CSV import (REST)", () => {
     expect(JSON.stringify(foreign.body.details)).not.toContain(foreignComponent.id);
     expect(JSON.stringify(foreign.body.details)).not.toContain("does not belong");
     expect(JSON.stringify(foreign.body.details)).not.toContain("exists");
+  });
+
+  it("imports chain lube_type into properties and rejects lube on non-chain", async () => {
+    const { agent } = await createAuthenticatedAgent(app);
+    const bike = await createBikeViaGraphql(agent, "CSV Lube Bike");
+
+    const okCsv = [
+      csvHeader(),
+      csvRow({
+        category: "chain",
+        name: "Wax Chain",
+        brand: "KMC",
+        model: "X11",
+        lube_type: "drip_wax",
+      }),
+    ].join("\n");
+    await agent.post(`/api/bikes/${bike.id}/components/import`).send({ csv: okCsv }).expect(201);
+
+    const detail = await graphqlRequest<{
+      bike: { components: { name: string; properties: { lubeType: string | null } }[] };
+    }>(
+      agent,
+      `query($id: ID!) {
+        bike(id: $id) { components { name properties { lubeType } } }
+      }`,
+      { id: bike.id },
+    );
+    expect(detail.body.data?.bike.components[0]?.properties.lubeType).toBe("drip_wax");
+
+    const badCsv = [
+      csvHeader(),
+      csvRow({ category: "frame", name: "Frame", lube_type: "wet_lube" }),
+    ].join("\n");
+    await agent
+      .post(`/api/bikes/${bike.id}/components/import`)
+      .send({ csv: badCsv, dryRun: true })
+      .expect(400);
   });
 });
