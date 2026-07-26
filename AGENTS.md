@@ -80,6 +80,8 @@ In GitHub **Settings → Branches** for `master`, require the **CI / Check and t
 - Component categories are a fixed, hardcoded set in `shared/src/categories.ts` (`CATEGORIES` — frame, fork, crankset, … plus an `other` catchall). They are always visible and cannot be created/deleted/edited.
 - Components live under a bike + category (`components` table). One active component per (bike, category) is enforced server-side (transaction + unique partial index); clients set it via the `activateComponent` GraphQL mutation.
 - After mutations the client invalidates the affected TanStack Query keys and refetches from the server
+- **Icon accessibility:** prefer **icon + visible text** so the action is obvious without hover. When space is tight (menus, toolbars, quick-access / icon-sm row actions), use **icon + tooltip** (shadcn `Tooltip` + `aria-label`). Never ship an icon-only control with no visible or tooltip label — even for “obvious” icons (edit, delete, archive, etc.). Screen readers still need a clear `aria-label`; tooltips cover sighted users who don’t recognize the glyph.
+- **Mutation pending feedback:** for list/row actions that hit the API (archive, unarchive, activate, …), prefer **button spinner + row pending** through mutation _and_ query refetch — not optimistic UI. Scope busy to the acting row; keep toast for success/error after settle. Latency should stay visible so slow GraphQL/Turso paths are obvious while dogfooding.
 - **Strava webhooks (private hosting):** deploy `strava-webhook-proxy` on a public URL; MyBike pulls events via `STRAVA_WEBHOOK_PROXY_URL` + API key. One-time: set `STRAVA_WEBHOOK_CALLBACK_URL`, `STRAVA_VERIFY_TOKEN`, run `subscribe`. Main server polls on an interval and on manual sync.
 
 ## API layers (GraphQL vs REST)

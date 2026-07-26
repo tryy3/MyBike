@@ -70,3 +70,24 @@ export const GROUP_SECTION_BORDER_CLASS: Record<SystemGroupColorToken, string> =
   "chart-6": "border-chart-6/25",
   "chart-7": "border-chart-7/25",
 };
+
+/** Left accent rail (active component row, etc.). */
+export const GROUP_ACCENT_BORDER_CLASS: Record<SystemGroupColorToken, string> = {
+  "chart-1": "border-l-chart-1",
+  "chart-2": "border-l-chart-2",
+  "chart-3": "border-l-chart-3",
+  "chart-4": "border-l-chart-4",
+  "chart-5": "border-l-chart-5",
+  "chart-6": "border-l-chart-6",
+  "chart-7": "border-l-chart-7",
+};
+
+export const GROUP_TEXT_CLASS: Record<SystemGroupColorToken, string> = {
+  "chart-1": "text-chart-1",
+  "chart-2": "text-chart-2",
+  "chart-3": "text-chart-3",
+  "chart-4": "text-chart-4",
+  "chart-5": "text-chart-5",
+  "chart-6": "text-chart-6",
+  "chart-7": "text-chart-7",
+};

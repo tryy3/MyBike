@@ -107,9 +107,14 @@ export function invalidateMaintenanceData(qc: QueryClient, bikeId: string): void
 }
 
 /** Refetch bike detail + maintenance when component wear or active parts change. */
-export function invalidateWearDependentBikeQueries(qc: QueryClient, bikeId: string): void {
-  void qc.invalidateQueries({ queryKey: queryKeys.bike(bikeId), exact: true });
-  void qc.invalidateQueries({ queryKey: queryKeys.bikeMaintenance(bikeId), exact: true });
+export async function invalidateWearDependentBikeQueries(
+  qc: QueryClient,
+  bikeId: string,
+): Promise<void> {
+  await Promise.all([
+    qc.invalidateQueries({ queryKey: queryKeys.bike(bikeId), exact: true }),
+    qc.invalidateQueries({ queryKey: queryKeys.bikeMaintenance(bikeId), exact: true }),
+  ]);
 }
 
 /** Refetch all bike-scoped caches after Strava sync affects wear across bikes. */

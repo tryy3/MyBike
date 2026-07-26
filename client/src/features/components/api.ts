@@ -16,8 +16,8 @@ import {
 import type { BikeDetailWithStats } from "@/features/bikes/api";
 import { invalidateWearDependentBikeQueries } from "@/features/maintenance/cache-sync";
 
-function invalidateComponentQueries(qc: QueryClient, bikeId: string) {
-  invalidateWearDependentBikeQueries(qc, bikeId);
+async function invalidateComponentQueries(qc: QueryClient, bikeId: string) {
+  await invalidateWearDependentBikeQueries(qc, bikeId);
   void qc.invalidateQueries({ queryKey: queryKeys.fieldSuggestions, exact: true });
 }
 
@@ -156,7 +156,7 @@ export function useImportComponents(bikeId: string) {
     mutationFn: ({ csv, dryRun = false }: { csv: string; dryRun?: boolean }) =>
       api.importComponents(bikeId, csv, dryRun),
     onSuccess: (data, vars) => {
-      if (!vars.dryRun) invalidateComponentQueries(qc, bikeId);
+      if (!vars.dryRun) void invalidateComponentQueries(qc, bikeId);
     },
   });
 }

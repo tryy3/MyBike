@@ -2,6 +2,7 @@ import { categoryLabel, isLubeType, LUBE_TYPE_IDS, normalizePropertiesForRead } 
 import type { ComponentRow } from "../../db/schema.js";
 import { builder } from "../builder.js";
 import { getWearForComponent } from "../../services/stats.js";
+import { getCachedStravaWearByBikeId } from "../wear-cache.js";
 import { WearRef } from "./stats.js";
 
 export const ComponentRef = builder.objectRef<ComponentRow>("Component");
@@ -54,13 +55,16 @@ builder.objectType(ComponentRef, {
     updatedAt: t.field({ type: "DateTime", resolve: (parent) => parent.updatedAt }),
     wear: t.field({
       type: WearRef,
-      resolve: (parent) =>
-        getWearForComponent(
+      resolve: async (parent, _args, context) => {
+        const stravaWearByComponent = await getCachedStravaWearByBikeId(context, parent.bikeId);
+        return getWearForComponent(
           parent.bikeId,
           parent.id,
           parent.distanceMeters,
           parent.movingTimeMinutes,
-        ),
+          stravaWearByComponent,
+        );
+      },
     }),
   }),
 });

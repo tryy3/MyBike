@@ -132,9 +132,11 @@ export async function getBikeDetail(bikeId: string, userId: string): Promise<Bik
 export async function listComponentsForBike(
   bikeId: string,
   userId: string,
-  options?: { filter?: ComponentFilter },
+  options?: { filter?: ComponentFilter; skipRequireBike?: boolean },
 ): Promise<ComponentRow[]> {
-  await requireBike(bikeId, userId);
+  if (!options?.skipRequireBike) {
+    await requireBike(bikeId, userId);
+  }
   const filterConditions = options?.filter ? buildComponentFilterConditions(options.filter) : [];
   const rows = await db
     .select()
