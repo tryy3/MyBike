@@ -84,6 +84,27 @@ describe("componentInsertSchema", () => {
       expect(result.data.purchaseStore).toBe("Local shop");
     }
   });
+
+  it("defaults chain properties on insert when omitted", () => {
+    const result = componentInsertSchema.safeParse({
+      category: "chain",
+      name: "Chain",
+      brand: "Brand",
+      model: "Model",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.properties).toEqual({ lubeType: "wet_lube" });
+    }
+  });
+
+  it("rejects lubeType on non-chain insert", () => {
+    const result = componentInsertSchema.safeParse({
+      ...validComponent,
+      properties: { lubeType: "wet_lube" },
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("componentUpdateSchema", () => {
@@ -141,6 +162,7 @@ describe("COMPONENT_CSV_COLUMNS", () => {
       "purchaseDate",
       "purchaseCost",
       "purchaseStore",
+      "lube_type",
     ]);
   });
 });
