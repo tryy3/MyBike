@@ -6,6 +6,11 @@ import {
   componentInsertSchema,
   componentUpdateSchema,
 } from "./schemas/component.js";
+import {
+  DEFAULT_LUBE_TYPE,
+  normalizePropertiesForRead,
+  normalizePropertiesForWrite,
+} from "./schemas/component-properties.js";
 import { stravaImportCommitSchema } from "./schemas/strava.js";
 import { CATEGORY_IDS } from "./categories.js";
 import { describe, expect, it } from "vite-plus/test";
@@ -169,5 +174,42 @@ describe("stravaImportCommitSchema", () => {
     });
 
     expect(result.success).toBe(true);
+  });
+});
+
+describe("normalizePropertiesForWrite", () => {
+  it("defaults chain omit to wet_lube", () => {
+    expect(normalizePropertiesForWrite("chain", undefined)).toEqual({
+      lubeType: DEFAULT_LUBE_TYPE,
+    });
+    expect(normalizePropertiesForWrite("chain", {})).toEqual({
+      lubeType: "wet_lube",
+    });
+  });
+
+  it("accepts each lube type on chain", () => {
+    for (const lubeType of ["dry_lube", "wet_lube", "drip_wax", "immersion_wax"] as const) {
+      expect(normalizePropertiesForWrite("chain", { lubeType })).toEqual({ lubeType });
+    }
+  });
+
+  it("rejects unknown keys and invalid enum on chain", () => {
+    expect(() =>
+      normalizePropertiesForWrite("chain", { lubeType: "wet_lube", extra: 1 }),
+    ).toThrow();
+    expect(() => normalizePropertiesForWrite("chain", { lubeType: "graphite" })).toThrow();
+  });
+
+  it("allows empty properties on non-chain and rejects lubeType", () => {
+    expect(normalizePropertiesForWrite("frame", undefined)).toEqual({});
+    expect(normalizePropertiesForWrite("cassette", {})).toEqual({});
+    expect(() => normalizePropertiesForWrite("frame", { lubeType: "wet_lube" })).toThrow();
+  });
+});
+
+describe("normalizePropertiesForRead", () => {
+  it("returns {} for null non-chain and wet_lube for null chain", () => {
+    expect(normalizePropertiesForRead("frame", null)).toEqual({});
+    expect(normalizePropertiesForRead("chain", null)).toEqual({ lubeType: "wet_lube" });
   });
 });
