@@ -45,6 +45,15 @@ function buildComponentFilterConditions(filter: ComponentFilter): SQL[] {
     conditions.push(containsInsensitive(components.model, filter.modelContains));
   }
 
+  if (filter.lubeTypes && filter.lubeTypes.length > 0) {
+    conditions.push(
+      sql`json_extract(${components.properties}, '$.lubeType') IN (${sql.join(
+        filter.lubeTypes.map((value) => sql`${value}`),
+        sql`, `,
+      )})`,
+    );
+  }
+
   return conditions;
 }
 
