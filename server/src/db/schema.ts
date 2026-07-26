@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import type { ComponentProperties } from "shared";
 import { user } from "./auth-schema.js";
 
 function uuid() {
@@ -52,6 +53,8 @@ export const components = sqliteTable(
     brand: text("brand"),
     model: text("model"),
     notes: text("notes"),
+    /** Category-specific bag (e.g. chain lubeType). NULL means empty `{}` at the API. */
+    properties: text("properties", { mode: "json" }).$type<ComponentProperties | null>(),
     distanceMeters: integer("distance_meters"),
     movingTimeMinutes: integer("moving_time_minutes"),
     purchaseDate: text("purchase_date"),
