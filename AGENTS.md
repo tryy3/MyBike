@@ -124,7 +124,7 @@ mcp_servers:
 
 Implementation lives in `server/src/mcp/`. After MCP changes, add or update tests in `server/src/test/mcp.test.ts`.
 
-**Token-efficient component reads:** use field selection plus `bike(id) { components(filter: { … }) }`. Filter by `categories` (GraphQL enum `ComponentCategory`, e.g. `crankset`, `rear_derailleur`), `activeOnly`, `isActive`, `brands`, `nameContains`, `brandContains`, or `modelContains`. Example for drivetrain compatibility on one bike:
+**Token-efficient component reads:** use field selection plus `bike(id) { components(filter: { … }) }`. Filter by `categories` (GraphQL enum `ComponentCategory`, e.g. `crankset`, `rear_derailleur`), `activeOnly`, `isActive`, `isArchived`, `brands`, `nameContains`, `brandContains`, or `modelContains`. Example for drivetrain compatibility on one bike:
 
 ```graphql
 query ($id: ID!) {
