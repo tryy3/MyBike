@@ -76,6 +76,7 @@ describe("MCP server", () => {
         "create_component",
         "update_component",
         "set_active_component",
+        "archive_component",
         "replace_component",
       ]),
     );
@@ -91,15 +92,15 @@ describe("MCP server", () => {
     };
     expect(catalog.notes).toEqual({
       typedTools:
-        "Use fields[] on list/get tools to request only needed data. Write tools: create_component (inactive when sibling exists), update_component (brand/model/purchase/notes only — not name), set_active_component (rotate spares), replace_component (EOL service record + activate).",
+        "Use fields[] on list/get tools to request only needed data. Write tools: create_component (inactive when sibling exists), update_component (brand/model/purchase/notes only — not name), set_active_component (rotate spares), archive_component (inactive only), replace_component (EOL service record + activate; optional archiveOld).",
       workflows:
-        "EOL replace: find_bike → create_component → replace_component(bikeId+category+newComponentId). Spare rotation: find_bike → get_bike_components → set_active_component.",
+        "EOL replace: find_bike → create_component → replace_component(bikeId+category+newComponentId, archiveOld?: true). Spare rotation: find_bike → get_bike_components → set_active_component. Archive retired alternates with archive_component (unarchive is UI-only).",
       graphqlQuery:
         "Use graphql_query for ad-hoc read queries when typed tools are not enough. Mutations are rejected.",
       categoryIds:
         "Typed tools use hyphenated category ids (rear-derailleur). Raw GraphQL filter enums use underscores (rear_derailleur).",
       filters:
-        "Component filters: categories, activeOnly, isActive, brands, nameContains, brandContains, modelContains.",
+        "Component filters: categories, activeOnly, isActive, isArchived, brands, nameContains, brandContains, modelContains.",
       auth: "Read tools need graphql:read. Write tools need graphql:write on the API key.",
     });
   });
@@ -478,6 +479,127 @@ describe("MCP server", () => {
       ?.components;
     expect(active?.map((c) => c.id)).toEqual([b.id]);
     expect(a.id).not.toBe(b.id);
+  });
+
+  it("archive_component archives inactive parts and rejects active ones", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    const writeKey = await createApiKeyForTestUser(testUser, permissionsForScope("write"));
+    const bike = await createBikeViaGraphql(agent, "Archive MCP Bike");
+    const active = await createComponentViaGraphql(agent, bike.id, {
+      category: "chain",
+      name: "Active Chain",
+      brand: "KMC",
+      model: "X11",
+      isActive: true,
+    });
+    const spare = await createComponentViaGraphql(agent, bike.id, {
+      category: "chain",
+      name: "Spare Chain",
+      brand: "KMC",
+      model: "Waxed",
+      isActive: false,
+    });
+
+    const activeDenied = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 70,
+      method: "tools/call",
+      params: {
+        name: "archive_component",
+        arguments: { componentId: active.id },
+      },
+    });
+    expect(jsonRpcResult(activeDenied.body)?.isError).toBe(true);
+
+    const archived = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 71,
+      method: "tools/call",
+      params: {
+        name: "archive_component",
+        arguments: { componentId: spare.id },
+      },
+    });
+    expect(archived.status).toBe(200);
+    const component = (
+      jsonRpcResult(archived.body)?.structuredContent as {
+        component: { id: string; isArchived: boolean; isActive: boolean };
+      }
+    )?.component;
+    expect(component).toMatchObject({ id: spare.id, isArchived: true, isActive: false });
+  });
+
+  it("replace_component archiveOld archives the previous active component", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    const writeKey = await createApiKeyForTestUser(testUser, permissionsForScope("write"));
+    const bike = await createBikeViaGraphql(agent, "Archive On Replace Bike");
+    const oldChain = await createComponentViaGraphql(agent, bike.id, {
+      category: "chain",
+      name: "Wet Chain",
+      brand: "KMC",
+      model: "Old",
+      isActive: true,
+    });
+    const created = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 72,
+      method: "tools/call",
+      params: {
+        name: "create_component",
+        arguments: {
+          bikeId: bike.id,
+          category: "chain",
+          name: "Waxed Chain",
+          brand: "KMC",
+          model: "Wax",
+        },
+      },
+    });
+    const newId = (jsonRpcResult(created.body)?.structuredContent as { component: { id: string } })
+      ?.component.id;
+
+    const replaced = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 73,
+      method: "tools/call",
+      params: {
+        name: "replace_component",
+        arguments: {
+          bikeId: bike.id,
+          category: "chain",
+          newComponentId: newId,
+          archiveOld: true,
+        },
+      },
+    });
+    expect(replaced.status).toBe(200);
+
+    const list = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 74,
+      method: "tools/call",
+      params: {
+        name: "get_bike_components",
+        arguments: {
+          bikeId: bike.id,
+          filter: { categories: ["chain"] },
+          fields: ["id", "isActive", "isArchived"],
+        },
+      },
+    });
+    const components = (
+      jsonRpcResult(list.body)?.structuredContent as {
+        components: { id: string; isActive: boolean; isArchived: boolean }[];
+      }
+    )?.components;
+    expect(components?.find((c) => c.id === newId)).toMatchObject({
+      isActive: true,
+      isArchived: false,
+    });
+    expect(components?.find((c) => c.id === oldChain.id)).toMatchObject({
+      isActive: false,
+      isArchived: true,
+    });
   });
 
   it("replace_component logs EOL replace and activates new cassette", async () => {

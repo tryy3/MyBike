@@ -26,6 +26,10 @@ function buildComponentFilterConditions(filter: ComponentFilter): SQL[] {
     conditions.push(eq(components.isActive, filter.isActive));
   }
 
+  if (filter.isArchived !== undefined) {
+    conditions.push(eq(components.isArchived, filter.isArchived));
+  }
+
   if (filter.brands && filter.brands.length > 0) {
     const brandMatches = filter.brands.map(
       (brand) => sql`lower(${components.brand}) = lower(${brand})`,

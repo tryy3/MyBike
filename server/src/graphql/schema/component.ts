@@ -17,6 +17,7 @@ builder.objectType(ComponentRef, {
     model: t.exposeString("model", { nullable: true }),
     notes: t.exposeString("notes", { nullable: true }),
     isActive: t.exposeBoolean("isActive"),
+    isArchived: t.exposeBoolean("isArchived"),
     purchaseDate: t.exposeString("purchaseDate", { nullable: true }),
     purchaseCost: t.float({ nullable: true, resolve: (parent) => parent.purchaseCost }),
     purchaseStore: t.exposeString("purchaseStore", { nullable: true }),

@@ -18,6 +18,7 @@ const inputSchema = z
     notes: z.string().max(5000).nullish(),
     cost: z.number().min(0).nullish(),
     resetWear: z.boolean().optional(),
+    archiveOld: z.boolean().optional(),
   })
   .strict()
   .superRefine((data, ctx) => {
@@ -42,7 +43,7 @@ export function registerReplaceComponentTool(server: McpServer): void {
     {
       title: "Replace component",
       description:
-        "Replace a component through its EOL maintenance task and create a service record. Prefer due, overdue, or soon tasks; early replacement is allowed. Use after create_component. Not for spare rotation; use set_active_component instead.",
+        "Replace a component through its EOL maintenance task and create a service record. Prefer due, overdue, or soon tasks; early replacement is allowed. Use after create_component. Optional archiveOld (default false) archives the previous active part after swap. Not for spare rotation; use set_active_component instead.",
       inputSchema,
     },
     async (args, ctx) => {
@@ -75,6 +76,7 @@ export function registerReplaceComponentTool(server: McpServer): void {
             notes: data.notes ?? null,
             cost: data.cost,
             resetWear: data.resetWear ?? true,
+            archiveOld: data.archiveOld ?? false,
           });
           return {
             content: [{ type: "text" as const, text: JSON.stringify(record, null, 2) }],

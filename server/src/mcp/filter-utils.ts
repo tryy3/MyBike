@@ -13,6 +13,7 @@ export function parseComponentFilterInput(input: {
   categories?: string[];
   activeOnly?: boolean;
   isActive?: boolean;
+  isArchived?: boolean;
   brands?: string[];
   nameContains?: string;
   brandContains?: string;

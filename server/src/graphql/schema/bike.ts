@@ -17,9 +17,11 @@ import {
 } from "../../services/bikes.js";
 import {
   activateComponent,
+  archiveComponent,
   createComponent,
   deleteComponent,
   reorderComponents,
+  unarchiveComponent,
   updateComponent,
 } from "../../services/components.js";
 import { getRideStatsForBike } from "../../services/stats.js";
@@ -251,6 +253,32 @@ builder.mutationField("activateComponent", (t) =>
       const userId = requireGraphQLPermission(context, "write");
       const component = await activateComponent(args.id, userId);
       return component;
+    },
+  }),
+);
+
+builder.mutationField("archiveComponent", (t) =>
+  t.field({
+    type: ComponentRef,
+    args: {
+      id: t.arg.id({ required: true }),
+    },
+    resolve: async (_root, args, context) => {
+      const userId = requireGraphQLPermission(context, "write");
+      return archiveComponent(args.id, userId);
+    },
+  }),
+);
+
+builder.mutationField("unarchiveComponent", (t) =>
+  t.field({
+    type: ComponentRef,
+    args: {
+      id: t.arg.id({ required: true }),
+    },
+    resolve: async (_root, args, context) => {
+      const userId = requireGraphQLPermission(context, "write");
+      return unarchiveComponent(args.id, userId);
     },
   }),
 );

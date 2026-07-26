@@ -1252,18 +1252,20 @@ function ReplaceForm({
   const [notes, setNotes] = useState("");
   const [componentId, setComponentId] = useState("");
   const [resetWear, setResetWear] = useState(true);
+  const [archiveOld, setArchiveOld] = useState(false);
 
   useEffect(() => {
     if (!task) return;
     setNotes("");
     setComponentId("");
     setResetWear(true);
+    setArchiveOld(false);
   }, [task]);
 
   const candidates = useMemo(() => {
     if (!bike || !task?.componentCategory) return [];
     return bike.components
-      .filter((component) => component.category === task.componentCategory)
+      .filter((component) => component.category === task.componentCategory && !component.isArchived)
       .sort((a, b) => {
         if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
         return a.sortOrder - b.sortOrder;
@@ -1282,6 +1284,7 @@ function ReplaceForm({
         notes: notes.trim() || undefined,
         newComponentId: componentId || undefined,
         resetWear: componentId ? resetWear : undefined,
+        archiveOld: componentId ? archiveOld : undefined,
       });
       toast.success("Replacement recorded");
       onDone();
@@ -1342,15 +1345,26 @@ function ReplaceForm({
         ) : null}
       </div>
       {componentId ? (
-        <label className="flex cursor-pointer items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            className="size-4 cursor-pointer accent-primary"
-            checked={resetWear}
-            onChange={(e) => setResetWear(e.target.checked)}
-          />
-          Reset wear on selected component
-        </label>
+        <>
+          <label className="flex cursor-pointer items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="size-4 cursor-pointer accent-primary"
+              checked={resetWear}
+              onChange={(e) => setResetWear(e.target.checked)}
+            />
+            Reset wear on selected component
+          </label>
+          <label className="flex cursor-pointer items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="size-4 cursor-pointer accent-primary"
+              checked={archiveOld}
+              onChange={(e) => setArchiveOld(e.target.checked)}
+            />
+            Archive previous component
+          </label>
+        </>
       ) : null}
       <Button type="submit" disabled={replace.isPending}>
         {replace.isPending ? (

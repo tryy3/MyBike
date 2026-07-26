@@ -58,6 +58,9 @@ export const components = sqliteTable(
     purchaseCost: real("purchase_cost"),
     purchaseStore: text("purchase_store"),
     isActive: integer("is_active", { mode: "boolean" }).notNull().default(false),
+    // Soft retirement: inactive components can be archived to leave the
+    // active/alternate rotation without deleting history.
+    isArchived: integer("is_archived", { mode: "boolean" }).notNull().default(false),
     // Manual ordering within a (bike, category). New components are appended at
     // max+1 so the default order matches creation order; the user can reorder
     // via drag-and-drop, which rewrites these values.

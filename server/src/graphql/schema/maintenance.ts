@@ -174,6 +174,7 @@ const ReplaceMaintenanceInput = builder.inputType("ReplaceMaintenanceInput", {
     cost: t.float({ required: false }),
     newComponentId: t.id({ required: false }),
     resetWear: t.boolean({ required: false }),
+    archiveOld: t.boolean({ required: false }),
   }),
 });
 

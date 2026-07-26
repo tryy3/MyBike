@@ -98,6 +98,7 @@ export const componentSchema = componentBaseSchema.extend({
   id: z.string().uuid(),
   bikeId: z.string().uuid(),
   category: z.enum(CATEGORY_IDS),
+  isArchived: z.boolean(),
   sortOrder: z.number().int(),
   createdAt: z.number().int(),
   updatedAt: z.number().int(),

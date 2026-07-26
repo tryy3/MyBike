@@ -15,6 +15,7 @@ export const componentWearSchema = z.object({
   distanceMeters: z.number().int().min(0).nullable(),
   movingTimeMinutes: z.number().int().min(0).nullable(),
   isActive: z.boolean(),
+  isArchived: z.boolean(),
 });
 
 export const garageBikeStatsSchema = z.object({

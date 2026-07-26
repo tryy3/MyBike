@@ -33,7 +33,12 @@ import {
 } from "../lib/maintenance-due.js";
 import { badRequest, notFound } from "../lib/errors.js";
 import { requireBike } from "./bikes.js";
-import { activateComponent, requireComponent, updateComponent } from "./components.js";
+import {
+  activateComponent,
+  archiveComponent,
+  requireComponent,
+  updateComponent,
+} from "./components.js";
 
 function templateToRow(bikeId: string, template: (typeof MAINTENANCE_TEMPLATES)[number]) {
   return {
@@ -595,6 +600,21 @@ export async function replaceComponentMaintenance(
         code: "COMPONENT_CATEGORY_MISMATCH",
       });
     }
+
+    const category = component.category;
+    const previousActive =
+      (await db
+        .select()
+        .from(components)
+        .where(
+          and(
+            eq(components.bikeId, task.bikeId),
+            eq(components.category, category),
+            eq(components.isActive, true),
+          ),
+        )
+        .get()) ?? null;
+
     await activateComponent(input.newComponentId, userId);
     if (input.resetWear) {
       await updateComponent(
@@ -605,6 +625,15 @@ export async function replaceComponentMaintenance(
           movingTimeMinutes: 0,
         }),
       );
+    }
+
+    if (
+      input.archiveOld &&
+      previousActive &&
+      previousActive.id !== input.newComponentId &&
+      !previousActive.isArchived
+    ) {
+      await archiveComponent(previousActive.id, userId);
     }
   }
 

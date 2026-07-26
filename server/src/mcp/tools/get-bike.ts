@@ -19,6 +19,7 @@ const componentFilterSchema = z
     categories: z.array(z.string()).optional(),
     activeOnly: z.boolean().optional(),
     isActive: z.boolean().optional(),
+    isArchived: z.boolean().optional(),
     brands: z.array(z.string()).optional(),
     nameContains: z.string().optional(),
     brandContains: z.string().optional(),

@@ -131,6 +131,60 @@ describe("GraphQL active component invariant", () => {
     expect(wheels?.find((c) => c.id === b.id)?.isActive).toBe(true);
     expect(wheels?.find((c) => c.id === a.id)?.isActive).toBe(false);
   });
+
+  it("archives inactive components and blocks activating archived ones", async () => {
+    const { agent } = await createAuthenticatedAgent(app);
+    const bike = await createBikeViaGraphql(agent, "Archive Bike");
+
+    const active = await createComponentViaGraphql(
+      agent,
+      bike.id,
+      componentInput({ category: "chain", name: "Active", isActive: true }),
+    );
+    const spare = await createComponentViaGraphql(
+      agent,
+      bike.id,
+      componentInput({ category: "chain", name: "Spare", isActive: false }),
+    );
+
+    const archiveActive = await graphqlRequest(
+      agent,
+      `mutation($id: ID!) { archiveComponent(id: $id) { id isArchived } }`,
+      { id: active.id },
+    );
+    expect(archiveActive.body.errors?.[0]?.message).toMatch(/cannot be archived/i);
+
+    const archived = await graphqlRequest<{
+      archiveComponent: { id: string; isArchived: boolean; isActive: boolean };
+    }>(agent, `mutation($id: ID!) { archiveComponent(id: $id) { id isArchived isActive } }`, {
+      id: spare.id,
+    });
+    expect(archived.body.errors).toBeUndefined();
+    expect(archived.body.data?.archiveComponent).toMatchObject({
+      id: spare.id,
+      isArchived: true,
+      isActive: false,
+    });
+
+    const activateArchived = await graphqlRequest(
+      agent,
+      `mutation($id: ID!) { activateComponent(id: $id) { id isActive } }`,
+      { id: spare.id },
+    );
+    expect(activateArchived.body.errors?.[0]?.message).toMatch(/unarchive first/i);
+
+    const restored = await graphqlRequest<{
+      unarchiveComponent: { id: string; isArchived: boolean; isActive: boolean };
+    }>(agent, `mutation($id: ID!) { unarchiveComponent(id: $id) { id isArchived isActive } }`, {
+      id: spare.id,
+    });
+    expect(restored.body.errors).toBeUndefined();
+    expect(restored.body.data?.unarchiveComponent).toMatchObject({
+      id: spare.id,
+      isArchived: false,
+      isActive: false,
+    });
+  });
 });
 
 describe("GraphQL wear and activeOnly", () => {

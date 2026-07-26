@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { CheckIcon, GripVerticalIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import {
+  ArchiveIcon,
+  ArchiveRestoreIcon,
+  CheckIcon,
+  GripVerticalIcon,
+  PencilIcon,
+  PlusIcon,
+  Trash2Icon,
+} from "lucide-react";
 import {
   DndContext,
   KeyboardSensor,
@@ -32,7 +40,13 @@ import {
   ComponentNameLabel,
 } from "./component-list-layout";
 import { ComponentForm } from "./ComponentForm";
-import { useActivateComponent, useDeleteComponent, useReorderComponents } from "./api";
+import {
+  useActivateComponent,
+  useArchiveComponent,
+  useDeleteComponent,
+  useReorderComponents,
+  useUnarchiveComponent,
+} from "./api";
 import type { WearByComponentId } from "./ComponentsSplitView";
 
 export type CategoryFormMode = "add" | { edit: string } | null;
@@ -70,6 +84,8 @@ export function CategoryDetailContent({
 }: CategoryDetailContentProps) {
   const reorder = useReorderComponents(bikeId);
   const activate = useActivateComponent(bikeId);
+  const archive = useArchiveComponent(bikeId);
+  const unarchive = useUnarchiveComponent(bikeId);
   const deleteComponent = useDeleteComponent(bikeId);
   const [deleting, setDeleting] = useState<Component | null>(null);
 
@@ -113,6 +129,32 @@ export function CategoryDetailContent({
       },
       onError: (e) => {
         toast.error("Could not switch component", {
+          description: e instanceof Error ? e.message : "Something went wrong",
+        });
+      },
+    });
+  }
+
+  function handleArchive(component: Component) {
+    archive.mutate(component.id, {
+      onSuccess: () => {
+        toast.success(`Archived ${component.name}`);
+      },
+      onError: (e) => {
+        toast.error("Could not archive component", {
+          description: e instanceof Error ? e.message : "Something went wrong",
+        });
+      },
+    });
+  }
+
+  function handleUnarchive(component: Component) {
+    unarchive.mutate(component.id, {
+      onSuccess: () => {
+        toast.success(`Restored ${component.name}`);
+      },
+      onError: (e) => {
+        toast.error("Could not unarchive component", {
           description: e instanceof Error ? e.message : "Something went wrong",
         });
       },
@@ -168,8 +210,11 @@ export function CategoryDetailContent({
     );
   }
 
-  const hasActive = sorted.some((c) => c.isActive);
-  const hasAlternates = sorted.some((c) => !c.isActive);
+  const activeComponents = sorted.filter((c) => c.isActive && !c.isArchived);
+  const alternateComponents = sorted.filter((c) => !c.isActive && !c.isArchived);
+  const archivedComponents = sorted.filter((c) => c.isArchived);
+  const busy =
+    activate.isPending || archive.isPending || unarchive.isPending || deleteComponent.isPending;
 
   return (
     <div className="flex flex-col gap-4">
@@ -181,53 +226,85 @@ export function CategoryDetailContent({
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
           <SortableContext items={sorted.map((c) => c.id)} strategy={verticalListSortingStrategy}>
             <div className="flex flex-col gap-4">
-              {hasActive ? (
+              {activeComponents.length > 0 ? (
                 <section className="flex flex-col gap-2">
                   <h4 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                     Active
                   </h4>
                   <ul className="flex flex-col divide-y rounded-lg border">
-                    {sorted
-                      .filter((c) => c.isActive)
-                      .map((c) => (
-                        <ComponentRow
-                          key={c.id}
-                          component={c}
-                          displayWear={resolveDisplayWear(c, wearByComponentId)}
-                          canActivate={false}
-                          draggable={sortable}
-                          activating={activate.isPending}
-                          highlighted
-                          onActivate={() => handleActivate(c)}
-                          onEdit={() => onFormModeChange({ edit: c.id })}
-                          onDelete={() => setDeleting(c)}
-                        />
-                      ))}
+                    {activeComponents.map((c) => (
+                      <ComponentRow
+                        key={c.id}
+                        component={c}
+                        displayWear={resolveDisplayWear(c, wearByComponentId)}
+                        canActivate={false}
+                        canArchive={false}
+                        canUnarchive={false}
+                        draggable={sortable}
+                        busy={busy}
+                        highlighted
+                        onActivate={() => handleActivate(c)}
+                        onArchive={() => handleArchive(c)}
+                        onUnarchive={() => handleUnarchive(c)}
+                        onEdit={() => onFormModeChange({ edit: c.id })}
+                        onDelete={() => setDeleting(c)}
+                      />
+                    ))}
                   </ul>
                 </section>
               ) : null}
 
-              {hasAlternates ? (
+              {alternateComponents.length > 0 ? (
                 <section className="flex flex-col gap-2">
                   <h4 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                     Alternates
                   </h4>
                   <ul className="flex flex-col divide-y rounded-lg border">
-                    {sorted
-                      .filter((c) => !c.isActive)
-                      .map((c) => (
-                        <ComponentRow
-                          key={c.id}
-                          component={c}
-                          displayWear={resolveDisplayWear(c, wearByComponentId)}
-                          canActivate={components.length > 1}
-                          draggable={sortable}
-                          activating={activate.isPending}
-                          onActivate={() => handleActivate(c)}
-                          onEdit={() => onFormModeChange({ edit: c.id })}
-                          onDelete={() => setDeleting(c)}
-                        />
-                      ))}
+                    {alternateComponents.map((c) => (
+                      <ComponentRow
+                        key={c.id}
+                        component={c}
+                        displayWear={resolveDisplayWear(c, wearByComponentId)}
+                        canActivate={components.length > 1}
+                        canArchive
+                        canUnarchive={false}
+                        draggable={sortable}
+                        busy={busy}
+                        onActivate={() => handleActivate(c)}
+                        onArchive={() => handleArchive(c)}
+                        onUnarchive={() => handleUnarchive(c)}
+                        onEdit={() => onFormModeChange({ edit: c.id })}
+                        onDelete={() => setDeleting(c)}
+                      />
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+
+              {archivedComponents.length > 0 ? (
+                <section className="flex flex-col gap-2">
+                  <h4 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                    Archived
+                  </h4>
+                  <ul className="flex flex-col divide-y rounded-lg border border-dashed bg-muted/20">
+                    {archivedComponents.map((c) => (
+                      <ComponentRow
+                        key={c.id}
+                        component={c}
+                        displayWear={resolveDisplayWear(c, wearByComponentId)}
+                        canActivate={false}
+                        canArchive={false}
+                        canUnarchive
+                        draggable={sortable}
+                        busy={busy}
+                        muted
+                        onActivate={() => handleActivate(c)}
+                        onArchive={() => handleArchive(c)}
+                        onUnarchive={() => handleUnarchive(c)}
+                        onEdit={() => onFormModeChange({ edit: c.id })}
+                        onDelete={() => setDeleting(c)}
+                      />
+                    ))}
                   </ul>
                 </section>
               ) : null}
@@ -249,7 +326,11 @@ export function CategoryDetailContent({
         open={!!deleting}
         onOpenChange={(open) => !open && setDeleting(null)}
         title="Delete component?"
-        description={deleting ? `"${deleting.name}" will be removed from this category.` : ""}
+        description={
+          deleting
+            ? `"${deleting.name}" will be permanently removed. Prefer archive for retired parts.`
+            : ""
+        }
         confirmLabel="Delete"
         loading={deleteComponent.isPending}
         loadingLabel="Deleting…"
@@ -263,20 +344,30 @@ function ComponentRow({
   component,
   displayWear,
   canActivate,
+  canArchive,
+  canUnarchive,
   draggable,
-  activating,
+  busy,
   highlighted,
+  muted,
   onActivate,
+  onArchive,
+  onUnarchive,
   onEdit,
   onDelete,
 }: {
   component: Component;
   displayWear: { distanceMeters: number | null; movingTimeMinutes: number | null };
   canActivate: boolean;
+  canArchive: boolean;
+  canUnarchive: boolean;
   draggable: boolean;
-  activating: boolean;
+  busy: boolean;
   highlighted?: boolean;
+  muted?: boolean;
   onActivate: () => void;
+  onArchive: () => void;
+  onUnarchive: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -298,6 +389,7 @@ function ComponentRow({
       className={cn(
         "flex items-start justify-between gap-3 px-3 py-3",
         highlighted && "bg-muted/40",
+        muted && "text-muted-foreground",
       )}
     >
       <div className="flex min-w-0 flex-1 items-center gap-1">
@@ -316,11 +408,16 @@ function ComponentRow({
           <ComponentIdentityTier separated={Boolean(component.notes?.trim())}>
             <div className="flex items-center gap-2">
               <ComponentNameLabel>{component.name}</ComponentNameLabel>
-              {component.isActive && (
+              {component.isActive ? (
                 <Badge variant="secondary" className="gap-1">
                   <CheckIcon className="size-3" aria-hidden="true" /> Active
                 </Badge>
-              )}
+              ) : null}
+              {component.isArchived ? (
+                <Badge variant="outline" className="gap-1">
+                  <ArchiveIcon className="size-3" aria-hidden="true" /> Archived
+                </Badge>
+              ) : null}
             </div>
             <ComponentMetaLine
               brandModel={componentBrandModel(component)}
@@ -333,17 +430,39 @@ function ComponentRow({
       </div>
 
       <div className="flex shrink-0 items-center gap-1 pt-0.5">
-        {canActivate && !component.isActive && (
+        {canActivate ? (
           <Button
             size="sm"
             variant="outline"
-            disabled={activating}
+            disabled={busy}
             onClick={onActivate}
             aria-label={`Switch to ${component.name}`}
           >
             Use this
           </Button>
-        )}
+        ) : null}
+        {canArchive ? (
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            disabled={busy}
+            aria-label={`Archive ${component.name}`}
+            onClick={onArchive}
+          >
+            <ArchiveIcon />
+          </Button>
+        ) : null}
+        {canUnarchive ? (
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            disabled={busy}
+            aria-label={`Unarchive ${component.name}`}
+            onClick={onUnarchive}
+          >
+            <ArchiveRestoreIcon />
+          </Button>
+        ) : null}
         <Button
           size="icon-sm"
           variant="ghost"
