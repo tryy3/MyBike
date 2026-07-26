@@ -99,7 +99,9 @@ describe("MCP server", () => {
       categoryIds:
         "Typed tools use hyphenated category ids (rear-derailleur). Raw GraphQL filter enums use underscores (rear_derailleur).",
       filters:
-        "Component filters: categories, activeOnly, isActive, brands, nameContains, brandContains, modelContains.",
+        "Component filters: categories, activeOnly, isActive, brands, nameContains, brandContains, modelContains, lubeTypes (chain properties.lubeType: dry_lube|wet_lube|drip_wax|immersion_wax).",
+      properties:
+        "components.properties is an object (never null). Chains include lubeType; other categories use {}.",
       auth: "Read tools need graphql:read. Write tools need graphql:write on the API key.",
     });
   });
@@ -706,6 +708,98 @@ describe("MCP server", () => {
 
     expect(res.status).toBe(200);
     expect(jsonRpcResult(res.body)?.isError).toBe(true);
+  });
+
+  it("create_component defaults chain lubeType and update_component can set drip_wax", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    const writeKey = await createApiKeyForTestUser(testUser, permissionsForScope("write"));
+    const bike = await createBikeViaGraphql(agent, "MCP Lube Bike");
+
+    const created = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 80,
+      method: "tools/call",
+      params: {
+        name: "create_component",
+        arguments: {
+          bikeId: bike.id,
+          category: "chain",
+          name: "MCP Chain",
+          brand: "KMC",
+          model: "X11",
+        },
+      },
+    });
+    const createdComponent = (
+      jsonRpcResult(created.body)?.structuredContent as {
+        component: { id: string; properties: { lubeType: string } };
+      }
+    )?.component;
+    expect(createdComponent?.properties.lubeType).toBe("wet_lube");
+
+    const updated = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 81,
+      method: "tools/call",
+      params: {
+        name: "update_component",
+        arguments: {
+          componentId: createdComponent!.id,
+          properties: { lubeType: "drip_wax" },
+        },
+      },
+    });
+    const updatedComponent = (
+      jsonRpcResult(updated.body)?.structuredContent as {
+        component: { properties: { lubeType: string } };
+      }
+    )?.component;
+    expect(updatedComponent?.properties.lubeType).toBe("drip_wax");
+
+    const listed = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 82,
+      method: "tools/call",
+      params: {
+        name: "get_bike_components",
+        arguments: {
+          bikeId: bike.id,
+          fields: ["id", "name", "properties"],
+          filter: { lubeTypes: ["drip_wax"] },
+        },
+      },
+    });
+    const components = (
+      jsonRpcResult(listed.body)?.structuredContent as {
+        components: { name: string; properties: { lubeType: string } }[];
+      }
+    )?.components;
+    expect(components).toHaveLength(1);
+    expect(components?.[0]?.properties.lubeType).toBe("drip_wax");
+  });
+
+  it("rejects properties.lubeType on frame via create_component", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    const writeKey = await createApiKeyForTestUser(testUser, permissionsForScope("write"));
+    const bike = await createBikeViaGraphql(agent, "MCP Frame Props Bike");
+
+    const rejected = await mcpRequest(writeKey, {
+      jsonrpc: "2.0",
+      id: 83,
+      method: "tools/call",
+      params: {
+        name: "create_component",
+        arguments: {
+          bikeId: bike.id,
+          category: "frame",
+          name: "Frame",
+          brand: "Brand",
+          model: "Model",
+          properties: { lubeType: "wet_lube" },
+        },
+      },
+    });
+    expect(jsonRpcResult(rejected.body)?.isError).toBe(true);
   });
 
   it("accepts x-api-key header", async () => {

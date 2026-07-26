@@ -17,6 +17,7 @@ export function parseComponentFilterInput(input: {
   nameContains?: string;
   brandContains?: string;
   modelContains?: string;
+  lubeTypes?: Array<"dry_lube" | "wet_lube" | "drip_wax" | "immersion_wax">;
 }) {
   const normalizedCategories = normalizeCategoryIds(input.categories);
   if (normalizedCategories) {
