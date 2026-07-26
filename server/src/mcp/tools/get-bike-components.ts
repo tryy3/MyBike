@@ -1,4 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/server";
+import { LUBE_TYPE_IDS } from "shared";
 import { z } from "zod";
 import { listComponentsForBike } from "../../services/bikes.js";
 import { getMcpAuth, requireReadPermission } from "../context.js";
@@ -21,7 +22,7 @@ const componentFilterSchema = z
     nameContains: z.string().optional(),
     brandContains: z.string().optional(),
     modelContains: z.string().optional(),
-    lubeTypes: z.array(z.enum(["dry_lube", "wet_lube", "drip_wax", "immersion_wax"])).optional(),
+    lubeTypes: z.array(z.enum(LUBE_TYPE_IDS)).optional(),
   })
   .optional();
 

@@ -1,4 +1,4 @@
-import { categoryLabel, LUBE_TYPE_IDS, normalizePropertiesForRead, type LubeType } from "shared";
+import { categoryLabel, isLubeType, LUBE_TYPE_IDS, normalizePropertiesForRead } from "shared";
 import type { ComponentRow } from "../../db/schema.js";
 import { builder } from "../builder.js";
 import { getWearForComponent } from "../../services/stats.js";
@@ -19,7 +19,7 @@ builder.objectType(ComponentPropertiesRef, {
     lubeType: t.field({
       type: LubeTypeEnum,
       nullable: true,
-      resolve: (parent) => (parent.lubeType as LubeType | undefined) ?? null,
+      resolve: (parent) => (isLubeType(parent.lubeType) ? parent.lubeType : null),
     }),
   }),
 });

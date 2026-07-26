@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import {
   DEFAULT_LUBE_TYPE,
+  isLubeType,
   LUBE_TYPE_IDS,
   LUBE_TYPE_LABELS,
   type Component,
@@ -138,7 +139,9 @@ function toFormValues(component: Component): ComponentFormValues {
   const { hours, minutes } = minutesToHoursMinutes(component.movingTimeMinutes);
   const lubeType =
     component.category === "chain"
-      ? ((component.properties?.lubeType as LubeType | undefined) ?? DEFAULT_LUBE_TYPE)
+      ? isLubeType(component.properties?.lubeType)
+        ? component.properties.lubeType
+        : DEFAULT_LUBE_TYPE
       : undefined;
   return {
     name: component.name,

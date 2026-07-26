@@ -234,4 +234,28 @@ describe("normalizePropertiesForRead", () => {
     expect(normalizePropertiesForRead("frame", null)).toEqual({});
     expect(normalizePropertiesForRead("chain", null)).toEqual({ lubeType: "wet_lube" });
   });
+
+  it("surfaces legacy/unknown lube ids as plain strings on read", () => {
+    expect(normalizePropertiesForRead("chain", { lubeType: "legacy_grease" })).toEqual({
+      lubeType: "legacy_grease",
+    });
+  });
+});
+
+describe("properties path nesting", () => {
+  it("reports non-object properties under a single properties path", () => {
+    const result = componentInsertSchema.safeParse({
+      category: "chain",
+      name: "Chain",
+      brand: "Brand",
+      model: "Model",
+      properties: "wet_lube",
+    });
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error.issues.some((issue) => issue.path.join(".") === "properties")).toBe(true);
+    expect(
+      result.error.issues.some((issue) => issue.path.join(".") === "properties.properties"),
+    ).toBe(false);
+  });
 });

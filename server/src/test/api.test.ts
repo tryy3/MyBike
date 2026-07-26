@@ -140,4 +140,80 @@ describe("CSV import (REST)", () => {
       .send({ csv: badCsv, dryRun: true })
       .expect(400);
   });
+
+  it("rejects blank or unknown lube_type on chain CSV create/update", async () => {
+    const { agent } = await createAuthenticatedAgent(app);
+    const bike = await createBikeViaGraphql(agent, "CSV Lube Required Bike");
+    const chain = await createComponentViaGraphql(agent, bike.id, {
+      category: "chain",
+      name: "Wax Chain",
+      brand: "KMC",
+      model: "X11",
+      properties: { lubeType: "drip_wax" },
+    });
+
+    const blankCreate = [
+      csvHeader(),
+      csvRow({
+        category: "chain",
+        name: "New Chain",
+        brand: "KMC",
+        model: "X11",
+        lube_type: "",
+      }),
+    ].join("\n");
+    await agent
+      .post(`/api/bikes/${bike.id}/components/import`)
+      .send({ csv: blankCreate, dryRun: true })
+      .expect(400);
+
+    const unknownCreate = [
+      csvHeader(),
+      csvRow({
+        category: "chain",
+        name: "New Chain",
+        brand: "KMC",
+        model: "X11",
+        lube_type: "legacy_grease",
+      }),
+    ].join("\n");
+    await agent
+      .post(`/api/bikes/${bike.id}/components/import`)
+      .send({ csv: unknownCreate, dryRun: true })
+      .expect(400);
+
+    const blankUpdate = [
+      csvHeader(),
+      csvRow({
+        id: chain.id,
+        category: "chain",
+        name: "Renamed Wax Chain",
+        brand: "KMC",
+        model: "X11",
+        lube_type: "",
+      }),
+    ].join("\n");
+    await agent
+      .post(`/api/bikes/${bike.id}/components/import`)
+      .send({ csv: blankUpdate, dryRun: true })
+      .expect(400);
+  });
+
+  it("exports chain lube_type using read normalization defaults", async () => {
+    const { agent } = await createAuthenticatedAgent(app);
+    const bike = await createBikeViaGraphql(agent, "CSV Export Lube Bike");
+    await createComponentViaGraphql(agent, bike.id, {
+      category: "chain",
+      name: "Default Chain",
+      brand: "KMC",
+      model: "X11",
+    });
+
+    const exported = await agent.get(`/api/bikes/${bike.id}/components/export.csv`).expect(200);
+    const lines = String(exported.text).trim().split("\n");
+    expect(lines[0]).toBe(csvHeader());
+    const cols = lines[1]?.split(",") ?? [];
+    const lubeIndex = COMPONENT_CSV_COLUMNS.indexOf("lube_type");
+    expect(cols[lubeIndex]).toBe("wet_lube");
+  });
 });

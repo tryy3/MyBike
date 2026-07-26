@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { CATEGORY_IDS } from "../categories.js";
 import {
-  chainPropertiesSchema,
+  chainPropertiesReadSchema,
   emptyPropertiesSchema,
   normalizePropertiesForWrite,
 } from "./component-properties.js";
@@ -137,7 +137,7 @@ export const componentSchema = componentBaseSchema.extend({
   sortOrder: z.number().int(),
   createdAt: z.number().int(),
   updatedAt: z.number().int(),
-  properties: z.union([chainPropertiesSchema, emptyPropertiesSchema]).default({}),
+  properties: z.union([chainPropertiesReadSchema, emptyPropertiesSchema]).default({}),
 });
 
 export const fieldSuggestionsSchema = z.object({

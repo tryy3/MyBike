@@ -125,7 +125,7 @@ mcp_servers:
 
 Implementation lives in `server/src/mcp/`. After MCP changes, add or update tests in `server/src/test/mcp.test.ts`.
 
-**Component properties:** `Component.properties` is always an object (`{}` when empty). App-defined per category — today only `chain` has `lubeType` (`dry_lube` | `wet_lube` | `drip_wax` | `immersion_wax`; default `wet_lube`). Non-chains reject non-empty properties. Filter with `lubeTypes` on `ComponentFilterInput` / MCP `get_bike_components`. CSV column `lube_type` maps to `properties.lubeType`.
+**Component properties:** `Component.properties` is always an object (`{}` when empty). App-defined per category — today only `chain` has `lubeType` (`dry_lube` | `wet_lube` | `drip_wax` | `immersion_wax`; default `wet_lube`). Non-chains reject non-empty properties. Filter with `lubeTypes` on `ComponentFilterInput` / MCP `get_bike_components`. CSV column `lube_type` maps to `properties.lubeType` (current header required; chains require an explicit known `lube_type` — blank/unknown errors).
 
 **Token-efficient component reads:** use field selection plus `bike(id) { components(filter: { … }) }`. Filter by `categories` (GraphQL enum `ComponentCategory`, e.g. `crankset`, `rear_derailleur`), `activeOnly`, `isActive`, `brands`, `nameContains`, `brandContains`, `modelContains`, or `lubeTypes`. Example for drivetrain compatibility on one bike:
 

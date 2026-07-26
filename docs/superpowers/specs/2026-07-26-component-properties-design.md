@@ -99,8 +99,11 @@ Suggested modules:
 
 ### CSV
 
-- Optional `lube_type` column maps to `properties.lubeType` for chain rows.
-- Import: missing lube on chain → default `wet_lube`; non-chain with lube column set → validation error (same rules as API).
+- Current header only (includes `lube_type`); older headers are rejected.
+- `lube_type` maps to `properties.lubeType` for chain rows.
+- Chain create/update: `lube_type` is **required** and must be a known enum value — blank or unknown → validation error (no soft-default / preserve).
+- Non-chain with `lube_type` set → validation error; blank is fine (`{}`).
+- Export: chain `lube_type` uses read normalization (null/`{}` properties export as `wet_lube`).
 
 ### Normalization rules
 
@@ -119,8 +122,8 @@ v1 treats `properties` on update as a **full replace** of the bag (bag is tiny).
 ## UI
 
 - **Form:** In `ComponentForm`, when `category === "chain"`, show a required “Lube type” select (four labels). Preselect Wet lube on create; show stored value on edit.
-- **Display:** Show lube type on chain list/detail (secondary labeled value). No properties chrome for other categories.
-- **Filter:** Optional lube-type multi-select wired to GraphQL `lubeTypes`. Show it only in chain context (e.g. when the category panel/filter is chain); hide otherwise.
+- **Display:** Show chain lube type as property pills on list/detail (shared chips). No properties chrome for other categories.
+- **Filter:** No client-side lube-type filter. GraphQL/MCP still expose `lubeTypes` for API/script clients.
 
 ## Errors
 
@@ -145,7 +148,7 @@ Same style as existing Zod → GraphQL/MCP validation errors:
 | `server` services | normalize `{}`, default wet for chains, JSON extract filter                   |
 | GraphQL           | `properties` on type/inputs; `lubeTypes` on filter; enum type                 |
 | MCP               | field catalog + create/update/list/filter                                     |
-| Client            | chain-only select + display + filter wiring                                   |
+| Client            | chain-only select + property pills (no UI lube filter)                        |
 
 ## Future upgrade path (out of scope)
 

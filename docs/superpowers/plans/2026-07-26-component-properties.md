@@ -694,11 +694,11 @@ Export row builder: `lube_type: properties?.lubeType ?? ""` (empty for non-chain
 
 Import: when parsing a row, build `properties` from `lube_type` cell:
 
-- if category === `chain` and cell empty → omit (normalize defaults wet)
+- if category === `chain` and cell empty/unknown → validation error (no soft-default)
 - if category !== `chain` and cell non-empty → throw validation error
 - if cell set → `properties: { lubeType: cell }` then run through existing insert/update validation
 
-Accept legacy headers without `lube_type` (already supported via `COMPONENT_CSV_LEGACY_COLUMNS` / header detection — ensure new column is optional on import when missing from header).
+Require the current header including `lube_type` (reject older headers).
 
 - [ ] **Step 3: Tests PASS + commit**
 
@@ -752,47 +752,37 @@ git commit -m "feat(client): chain lube type field on component form"
 
 ---
 
-### Task 9: Display lube type + chain-only list filter
+### Task 9: Display lube type (property pills)
 
 **Files:**
 
 - Modify: `client/src/features/components/CategoryDetailContent.tsx`
+- Add: `client/src/features/components/component-property-pills.ts`
 
 **Interfaces:**
 
 - Consumes: `LUBE_TYPE_LABELS`, component `properties.lubeType`
-- Produces: secondary line showing lube label for chains; optional multi-select filter over the in-memory list when `categoryId === "chain"`
+- Produces: property pills on chain list/detail rows
 
-Note: bike detail loads all components in one query today. UI filter is **client-side** with the same enum semantics as GraphQL `lubeTypes` (no extra round-trip). Server filter remains for API/MCP.
+Note: no client-side lube-type list filter. Server/GraphQL/MCP `lubeTypes` remains for API clients.
 
 - [ ] **Step 1: Display**
 
-In the chain row UI near `ComponentMetaLine` / detail tier, when `component.category === "chain"` and `properties.lubeType` is set, show e.g. `Lube: Wet lube` using `LUBE_TYPE_LABELS`.
+Show chain lube type as shared property pills (list + detail). No properties chrome for other categories.
 
-- [ ] **Step 2: Filter controls**
+- [ ] **Step 2: (removed) Filter controls**
 
-When the category panel is `chain`, render a compact multi-select or toggle group of lube types. Filter `components` list before render:
-
-```typescript
-const visible =
-  selectedLubeTypes.length === 0
-    ? components
-    : components.filter(
-        (c) => c.properties?.lubeType != null && selectedLubeTypes.includes(c.properties.lubeType),
-      );
-```
-
-Default: no lube filter selected → show all chains.
+Deferred / not shipping: in-panel lube multi-select was dropped as unnecessary.
 
 - [ ] **Step 3: Manual sanity check** (dev servers)
 
-Run API + client; open a bike → Chain category → add/edit lube → confirm list label and filter.
+Run API + client; open a bike → Chain category → add/edit lube → confirm property pills.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add client/src/features/components/CategoryDetailContent.tsx
-git commit -m "feat(client): show and filter chain lube type in category panel"
+git add client/src/features/components/CategoryDetailContent.tsx client/src/features/components/component-property-pills.ts
+git commit -m "feat(client): show chain lube type as property pills"
 ```
 
 ---
@@ -833,7 +823,7 @@ git commit -m "docs: note component properties and lubeTypes filter"
 | Filter `lubeTypes`                     | Tasks 2, 4, 5, 6                            |
 | MCP expose + filter                    | Task 6                                      |
 | CSV `lube_type`                        | Tasks 2, 7                                  |
-| UI select + display + chain filter     | Tasks 8–9                                   |
+| UI select + property pills             | Tasks 8–9                                   |
 | Migration backfill wet_lube            | Task 3                                      |
 | No Turso jsonb / user custom fields    | Global constraints / non-goals              |
 

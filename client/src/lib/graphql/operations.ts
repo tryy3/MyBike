@@ -1,4 +1,5 @@
-import type { Component, LubeType } from "shared";
+import type { Component } from "shared";
+import { isLubeType } from "shared";
 
 export interface RideStatsGql {
   distanceMeters: number;
@@ -272,7 +273,7 @@ export function toComponentRow(c: ComponentGql): Component {
     brand: c.brand,
     model: c.model,
     notes: c.notes,
-    properties: c.properties.lubeType ? { lubeType: c.properties.lubeType as LubeType } : {},
+    properties: isLubeType(c.properties.lubeType) ? { lubeType: c.properties.lubeType } : {},
     isActive: c.isActive,
     distanceMeters: c.wear.distanceMeters,
     movingTimeMinutes: c.wear.movingTimeMinutes,

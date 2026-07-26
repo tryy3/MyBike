@@ -10,7 +10,7 @@ import {
 } from "./graphql-helper.js";
 import { db } from "../db/index.js";
 import { account, user } from "../db/auth-schema.js";
-import { stravaActivities } from "../db/schema.js";
+import { components, stravaActivities } from "../db/schema.js";
 
 const app = createApp();
 
@@ -314,6 +314,92 @@ describe("GraphQL component properties", () => {
     expect(res.body.data?.bike.components).toHaveLength(1);
     expect(res.body.data?.bike.components[0]?.name).toBe("Wax Chain");
     expect(res.body.data?.bike.components[0]?.properties.lubeType).toBe("drip_wax");
+  });
+
+  it("updates chain lubeType and defaults omitted properties to wet_lube", async () => {
+    const { agent } = await createAuthenticatedAgent(app);
+    const bike = await createBikeViaGraphql(agent, "Chain Update Props Bike");
+    const created = await createComponentViaGraphql(agent, bike.id, {
+      category: "chain",
+      name: "Chain",
+      brand: "KMC",
+      model: "X11",
+      properties: { lubeType: "wet_lube" },
+    });
+
+    const toWax = await graphqlRequest<{
+      updateComponent: { id: string; properties: { lubeType: string | null } };
+    }>(
+      agent,
+      `mutation($id: ID!, $input: ComponentUpdateInput!) {
+        updateComponent(id: $id, input: $input) { id properties { lubeType } }
+      }`,
+      { id: created.id, input: { properties: { lubeType: "drip_wax" } } },
+    );
+    expect(toWax.body.errors).toBeUndefined();
+    expect(toWax.body.data?.updateComponent.properties.lubeType).toBe("drip_wax");
+
+    const toDefault = await graphqlRequest<{
+      updateComponent: { id: string; properties: { lubeType: string | null } };
+    }>(
+      agent,
+      `mutation($id: ID!, $input: ComponentUpdateInput!) {
+        updateComponent(id: $id, input: $input) { id properties { lubeType } }
+      }`,
+      { id: created.id, input: { properties: {} } },
+    );
+    expect(toDefault.body.errors).toBeUndefined();
+    expect(toDefault.body.data?.updateComponent.properties.lubeType).toBe("wet_lube");
+  });
+
+  it("rejects lubeType on non-chain GraphQL update", async () => {
+    const { agent } = await createAuthenticatedAgent(app);
+    const bike = await createBikeViaGraphql(agent, "Frame Update Props Bike");
+    const frame = await createComponentViaGraphql(agent, bike.id, {
+      category: "frame",
+      name: "Frame",
+      brand: "Brand",
+      model: "Model",
+    });
+
+    const res = await graphqlRequest(
+      agent,
+      `mutation($id: ID!, $input: ComponentUpdateInput!) {
+        updateComponent(id: $id, input: $input) { id }
+      }`,
+      { id: frame.id, input: { properties: { lubeType: "wet_lube" } } },
+    );
+    expect(res.body.errors?.length).toBeGreaterThan(0);
+  });
+
+  it("returns null GraphQL lubeType for legacy/unknown stored values", async () => {
+    const { agent } = await createAuthenticatedAgent(app);
+    const bike = await createBikeViaGraphql(agent, "Legacy Lube Bike");
+    const chain = await createComponentViaGraphql(agent, bike.id, {
+      category: "chain",
+      name: "Legacy Chain",
+      brand: "KMC",
+      model: "X11",
+    });
+
+    await db
+      .update(components)
+      .set({ properties: { lubeType: "legacy_grease" } })
+      .where(eq(components.id, chain.id))
+      .run();
+
+    const res = await graphqlRequest<{
+      bike: { components: { id: string; properties: { lubeType: string | null } }[] };
+    }>(
+      agent,
+      `query($id: ID!) {
+        bike(id: $id) { components { id properties { lubeType } } }
+      }`,
+      { id: bike.id },
+    );
+    expect(res.body.errors).toBeUndefined();
+    const row = res.body.data?.bike.components.find((c) => c.id === chain.id);
+    expect(row?.properties.lubeType).toBeNull();
   });
 });
 

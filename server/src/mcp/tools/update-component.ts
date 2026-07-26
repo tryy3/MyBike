@@ -1,5 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/server";
-import { componentUpdateSchema } from "shared";
+import { componentUpdateSchema, LUBE_TYPE_IDS } from "shared";
 import { z } from "zod";
 import { updateComponent } from "../../services/components.js";
 import { getMcpAuth, requireWritePermission } from "../context.js";
@@ -20,7 +20,7 @@ const mcpComponentUpdateSchema = z
     purchaseStore: z.string().max(200).nullish(),
     properties: z
       .object({
-        lubeType: z.enum(["dry_lube", "wet_lube", "drip_wax", "immersion_wax"]).optional(),
+        lubeType: z.enum(LUBE_TYPE_IDS).optional(),
       })
       .strict()
       .optional(),

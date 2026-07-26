@@ -13,9 +13,20 @@ export const LUBE_TYPE_LABELS: Record<LubeType, string> = {
 
 export const lubeTypeSchema = z.enum(LUBE_TYPE_IDS);
 
+export function isLubeType(value: unknown): value is LubeType {
+  return typeof value === "string" && (LUBE_TYPE_IDS as readonly string[]).includes(value);
+}
+
 export const chainPropertiesSchema = z
   .object({
     lubeType: lubeTypeSchema,
+  })
+  .strict();
+
+/** Soft-read schema: legacy/unknown lube ids may appear until remapped. */
+export const chainPropertiesReadSchema = z
+  .object({
+    lubeType: z.string().min(1),
   })
   .strict();
 
@@ -23,6 +34,11 @@ export const emptyPropertiesSchema = z.object({}).strict();
 
 export type ComponentProperties =
   | z.infer<typeof chainPropertiesSchema>
+  | z.infer<typeof emptyPropertiesSchema>;
+
+/** Read shape may include legacy/unknown lube ids until remapped. */
+export type ComponentPropertiesRead =
+  | z.infer<typeof chainPropertiesReadSchema>
   | z.infer<typeof emptyPropertiesSchema>;
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -39,7 +55,7 @@ export function normalizePropertiesForWrite(category: string, input: unknown): C
       throw new z.ZodError([
         {
           code: "custom",
-          path: ["properties"],
+          path: [],
           message: "properties must be an object",
         },
       ]);
@@ -54,7 +70,10 @@ export function normalizePropertiesForWrite(category: string, input: unknown): C
 }
 
 /** Normalize DB values for API responses (never null). */
-export function normalizePropertiesForRead(category: string, stored: unknown): ComponentProperties {
+export function normalizePropertiesForRead(
+  category: string,
+  stored: unknown,
+): ComponentPropertiesRead {
   if (stored === undefined || stored === null) {
     return category === "chain" ? { lubeType: DEFAULT_LUBE_TYPE } : {};
   }
@@ -66,7 +85,7 @@ export function normalizePropertiesForRead(category: string, stored: unknown): C
     if (parsed.success) return parsed.data;
     // Legacy/removed enum values: still surface the stored string on read.
     if (isPlainObject(stored) && typeof stored.lubeType === "string") {
-      return { lubeType: stored.lubeType as LubeType };
+      return { lubeType: stored.lubeType };
     }
     return { lubeType: DEFAULT_LUBE_TYPE };
   }
