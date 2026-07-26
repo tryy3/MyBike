@@ -1,4 +1,5 @@
 import type { Component } from "shared";
+import { isLubeType } from "shared";
 
 export interface RideStatsGql {
   distanceMeters: number;
@@ -50,6 +51,9 @@ export interface ComponentGql {
   brand: string | null;
   model: string | null;
   notes: string | null;
+  properties: {
+    lubeType: string | null;
+  };
   isActive: boolean;
   isArchived: boolean;
   purchaseDate: string | null;
@@ -112,6 +116,9 @@ export const BIKE_DETAIL_QUERY = /* GraphQL */ `
         brand
         model
         notes
+        properties {
+          lubeType
+        }
         isActive
         isArchived
         purchaseDate
@@ -190,6 +197,9 @@ export const CREATE_COMPONENT_MUTATION = /* GraphQL */ `
       brand
       model
       notes
+      properties {
+        lubeType
+      }
       isActive
       isArchived
       purchaseDate
@@ -217,6 +227,9 @@ export const UPDATE_COMPONENT_MUTATION = /* GraphQL */ `
       brand
       model
       notes
+      properties {
+        lubeType
+      }
       isActive
       isArchived
       purchaseDate
@@ -285,6 +298,7 @@ export function toComponentRow(c: ComponentGql): Component {
     brand: c.brand,
     model: c.model,
     notes: c.notes,
+    properties: isLubeType(c.properties.lubeType) ? { lubeType: c.properties.lubeType } : {},
     isActive: c.isActive,
     isArchived: c.isArchived,
     distanceMeters: c.wear.distanceMeters,

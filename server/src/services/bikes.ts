@@ -1,5 +1,12 @@
 import { and, asc, desc, eq, inArray, or, sql, type SQL } from "drizzle-orm";
-import type { BikeInsert, BikeUpdate, BikeDetail, BikeListItem, ComponentFilter } from "shared";
+import {
+  normalizePropertiesForRead,
+  type BikeInsert,
+  type BikeUpdate,
+  type BikeDetail,
+  type BikeListItem,
+  type ComponentFilter,
+} from "shared";
 import { db } from "../db/index.js";
 import { affectedRows } from "../db/result.js";
 import { bikes, components, maintenanceTasks } from "../db/schema.js";
@@ -47,6 +54,15 @@ function buildComponentFilterConditions(filter: ComponentFilter): SQL[] {
 
   if (filter.modelContains) {
     conditions.push(containsInsensitive(components.model, filter.modelContains));
+  }
+
+  if (filter.lubeTypes && filter.lubeTypes.length > 0) {
+    conditions.push(
+      sql`json_extract(${components.properties}, '$.lubeType') IN (${sql.join(
+        filter.lubeTypes.map((value) => sql`${value}`),
+        sql`, `,
+      )})`,
+    );
   }
 
   return conditions;
@@ -103,7 +119,14 @@ export async function getBikeDetail(bikeId: string, userId: string): Promise<Bik
     .where(eq(components.bikeId, bikeId))
     .orderBy(asc(components.sortOrder), asc(components.createdAt))
     .all();
-  return { ...bike, components: rows };
+  return {
+    ...bike,
+    components: rows.map((row) => ({
+      ...row,
+      category: row.category as BikeDetail["components"][number]["category"],
+      properties: normalizePropertiesForRead(row.category, row.properties),
+    })),
+  };
 }
 
 export async function listComponentsForBike(

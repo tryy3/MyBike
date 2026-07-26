@@ -7,6 +7,7 @@ export * from "./schemas/auth.js";
 export * from "./schemas/bike.js";
 export * from "./schemas/component.js";
 export * from "./schemas/component-filter.js";
+export * from "./schemas/component-properties.js";
 export * from "./schemas/maintenance.js";
 export * from "./schemas/strava.js";
 export * from "./schemas/strava-webhook.js";

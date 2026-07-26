@@ -35,22 +35,23 @@ MyBike/
 
 Install the Vite+ CLI once: `curl -fsSL https://vite.plus | bash`. Run `vp env off` if vp's Node manager conflicts with nvm/Nix.
 
-| What                        | Command                                                |
-| --------------------------- | ------------------------------------------------------ |
-| Install deps                | `vp install` (or `npm install`)                        |
-| Server dev                  | `npm run -w server dev`                                |
-| Client dev                  | `npm run -w client dev`                                |
-| Webhook proxy dev           | `npm run -w strava-webhook-proxy dev`                  |
-| Format + lint + typecheck   | `vp check`                                             |
-| Auto-fix format/lint        | `vp check --fix`                                       |
-| Run tests                   | `npm test` (runs shared + server via `vp run -r test`) |
-| Full verify (CI equivalent) | `npm run verify`                                       |
-| Generate migration          | `npm run -w server db:generate`                        |
-| Apply migrations            | `npm run -w server db:migrate`                         |
-| Push schema (interactive)   | `npm run -w server db:push`                            |
-| Drizzle Studio              | `npm run -w server db:studio`                          |
-| Proxy migrate               | `npm run -w strava-webhook-proxy db:migrate`           |
-| Strava webhook subscribe    | `npm run -w strava-webhook-proxy subscribe`            |
+| What                        | Command                                                 |
+| --------------------------- | ------------------------------------------------------- |
+| Install deps                | `vp install` (or `npm install`)                         |
+| Server dev                  | `npm run -w server dev`                                 |
+| Client dev                  | `npm run -w client dev`                                 |
+| Webhook proxy dev           | `npm run -w strava-webhook-proxy dev`                   |
+| Format + lint + typecheck   | `vp check`                                              |
+| Auto-fix format/lint        | `vp check --fix`                                        |
+| Run tests                   | `npm test` (runs shared + server via `vp run -r test`)  |
+| Full verify (CI equivalent) | `npm run verify`                                        |
+| Generate migration          | `npm run -w server db:generate`                         |
+| Apply migrations            | `npm run -w server db:migrate`                          |
+| Turso Cloud PR branch       | `npm run db:branch` (prints exports; needs `turso` CLI) |
+| Push schema (interactive)   | `npm run -w server db:push`                             |
+| Drizzle Studio              | `npm run -w server db:studio`                           |
+| Proxy migrate               | `npm run -w strava-webhook-proxy db:migrate`            |
+| Strava webhook subscribe    | `npm run -w strava-webhook-proxy subscribe`             |
 
 ## Quality gates
 
@@ -124,7 +125,9 @@ mcp_servers:
 
 Implementation lives in `server/src/mcp/`. After MCP changes, add or update tests in `server/src/test/mcp.test.ts`.
 
-**Token-efficient component reads:** use field selection plus `bike(id) { components(filter: { … }) }`. Filter by `categories` (GraphQL enum `ComponentCategory`, e.g. `crankset`, `rear_derailleur`), `activeOnly`, `isActive`, `isArchived`, `brands`, `nameContains`, `brandContains`, or `modelContains`. Example for drivetrain compatibility on one bike:
+**Component properties:** `Component.properties` is always an object (`{}` when empty). App-defined per category — today only `chain` has `lubeType` (`dry_lube` | `wet_lube` | `drip_wax` | `immersion_wax`; default `wet_lube`). Non-chains reject non-empty properties. Filter with `lubeTypes` on `ComponentFilterInput` / MCP `get_bike_components`. CSV column `lube_type` maps to `properties.lubeType` (current header required; chains require an explicit known `lube_type` — blank/unknown errors).
+
+**Token-efficient component reads:** use field selection plus `bike(id) { components(filter: { … }) }`. Filter by `categories` (GraphQL enum `ComponentCategory`, e.g. `crankset`, `rear_derailleur`), `activeOnly`, `isActive`, `isArchived`, `brands`, `nameContains`, `brandContains`, `modelContains`, or `lubeTypes`. Example for drivetrain compatibility on one bike:
 
 ```graphql
 query ($id: ID!) {

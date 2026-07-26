@@ -4,7 +4,15 @@ import { Controller, useForm } from "react-hook-form";
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
-import { type Component } from "shared";
+import {
+  DEFAULT_LUBE_TYPE,
+  isLubeType,
+  LUBE_TYPE_IDS,
+  LUBE_TYPE_LABELS,
+  type Component,
+  type ComponentProperties,
+  type LubeType,
+} from "shared";
 
 import { ComboboxField } from "@/components/ComboboxField";
 import { Button } from "@/components/ui/button";
@@ -17,6 +25,13 @@ import {
   InputGroupInput,
   InputGroupText,
 } from "@/components/ui/input-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCreateComponent, useFieldSuggestions, useUpdateComponent } from "./api";
@@ -49,42 +64,53 @@ const optionalWholeNumber = (label: string, max?: number) =>
       : `${label} must be a whole number ≥ 0`,
   );
 
-const formSchema = z
-  .object({
-    name: z.string().min(1).max(200),
-    brand: z.string().min(1).max(200),
-    model: z.string().min(1).max(200),
-    notes: z.string().max(5000).nullish(),
-    distanceKm: optionalNonNegativeNumber("Distance"),
-    movingTimeHours: optionalWholeNumber("Hours"),
-    movingTimeMinutes: optionalWholeNumber("Minutes", 59),
-    purchaseDate: z.string().nullish(),
-    purchaseCost: optionalNonNegativeNumber("Purchase cost"),
-    purchaseStore: z.string().max(200).nullish(),
-  })
-  .superRefine((data, ctx) => {
-    const hours = data.movingTimeHours?.trim() ?? "";
-    const minutes = data.movingTimeMinutes?.trim() ?? "";
-    if (hours === "" && minutes === "") return;
+function buildFormSchema(category: string) {
+  return z
+    .object({
+      name: z.string().min(1).max(200),
+      brand: z.string().min(1).max(200),
+      model: z.string().min(1).max(200),
+      notes: z.string().max(5000).nullish(),
+      distanceKm: optionalNonNegativeNumber("Distance"),
+      movingTimeHours: optionalWholeNumber("Hours"),
+      movingTimeMinutes: optionalWholeNumber("Minutes", 59),
+      purchaseDate: z.string().nullish(),
+      purchaseCost: optionalNonNegativeNumber("Purchase cost"),
+      purchaseStore: z.string().max(200).nullish(),
+      lubeType: z.enum(LUBE_TYPE_IDS).optional(),
+    })
+    .superRefine((data, ctx) => {
+      if (category === "chain" && data.lubeType == null) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Lube type is required",
+          path: ["lubeType"],
+        });
+      }
 
-    const h = hours === "" ? 0 : Number(hours);
-    const m = minutes === "" ? 0 : Number(minutes);
-    if (!Number.isInteger(h) || h < 0) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Hours must be a whole number ≥ 0",
-        path: ["movingTimeHours"],
-      });
-    }
-    if (!Number.isInteger(m) || m < 0 || m > 59) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Minutes must be a whole number from 0 to 59",
-        path: ["movingTimeMinutes"],
-      });
-    }
-  });
-type ComponentFormValues = z.infer<typeof formSchema>;
+      const hours = data.movingTimeHours?.trim() ?? "";
+      const minutes = data.movingTimeMinutes?.trim() ?? "";
+      if (hours === "" && minutes === "") return;
+
+      const h = hours === "" ? 0 : Number(hours);
+      const m = minutes === "" ? 0 : Number(minutes);
+      if (!Number.isInteger(h) || h < 0) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Hours must be a whole number ≥ 0",
+          path: ["movingTimeHours"],
+        });
+      }
+      if (!Number.isInteger(m) || m < 0 || m > 59) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Minutes must be a whole number from 0 to 59",
+          path: ["movingTimeMinutes"],
+        });
+      }
+    });
+}
+type ComponentFormValues = z.infer<ReturnType<typeof buildFormSchema>>;
 
 interface ComponentFormProps {
   bikeId: string;
@@ -93,21 +119,30 @@ interface ComponentFormProps {
   onDone: () => void;
 }
 
-const EMPTY: ComponentFormValues = {
-  name: "",
-  brand: "",
-  model: "",
-  notes: "",
-  distanceKm: "",
-  movingTimeHours: "",
-  movingTimeMinutes: "",
-  purchaseDate: "",
-  purchaseCost: "",
-  purchaseStore: "",
-};
+function emptyFormValues(category: string): ComponentFormValues {
+  return {
+    name: "",
+    brand: "",
+    model: "",
+    notes: "",
+    distanceKm: "",
+    movingTimeHours: "",
+    movingTimeMinutes: "",
+    purchaseDate: "",
+    purchaseCost: "",
+    purchaseStore: "",
+    lubeType: category === "chain" ? DEFAULT_LUBE_TYPE : undefined,
+  };
+}
 
 function toFormValues(component: Component): ComponentFormValues {
   const { hours, minutes } = minutesToHoursMinutes(component.movingTimeMinutes);
+  const lubeType =
+    component.category === "chain"
+      ? isLubeType(component.properties?.lubeType)
+        ? component.properties.lubeType
+        : DEFAULT_LUBE_TYPE
+      : undefined;
   return {
     name: component.name,
     brand: component.brand ?? "",
@@ -119,10 +154,11 @@ function toFormValues(component: Component): ComponentFormValues {
     purchaseDate: component.purchaseDate ?? "",
     purchaseCost: component.purchaseCost != null ? String(component.purchaseCost) : "",
     purchaseStore: component.purchaseStore ?? "",
+    lubeType,
   };
 }
 
-function normalize(raw: ComponentFormValues) {
+function normalize(raw: ComponentFormValues, category: string) {
   const trim = (v: string | null | undefined) => (!v || v.trim() === "" ? null : v.trim());
 
   return {
@@ -141,6 +177,9 @@ function normalize(raw: ComponentFormValues) {
       return trimmed === "" ? null : Number(trimmed);
     })(),
     purchaseStore: trim(raw.purchaseStore ?? null),
+    properties: (category === "chain"
+      ? { lubeType: raw.lubeType ?? DEFAULT_LUBE_TYPE }
+      : {}) as ComponentProperties,
   };
 }
 
@@ -149,22 +188,23 @@ export function ComponentForm({ bikeId, category, component, onDone }: Component
   const createComponent = useCreateComponent(bikeId);
   const updateComponent = useUpdateComponent(bikeId);
   const { data: suggestions } = useFieldSuggestions();
+  const formSchema = buildFormSchema(category);
 
   const form = useForm<ComponentFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: component ? toFormValues(component) : EMPTY,
+    defaultValues: component ? toFormValues(component) : emptyFormValues(category),
   });
 
   useEffect(() => {
-    form.reset(component ? toFormValues(component) : EMPTY);
-  }, [component, form]);
+    form.reset(component ? toFormValues(component) : emptyFormValues(category));
+  }, [component, category, form]);
 
   const onSubmit = form.handleSubmit((data) => {
-    const normalized = normalize(data);
+    const normalized = normalize(data, category);
     const result = isEdit
       ? updateComponent.mutateAsync({ id: component!.id, data: normalized })
       : createComponent.mutateAsync({
-          category,
+          category: category as Component["category"],
           ...normalized,
           isActive: false,
         });
@@ -208,6 +248,43 @@ export function ComponentForm({ bikeId, category, component, onDone }: Component
             suggestions={suggestions?.model ?? []}
           />
         </div>
+
+        {category === "chain" && (
+          <Controller
+            name="lubeType"
+            control={form.control}
+            render={({ field, fieldState }) => {
+              const errorId = `${field.name}-error`;
+              return (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor={field.name}>Lube type</FieldLabel>
+                  <Select
+                    value={field.value ?? DEFAULT_LUBE_TYPE}
+                    onValueChange={(value) => field.onChange(value as LubeType)}
+                  >
+                    <SelectTrigger
+                      id={field.name}
+                      className="w-full"
+                      aria-invalid={fieldState.invalid}
+                    >
+                      <SelectValue placeholder="Select lube type">
+                        {LUBE_TYPE_LABELS[(field.value ?? DEFAULT_LUBE_TYPE) as LubeType]}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LUBE_TYPE_IDS.map((id) => (
+                        <SelectItem key={id} value={id} textValue={LUBE_TYPE_LABELS[id]}>
+                          {LUBE_TYPE_LABELS[id]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {fieldState.invalid && <FieldError id={errorId} errors={[fieldState.error]} />}
+                </Field>
+              );
+            }}
+          />
+        )}
 
         <div className="flex flex-col gap-4 sm:flex-row">
           <Controller

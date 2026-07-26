@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { CATEGORY_IDS } from "../categories.js";
+import {
+  chainPropertiesReadSchema,
+  emptyPropertiesSchema,
+  normalizePropertiesForWrite,
+} from "./component-properties.js";
 
 const requiredString = z.string().trim().min(1).max(200);
 const optionalString = z
@@ -76,11 +81,40 @@ export const componentBaseSchema = z.object({
   ...componentOptionalFields,
 });
 
-export const componentInsertSchema = componentBaseSchema.extend({
+/** Field shape before property normalization — usable with `.pick()` in MCP tools. */
+export const componentInsertFieldsSchema = componentBaseSchema.extend({
   category: z.enum(CATEGORY_IDS),
   brand: requiredString,
   model: requiredString,
+  properties: z.unknown().optional(),
 });
+
+export const componentInsertSchema = componentInsertFieldsSchema
+  .superRefine((data, ctx) => {
+    try {
+      normalizePropertiesForWrite(data.category, data.properties);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        for (const issue of err.issues) {
+          ctx.addIssue({
+            code: "custom",
+            message: issue.message,
+            path: ["properties", ...issue.path],
+          });
+        }
+        return;
+      }
+      ctx.addIssue({
+        code: "custom",
+        message: "Invalid properties",
+        path: ["properties"],
+      });
+    }
+  })
+  .transform((data) => ({
+    ...data,
+    properties: normalizePropertiesForWrite(data.category, data.properties),
+  }));
 
 export const componentUpdateSchema = z.object({
   name: requiredString.optional(),
@@ -92,6 +126,8 @@ export const componentUpdateSchema = z.object({
   purchaseDate: patchPurchaseDate,
   purchaseCost: patchOptionalCost,
   purchaseStore: patchOptionalString,
+  /** Full replace when present; category-validated in service via normalizePropertiesForWrite. */
+  properties: z.unknown().optional(),
 });
 
 export const componentSchema = componentBaseSchema.extend({
@@ -102,6 +138,7 @@ export const componentSchema = componentBaseSchema.extend({
   sortOrder: z.number().int(),
   createdAt: z.number().int(),
   updatedAt: z.number().int(),
+  properties: z.union([chainPropertiesReadSchema, emptyPropertiesSchema]).default({}),
 });
 
 export const fieldSuggestionsSchema = z.object({
@@ -136,6 +173,7 @@ export const COMPONENT_CSV_COLUMNS = [
   "purchaseDate",
   "purchaseCost",
   "purchaseStore",
+  "lube_type",
 ] as const;
 
 /** Header row accepted by import before the new optional columns were added. */

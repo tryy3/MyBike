@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CATEGORY_IDS } from "../categories.js";
+import { lubeTypeSchema } from "./component-properties.js";
 
 const optionalNonEmptyString = z.string().trim().min(1).max(200);
 
@@ -12,6 +13,7 @@ export const componentFilterSchema = z.object({
   nameContains: optionalNonEmptyString.optional(),
   brandContains: optionalNonEmptyString.optional(),
   modelContains: optionalNonEmptyString.optional(),
+  lubeTypes: z.array(lubeTypeSchema).optional(),
 });
 
 export type ComponentFilter = z.infer<typeof componentFilterSchema>;

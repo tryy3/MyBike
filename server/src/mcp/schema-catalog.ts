@@ -25,6 +25,7 @@ export const COMPONENT_FIELDS = [
   "brand",
   "model",
   "notes",
+  "properties",
   "isActive",
   "isArchived",
   "purchaseDate",
@@ -49,6 +50,7 @@ export const COMPONENT_FILTER_FIELDS = [
   "nameContains",
   "brandContains",
   "modelContains",
+  "lubeTypes",
 ] as const;
 
 export const MAINTENANCE_TASK_FIELDS = [
@@ -123,7 +125,9 @@ export function getSchemaCatalog() {
       categoryIds:
         "Typed tools use hyphenated category ids (rear-derailleur). Raw GraphQL filter enums use underscores (rear_derailleur).",
       filters:
-        "Component filters: categories, activeOnly, isActive, isArchived, brands, nameContains, brandContains, modelContains.",
+        "Component filters: categories, activeOnly, isActive, isArchived, brands, nameContains, brandContains, modelContains, lubeTypes (chain properties.lubeType: dry_lube|wet_lube|drip_wax|immersion_wax).",
+      properties:
+        "components.properties is an object (never null). Chains include lubeType; other categories use {}.",
       auth: "Read tools need graphql:read. Write tools need graphql:write on the API key.",
     },
   };

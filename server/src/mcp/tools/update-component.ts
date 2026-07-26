@@ -1,5 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/server";
-import { componentUpdateSchema } from "shared";
+import { componentUpdateSchema, LUBE_TYPE_IDS } from "shared";
 import { z } from "zod";
 import { updateComponent } from "../../services/components.js";
 import { getMcpAuth, requireWritePermission } from "../context.js";
@@ -18,6 +18,12 @@ const mcpComponentUpdateSchema = z
       .nullish(),
     purchaseCost: z.number().min(0).nullish(),
     purchaseStore: z.string().max(200).nullish(),
+    properties: z
+      .object({
+        lubeType: z.enum(LUBE_TYPE_IDS).optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 
@@ -27,7 +33,7 @@ export function registerUpdateComponentTool(server: McpServer): void {
     {
       title: "Update component",
       description:
-        "Partially updates a component's brand, model, notes, and purchase details. Only fields you include are changed; omit a field to leave it unchanged. Pass null (or empty string for text/date fields) to clear a value. The component name cannot be changed.",
+        "Partially updates a component's brand, model, notes, purchase details, and properties. Only fields you include are changed; omit a field to leave it unchanged. Pass null (or empty string for text/date fields) to clear a value. properties is a full replace (chains: { lubeType }). The component name cannot be changed.",
       inputSchema: mcpComponentUpdateSchema,
     },
     async (args, ctx) => {

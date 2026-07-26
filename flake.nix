@@ -66,6 +66,7 @@
           nodejs_26
           agent-browser
           python3
+          turso-cli
         ];
 
         shellHook = ''
