@@ -1,12 +1,12 @@
 import type { McpServer } from "@modelcontextprotocol/server";
-import { componentInsertSchema } from "shared";
+import { componentInsertFieldsSchema, componentInsertSchema } from "shared";
 import { z } from "zod";
 import { createComponent } from "../../services/components.js";
 import { getMcpAuth, requireWritePermission } from "../context.js";
 import { serializeComponent } from "../serialize.js";
 import { withMcpToolLog } from "../tool-log.js";
 
-const createComponentInputSchema = componentInsertSchema
+const createComponentInputSchema = componentInsertFieldsSchema
   .pick({
     category: true,
     name: true,
@@ -16,6 +16,7 @@ const createComponentInputSchema = componentInsertSchema
     purchaseDate: true,
     purchaseCost: true,
     purchaseStore: true,
+    properties: true,
   })
   .extend({ bikeId: z.string().min(1) });
 

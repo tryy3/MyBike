@@ -1,5 +1,11 @@
 import { and, asc, eq, ne, sql } from "drizzle-orm";
-import type { ComponentInsert, ComponentReorder, ComponentUpdate } from "shared";
+import {
+  normalizePropertiesForWrite,
+  type ComponentInsert,
+  type ComponentProperties,
+  type ComponentReorder,
+  type ComponentUpdate,
+} from "shared";
 import { db } from "../db/index.js";
 import { affectedRows } from "../db/result.js";
 import { bikes, components } from "../db/schema.js";
@@ -21,6 +27,10 @@ function optionalComponentFields(data: {
     purchaseCost: data.purchaseCost ?? null,
     purchaseStore: data.purchaseStore ?? null,
   };
+}
+
+function propertiesForStorage(properties: ComponentProperties): ComponentProperties | null {
+  return Object.keys(properties).length === 0 ? null : properties;
 }
 
 export async function requireComponent(componentId: string, userId: string): Promise<ComponentRow> {
@@ -73,6 +83,7 @@ export async function createComponent(
         brand: data.brand ?? null,
         model: data.model ?? null,
         notes: data.notes ?? null,
+        properties: propertiesForStorage(data.properties),
         ...optionalComponentFields(data),
         isActive,
         sortOrder,
@@ -87,7 +98,7 @@ export async function updateComponent(
   userId: string,
   data: ComponentUpdate,
 ): Promise<ComponentRow> {
-  await requireComponent(componentId, userId);
+  const existing = await requireComponent(componentId, userId);
   const updates: Record<string, unknown> = {};
   if (data.name !== undefined) updates.name = data.name;
   if (data.brand !== undefined) updates.brand = data.brand ?? null;
@@ -99,10 +110,12 @@ export async function updateComponent(
   if (data.purchaseDate !== undefined) updates.purchaseDate = data.purchaseDate ?? null;
   if (data.purchaseCost !== undefined) updates.purchaseCost = data.purchaseCost ?? null;
   if (data.purchaseStore !== undefined) updates.purchaseStore = data.purchaseStore ?? null;
+  if (data.properties !== undefined) {
+    const normalized = normalizePropertiesForWrite(existing.category, data.properties);
+    updates.properties = propertiesForStorage(normalized);
+  }
   if (Object.keys(updates).length === 0) {
-    const row = await db.select().from(components).where(eq(components.id, componentId)).get();
-    if (!row) throw notFound("Component");
-    return row;
+    return existing;
   }
   return await db
     .update(components)

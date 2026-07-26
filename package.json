@@ -14,6 +14,7 @@
     "build:packages": "npm run -w shared build && npm run -w logging build",
     "test": "vp run -r test",
     "verify": "npm run build:packages && vp check && npm test",
+    "db:branch": "npm run -w server db:branch --",
     "prepare": "vp config"
   },
   "dependencies": {

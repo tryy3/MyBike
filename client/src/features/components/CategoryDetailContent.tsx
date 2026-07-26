@@ -30,6 +30,7 @@ import {
   ComponentIdentityTier,
   ComponentMetaLine,
   ComponentNameLabel,
+  ComponentPropertiesPills,
 } from "./component-list-layout";
 import { ComponentForm } from "./ComponentForm";
 import { useActivateComponent, useDeleteComponent, useReorderComponents } from "./api";
@@ -326,6 +327,10 @@ function ComponentRow({
               brandModel={componentBrandModel(component)}
               distanceMeters={displayWear.distanceMeters}
               movingTimeMinutes={displayWear.movingTimeMinutes}
+            />
+            <ComponentPropertiesPills
+              category={component.category}
+              properties={component.properties}
             />
           </ComponentIdentityTier>
           <ComponentDetailTier notes={component.notes} lineClamp={3} />

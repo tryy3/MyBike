@@ -1,4 +1,4 @@
-import { categoryLabel } from "shared";
+import { categoryLabel, normalizePropertiesForRead } from "shared";
 import type { BikeListItem } from "shared";
 import type { BikeRow, ComponentRow } from "../db/schema.js";
 import { getRideStatsForBike, getWearForComponent } from "../services/stats.js";
@@ -40,6 +40,7 @@ export async function serializeComponent(row: ComponentRow): Promise<Record<stri
     brand: row.brand,
     model: row.model,
     notes: row.notes,
+    properties: normalizePropertiesForRead(row.category, row.properties),
     isActive: row.isActive,
     purchaseDate: row.purchaseDate,
     purchaseStore: row.purchaseStore,

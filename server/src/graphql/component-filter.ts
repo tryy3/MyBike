@@ -1,6 +1,7 @@
-import { CATEGORY_IDS, componentFilterSchema, type ComponentFilter } from "shared";
+import { CATEGORY_IDS, componentFilterSchema, type ComponentFilter, type LubeType } from "shared";
 import { HttpError } from "../lib/errors.js";
 import { builder } from "./builder.js";
+import { LubeTypeEnum } from "./schema/component.js";
 
 function categoryIdToEnumName(id: string): string {
   return id.replace(/-/g, "_");
@@ -19,6 +20,7 @@ export const ComponentFilterInput = builder.inputType("ComponentFilterInput", {
     nameContains: t.string({ required: false }),
     brandContains: t.string({ required: false }),
     modelContains: t.string({ required: false }),
+    lubeTypes: t.field({ type: [LubeTypeEnum], required: false }),
   }),
 });
 
@@ -32,6 +34,7 @@ export function mergeComponentFilter(
     nameContains?: string | null;
     brandContains?: string | null;
     modelContains?: string | null;
+    lubeTypes?: LubeType[] | null;
   } | null,
 ): ComponentFilter {
   const filter = rawFilter ? componentFilterSchema.parse(rawFilter) : {};

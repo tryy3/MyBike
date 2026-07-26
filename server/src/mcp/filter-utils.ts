@@ -1,4 +1,4 @@
-import { CATEGORY_IDS, componentFilterSchema } from "shared";
+import { CATEGORY_IDS, componentFilterSchema, type LubeType } from "shared";
 
 export function normalizeCategoryId(value: string): string {
   return value.replace(/_/g, "-");
@@ -17,6 +17,7 @@ export function parseComponentFilterInput(input: {
   nameContains?: string;
   brandContains?: string;
   modelContains?: string;
+  lubeTypes?: LubeType[];
 }) {
   const normalizedCategories = normalizeCategoryIds(input.categories);
   if (normalizedCategories) {
