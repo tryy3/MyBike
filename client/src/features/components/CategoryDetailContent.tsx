@@ -250,6 +250,11 @@ export function CategoryDetailContent({
   const activeComponents = sorted.filter((c) => c.isActive && !c.isArchived);
   const alternateComponents = sorted.filter((c) => !c.isActive && !c.isArchived);
   const archivedComponents = sorted.filter((c) => c.isArchived);
+  const sortableIds = [
+    ...activeComponents.map((c) => c.id),
+    ...alternateComponents.map((c) => c.id),
+    ...(archivedOpen ? archivedComponents.map((c) => c.id) : []),
+  ];
 
   return (
     <div className="flex flex-col gap-4">
@@ -259,7 +264,7 @@ export function CategoryDetailContent({
         </p>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-          <SortableContext items={sorted.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+          <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
             <div className="flex flex-col gap-4">
               {activeComponents.length > 0 ? (
                 <section className="flex flex-col gap-2">

@@ -135,7 +135,11 @@ export async function deleteComponent(componentId: string, userId: string): Prom
         .select()
         .from(components)
         .where(
-          and(eq(components.bikeId, existing.bikeId), eq(components.category, existing.category)),
+          and(
+            eq(components.bikeId, existing.bikeId),
+            eq(components.category, existing.category),
+            eq(components.isArchived, false),
+          ),
         )
         .orderBy(asc(components.createdAt))
         .get();
