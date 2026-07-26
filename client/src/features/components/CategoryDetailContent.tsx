@@ -18,12 +18,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import {
-  LUBE_TYPE_IDS,
-  LUBE_TYPE_LABELS,
-  type Component,
-  type LubeType,
-} from "shared";
+import { LUBE_TYPE_IDS, LUBE_TYPE_LABELS, type Component, type LubeType } from "shared";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -372,7 +367,7 @@ function ComponentRow({
           <ComponentIdentityTier
             separated={Boolean(
               component.notes?.trim() ||
-                (component.category === "chain" && componentLubeType(component)),
+              (component.category === "chain" && componentLubeType(component)),
             )}
           >
             <div className="flex items-center gap-2">

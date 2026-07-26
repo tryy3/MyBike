@@ -25,42 +25,44 @@
 
 ## File map
 
-| File | Responsibility |
-| --- | --- |
-| `shared/src/schemas/component-properties.ts` | Lube enum, labels, normalize/parse helpers |
-| `shared/src/schemas/component.ts` | Wire `properties` into insert/update/full schemas + CSV column |
-| `shared/src/schemas/component-filter.ts` | Add `lubeTypes` |
-| `shared/src/index.ts` | Re-export properties module |
-| `shared/src/schemas.test.ts` | Zod coverage |
-| `server/src/db/schema.ts` | `properties` column |
-| `server/drizzle/20260726120000_component_properties/migration.sql` | ADD COLUMN + chain backfill |
-| `server/src/services/components.ts` | Persist/normalize on create/update |
-| `server/src/services/bikes.ts` | `lubeTypes` SQL filter |
-| `server/src/services/component-import.ts` | CSV `lube_type` map |
-| `server/src/graphql/schema/component.ts` | `LubeType` enum + `ComponentProperties` + field |
-| `server/src/graphql/schema/bike.ts` | Input fields |
-| `server/src/graphql/component-filter.ts` | `lubeTypes` on filter input |
-| `server/src/mcp/schema-catalog.ts` | Field/filter catalog |
-| `server/src/mcp/serialize.ts` | Include normalized `properties` |
-| `server/src/mcp/tools/create-component.ts` | Accept `properties` |
-| `server/src/mcp/tools/update-component.ts` | Accept `properties` |
-| `server/src/test/graphql.test.ts` | Create/update/filter cases |
-| `server/src/test/mcp.test.ts` | MCP round-trip |
-| `client/src/lib/graphql/operations.ts` | Selection + types |
-| `client/src/features/components/ComponentForm.tsx` | Chain lube select |
-| `client/src/features/components/CategoryDetailContent.tsx` | Display + chain-only local filter |
-| `client/src/features/components/csv.ts` | Template column if needed |
+| File                                                               | Responsibility                                                 |
+| ------------------------------------------------------------------ | -------------------------------------------------------------- |
+| `shared/src/schemas/component-properties.ts`                       | Lube enum, labels, normalize/parse helpers                     |
+| `shared/src/schemas/component.ts`                                  | Wire `properties` into insert/update/full schemas + CSV column |
+| `shared/src/schemas/component-filter.ts`                           | Add `lubeTypes`                                                |
+| `shared/src/index.ts`                                              | Re-export properties module                                    |
+| `shared/src/schemas.test.ts`                                       | Zod coverage                                                   |
+| `server/src/db/schema.ts`                                          | `properties` column                                            |
+| `server/drizzle/20260726120000_component_properties/migration.sql` | ADD COLUMN + chain backfill                                    |
+| `server/src/services/components.ts`                                | Persist/normalize on create/update                             |
+| `server/src/services/bikes.ts`                                     | `lubeTypes` SQL filter                                         |
+| `server/src/services/component-import.ts`                          | CSV `lube_type` map                                            |
+| `server/src/graphql/schema/component.ts`                           | `LubeType` enum + `ComponentProperties` + field                |
+| `server/src/graphql/schema/bike.ts`                                | Input fields                                                   |
+| `server/src/graphql/component-filter.ts`                           | `lubeTypes` on filter input                                    |
+| `server/src/mcp/schema-catalog.ts`                                 | Field/filter catalog                                           |
+| `server/src/mcp/serialize.ts`                                      | Include normalized `properties`                                |
+| `server/src/mcp/tools/create-component.ts`                         | Accept `properties`                                            |
+| `server/src/mcp/tools/update-component.ts`                         | Accept `properties`                                            |
+| `server/src/test/graphql.test.ts`                                  | Create/update/filter cases                                     |
+| `server/src/test/mcp.test.ts`                                      | MCP round-trip                                                 |
+| `client/src/lib/graphql/operations.ts`                             | Selection + types                                              |
+| `client/src/features/components/ComponentForm.tsx`                 | Chain lube select                                              |
+| `client/src/features/components/CategoryDetailContent.tsx`         | Display + chain-only local filter                              |
+| `client/src/features/components/csv.ts`                            | Template column if needed                                      |
 
 ---
 
 ### Task 1: Shared `component-properties` module + unit tests
 
 **Files:**
+
 - Create: `shared/src/schemas/component-properties.ts`
 - Modify: `shared/src/index.ts`
 - Test: `shared/src/schemas.test.ts`
 
 **Interfaces:**
+
 - Produces: `LUBE_TYPE_IDS`, `LubeType`, `DEFAULT_LUBE_TYPE`, `LUBE_TYPE_LABELS`
 - Produces: `ComponentProperties` (`{ lubeType?: LubeType }` — empty object has no keys)
 - Produces: `normalizePropertiesForWrite(category: string, input: unknown): ComponentProperties`
@@ -95,7 +97,9 @@ describe("normalizePropertiesForWrite", () => {
   });
 
   it("rejects unknown keys and invalid enum on chain", () => {
-    expect(() => normalizePropertiesForWrite("chain", { lubeType: "wet_lube", extra: 1 })).toThrow();
+    expect(() =>
+      normalizePropertiesForWrite("chain", { lubeType: "wet_lube", extra: 1 }),
+    ).toThrow();
     expect(() => normalizePropertiesForWrite("chain", { lubeType: "graphite" })).toThrow();
   });
 
@@ -145,7 +149,9 @@ export const chainPropertiesSchema = z
 
 export const emptyPropertiesSchema = z.object({}).strict();
 
-export type ComponentProperties = z.infer<typeof chainPropertiesSchema> | z.infer<typeof emptyPropertiesSchema>;
+export type ComponentProperties =
+  | z.infer<typeof chainPropertiesSchema>
+  | z.infer<typeof emptyPropertiesSchema>;
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -154,12 +160,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 /** Validate + default for writes (create/update/CSV/MCP). */
 export function normalizePropertiesForWrite(category: string, input: unknown): ComponentProperties {
   if (category === "chain") {
-    const base =
-      input === undefined || input === null
-        ? {}
-        : isPlainObject(input)
-          ? input
-          : input;
+    const base = input === undefined || input === null ? {} : isPlainObject(input) ? input : input;
     if (!isPlainObject(base)) {
       throw new z.ZodError([
         {
@@ -224,12 +225,14 @@ git commit -m "feat(shared): add component properties helpers for chain lube typ
 ### Task 2: Wire properties into component + filter schemas
 
 **Files:**
+
 - Modify: `shared/src/schemas/component.ts`
 - Modify: `shared/src/schemas/component-filter.ts`
 - Modify: `shared/src/schemas.test.ts`
 - Run: `npm run -w shared build`
 
 **Interfaces:**
+
 - Consumes: `normalizePropertiesForWrite`, `lubeTypeSchema`, `ComponentProperties`
 - Produces: `ComponentInsert.properties`, `ComponentUpdate.properties?`, `Component.properties`, `ComponentFilter.lubeTypes?`
 - Produces: CSV column `lube_type` appended to `COMPONENT_CSV_COLUMNS`
@@ -357,10 +360,12 @@ git commit -m "feat(shared): wire properties into component and filter schemas"
 ### Task 3: DB column + migration backfill
 
 **Files:**
+
 - Modify: `server/src/db/schema.ts`
 - Create: `server/drizzle/20260726120000_component_properties/migration.sql`
 
 **Interfaces:**
+
 - Produces: `components.properties: ComponentProperties | null` (Drizzle json text)
 
 - [ ] **Step 1: Add column to Drizzle schema**
@@ -410,11 +415,13 @@ git commit -m "feat(db): add components.properties JSON column and chain backfil
 ### Task 4: Service create/update + lubeTypes filter
 
 **Files:**
+
 - Modify: `server/src/services/components.ts`
 - Modify: `server/src/services/bikes.ts`
 - Test: `server/src/test/graphql.test.ts` (or a focused service test if one exists — prefer GraphQL in Task 5; here add a small unit-style test only if services are tested directly)
 
 **Interfaces:**
+
 - Consumes: `normalizePropertiesForWrite`, `ComponentInsert.properties`
 - Produces: persisted `properties` on create/update; filter `json_extract(properties, '$.lubeType') IN (...)`
 
@@ -476,6 +483,7 @@ git commit -m "feat(server): persist component properties and filter by lubeType
 ### Task 5: GraphQL types, inputs, filter + tests
 
 **Files:**
+
 - Modify: `server/src/graphql/schema/component.ts`
 - Modify: `server/src/graphql/schema/bike.ts`
 - Modify: `server/src/graphql/component-filter.ts`
@@ -483,6 +491,7 @@ git commit -m "feat(server): persist component properties and filter by lubeType
 - Modify: `server/src/test/graphql-helper.ts` (extend create selection if needed)
 
 **Interfaces:**
+
 - Produces: GraphQL `LubeType`, `ComponentProperties`, `ComponentPropertiesInput`
 - Produces: `Component.properties: ComponentProperties!`
 - Produces: `ComponentFilterInput.lubeTypes`
@@ -494,7 +503,9 @@ In `server/src/test/graphql.test.ts` (follow existing `createBikeViaGraphql` / `
 ```typescript
 it("defaults chain lubeType to wet_lube when properties omitted", async () => {
   const bike = await createBikeViaGraphql(agent, "Hybrid");
-  const created = await graphqlRequest<{ createComponent: { id: string; properties: { lubeType: string } } }>(
+  const created = await graphqlRequest<{
+    createComponent: { id: string; properties: { lubeType: string } };
+  }>(
     agent,
     `mutation($bikeId: ID!, $input: ComponentInsertInput!) {
       createComponent(bikeId: $bikeId, input: $input) { id properties { lubeType } }
@@ -521,7 +532,7 @@ it("rejects lubeType on non-chain component", async () => {
         name: "Frame",
         brand: "Brand",
         model: "Model",
-        properties: { lubeType: "WET_LUBE" }, // use whatever enum serialization GraphQL expects
+        properties: { lubeType: "wet_lube" },
       },
     },
   );
@@ -610,6 +621,7 @@ git commit -m "feat(graphql): expose component properties and lubeTypes filter"
 ### Task 6: MCP catalog, serialize, create/update + tests
 
 **Files:**
+
 - Modify: `server/src/mcp/schema-catalog.ts`
 - Modify: `server/src/mcp/serialize.ts`
 - Modify: `server/src/mcp/tools/create-component.ts`
@@ -618,6 +630,7 @@ git commit -m "feat(graphql): expose component properties and lubeTypes filter"
 - Test: `server/src/test/mcp.test.ts`
 
 **Interfaces:**
+
 - Consumes: `normalizePropertiesForRead`, `componentInsertSchema` / `componentUpdateSchema`
 - Produces: `properties` on serialized components; create/update accept `properties: { lubeType? }`; filter accepts `lubeTypes`
 
@@ -663,11 +676,13 @@ git commit -m "feat(mcp): expose component properties and lubeTypes filter"
 ### Task 7: CSV import/export `lube_type`
 
 **Files:**
+
 - Modify: `server/src/services/component-import.ts`
 - Modify: `client/src/features/components/csv.ts` (template headers if it imports `COMPONENT_CSV_COLUMNS`)
 - Test: existing CSV tests in server (grep `COMPONENT_CSV` / `importComponents`) — extend them
 
 **Interfaces:**
+
 - Consumes: `normalizePropertiesForWrite`, `COMPONENT_CSV_COLUMNS`
 - Produces: export writes `lube_type` from `properties.lubeType`; import maps into `properties`
 
@@ -678,6 +693,7 @@ git commit -m "feat(mcp): expose component properties and lubeTypes filter"
 Export row builder: `lube_type: properties?.lubeType ?? ""` (empty for non-chain).
 
 Import: when parsing a row, build `properties` from `lube_type` cell:
+
 - if category === `chain` and cell empty → omit (normalize defaults wet)
 - if category !== `chain` and cell non-empty → throw validation error
 - if cell set → `properties: { lubeType: cell }` then run through existing insert/update validation
@@ -695,10 +711,12 @@ git commit -m "feat(csv): import/export chain lube_type via properties"
 ### Task 8: Client GraphQL types + ComponentForm lube select
 
 **Files:**
+
 - Modify: `client/src/lib/graphql/operations.ts`
 - Modify: `client/src/features/components/ComponentForm.tsx`
 
 **Interfaces:**
+
 - Consumes: `LUBE_TYPE_IDS`, `LUBE_TYPE_LABELS`, `DEFAULT_LUBE_TYPE` from `shared`
 - Produces: form field `lubeType` when `category === "chain"`; mutations send `properties: { lubeType }`
 
@@ -707,7 +725,7 @@ git commit -m "feat(csv): import/export chain lube_type via properties"
 ```typescript
 properties: {
   lubeType: string | null;
-};
+}
 ```
 
 Add to `BIKE_DETAIL_QUERY`, create/update mutation selections, and `toComponentRow` mapping so `Component.properties` is populated (extend shared `Component` type already done in Task 2).
@@ -737,9 +755,11 @@ git commit -m "feat(client): chain lube type field on component form"
 ### Task 9: Display lube type + chain-only list filter
 
 **Files:**
+
 - Modify: `client/src/features/components/CategoryDetailContent.tsx`
 
 **Interfaces:**
+
 - Consumes: `LUBE_TYPE_LABELS`, component `properties.lubeType`
 - Produces: secondary line showing lube label for chains; optional multi-select filter over the in-memory list when `categoryId === "chain"`
 
@@ -754,11 +774,12 @@ In the chain row UI near `ComponentMetaLine` / detail tier, when `component.cate
 When the category panel is `chain`, render a compact multi-select or toggle group of lube types. Filter `components` list before render:
 
 ```typescript
-const visible = selectedLubeTypes.length === 0
-  ? components
-  : components.filter((c) =>
-      c.properties?.lubeType != null && selectedLubeTypes.includes(c.properties.lubeType),
-    );
+const visible =
+  selectedLubeTypes.length === 0
+    ? components
+    : components.filter(
+        (c) => c.properties?.lubeType != null && selectedLubeTypes.includes(c.properties.lubeType),
+      );
 ```
 
 Default: no lube filter selected → show all chains.
@@ -779,6 +800,7 @@ git commit -m "feat(client): show and filter chain lube type in category panel"
 ### Task 10: Verify + docs touch-up
 
 **Files:**
+
 - Modify: `AGENTS.md` only if component field docs should mention `properties` / MCP (short note under component reads or MCP tools)
 
 - [ ] **Step 1: Full verify**
@@ -801,18 +823,18 @@ git commit -m "docs: note component properties and lubeTypes filter"
 
 ## Self-review (plan vs spec)
 
-| Spec requirement | Task |
-| --- | --- |
-| TEXT JSON `properties` column | Task 3 |
-| Zod per-category + wet default | Tasks 1–2 |
-| API never null (`{}`) | Tasks 1, 4–6 (`normalizePropertiesForRead`) |
-| Strict reject non-chain lube | Tasks 1–2, 5–7 |
-| GraphQL structured `properties` + enum | Task 5 |
-| Filter `lubeTypes` | Tasks 2, 4, 5, 6 |
-| MCP expose + filter | Task 6 |
-| CSV `lube_type` | Tasks 2, 7 |
-| UI select + display + chain filter | Tasks 8–9 |
-| Migration backfill wet_lube | Task 3 |
-| No Turso jsonb / user custom fields | Global constraints / non-goals |
+| Spec requirement                       | Task                                        |
+| -------------------------------------- | ------------------------------------------- |
+| TEXT JSON `properties` column          | Task 3                                      |
+| Zod per-category + wet default         | Tasks 1–2                                   |
+| API never null (`{}`)                  | Tasks 1, 4–6 (`normalizePropertiesForRead`) |
+| Strict reject non-chain lube           | Tasks 1–2, 5–7                              |
+| GraphQL structured `properties` + enum | Task 5                                      |
+| Filter `lubeTypes`                     | Tasks 2, 4, 5, 6                            |
+| MCP expose + filter                    | Task 6                                      |
+| CSV `lube_type`                        | Tasks 2, 7                                  |
+| UI select + display + chain filter     | Tasks 8–9                                   |
+| Migration backfill wet_lube            | Task 3                                      |
+| No Turso jsonb / user custom fields    | Global constraints / non-goals              |
 
 No TBD placeholders left. Types/names consistent: `normalizePropertiesForWrite` / `ForRead`, `lubeType`, `LUBE_TYPE_IDS`, GraphQL `LubeType` / `ComponentProperties`.

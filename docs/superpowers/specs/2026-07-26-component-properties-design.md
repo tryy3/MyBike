@@ -27,15 +27,15 @@ Add an app-defined, category-specific `properties` bag on components so fields l
 
 ## Decisions
 
-| Topic | Choice |
-| --- | --- |
-| Storage | TEXT JSON column `components.properties` via Drizzle `text(..., { mode: "json" })` |
-| API shape | Nested `properties` object (always an object, never null) |
-| Lube values | Fixed enum: `dry_lube`, `wet_lube`, `drip_wax`, `immersion_wax` |
-| Non-chain writes with lube | Reject (validation error) |
-| Chain requirement | Chains always have `lubeType`; default `wet_lube` when omitted on create/normalize |
-| Filter | `lubeTypes: [...]` on component filter |
-| Null in API | Avoid — return `{}` for components with no properties |
+| Topic                      | Choice                                                                             |
+| -------------------------- | ---------------------------------------------------------------------------------- |
+| Storage                    | TEXT JSON column `components.properties` via Drizzle `text(..., { mode: "json" })` |
+| API shape                  | Nested `properties` object (always an object, never null)                          |
+| Lube values                | Fixed enum: `dry_lube`, `wet_lube`, `drip_wax`, `immersion_wax`                    |
+| Non-chain writes with lube | Reject (validation error)                                                          |
+| Chain requirement          | Chains always have `lubeType`; default `wet_lube` when omitted on create/normalize |
+| Filter                     | `lubeTypes: [...]` on component filter                                             |
+| Null in API                | Avoid — return `{}` for components with no properties                              |
 
 ## Data model
 
@@ -54,11 +54,11 @@ Service layer normalizes:
 
 Stable ids (stored in JSON):
 
-| Id | UI label |
-| --- | --- |
-| `dry_lube` | Dry lube |
-| `wet_lube` | Wet lube |
-| `drip_wax` | Drip wax |
+| Id              | UI label      |
+| --------------- | ------------- |
+| `dry_lube`      | Dry lube      |
+| `wet_lube`      | Wet lube      |
+| `drip_wax`      | Drip wax      |
 | `immersion_wax` | Immersion wax |
 
 Default: `wet_lube`.
@@ -104,15 +104,15 @@ Suggested modules:
 
 ### Normalization rules
 
-| Case | Behavior |
-| --- | --- |
-| Non-chain, omit `properties` | Store/treat as `{}` |
-| Non-chain, `properties: {}` | OK |
-| Non-chain, any keys | Reject |
-| Chain create, omit `properties` or omit `lubeType` | Default `{ lubeType: "wet_lube" }` |
-| Chain create/update, valid `lubeType` | Store as given |
-| Chain update sending `properties` without `lubeType` | Default `wet_lube` |
-| Invalid enum | Reject |
+| Case                                                 | Behavior                           |
+| ---------------------------------------------------- | ---------------------------------- |
+| Non-chain, omit `properties`                         | Store/treat as `{}`                |
+| Non-chain, `properties: {}`                          | OK                                 |
+| Non-chain, any keys                                  | Reject                             |
+| Chain create, omit `properties` or omit `lubeType`   | Default `{ lubeType: "wet_lube" }` |
+| Chain create/update, valid `lubeType`                | Store as given                     |
+| Chain update sending `properties` without `lubeType` | Default `wet_lube`                 |
+| Invalid enum                                         | Reject                             |
 
 v1 treats `properties` on update as a **full replace** of the bag (bag is tiny). No deep-merge unless more keys appear later and require it.
 
@@ -138,14 +138,14 @@ Same style as existing Zod → GraphQL/MCP validation errors:
 
 ## Implementation map
 
-| Layer | Change |
-| --- | --- |
-| `shared` | lube enum, property schemas, category-aware create/update, filter, CSV column |
-| `server` db | `properties` column + backfill migration |
-| `server` services | normalize `{}`, default wet for chains, JSON extract filter |
-| GraphQL | `properties` on type/inputs; `lubeTypes` on filter; enum type |
-| MCP | field catalog + create/update/list/filter |
-| Client | chain-only select + display + filter wiring |
+| Layer             | Change                                                                        |
+| ----------------- | ----------------------------------------------------------------------------- |
+| `shared`          | lube enum, property schemas, category-aware create/update, filter, CSV column |
+| `server` db       | `properties` column + backfill migration                                      |
+| `server` services | normalize `{}`, default wet for chains, JSON extract filter                   |
+| GraphQL           | `properties` on type/inputs; `lubeTypes` on filter; enum type                 |
+| MCP               | field catalog + create/update/list/filter                                     |
+| Client            | chain-only select + display + filter wiring                                   |
 
 ## Future upgrade path (out of scope)
 

@@ -259,7 +259,11 @@ export function ComponentForm({ bikeId, category, component, onDone }: Component
                     value={field.value ?? DEFAULT_LUBE_TYPE}
                     onValueChange={(value) => field.onChange(value as LubeType)}
                   >
-                    <SelectTrigger id={field.name} className="w-full" aria-invalid={fieldState.invalid}>
+                    <SelectTrigger
+                      id={field.name}
+                      className="w-full"
+                      aria-invalid={fieldState.invalid}
+                    >
                       <SelectValue placeholder="Select lube type">
                         {LUBE_TYPE_LABELS[(field.value ?? DEFAULT_LUBE_TYPE) as LubeType]}
                       </SelectValue>

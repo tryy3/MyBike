@@ -284,8 +284,7 @@ export async function importComponentsFromCsv(
     }
 
     if (id === "") {
-      const propertiesInput =
-        lubeTypeRaw === "" ? undefined : { lubeType: lubeTypeRaw };
+      const propertiesInput = lubeTypeRaw === "" ? undefined : { lubeType: lubeTypeRaw };
       const parsed = componentInsertSchema.safeParse({
         category,
         name,
@@ -365,9 +364,7 @@ export async function importComponentsFromCsv(
         purchaseDate,
         purchaseCost,
         purchaseStore,
-        ...(propertiesUpdate !== undefined
-          ? { properties: propertiesUpdate ?? {} }
-          : {}),
+        ...(propertiesUpdate !== undefined ? { properties: propertiesUpdate ?? {} } : {}),
       });
       if (!parsed.success) {
         for (const issue of parsed.error.issues) {

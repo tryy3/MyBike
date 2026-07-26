@@ -272,9 +272,7 @@ export function toComponentRow(c: ComponentGql): Component {
     brand: c.brand,
     model: c.model,
     notes: c.notes,
-    properties: c.properties.lubeType
-      ? { lubeType: c.properties.lubeType as LubeType }
-      : {},
+    properties: c.properties.lubeType ? { lubeType: c.properties.lubeType as LubeType } : {},
     isActive: c.isActive,
     distanceMeters: c.wear.distanceMeters,
     movingTimeMinutes: c.wear.movingTimeMinutes,
