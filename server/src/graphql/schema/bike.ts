@@ -26,7 +26,7 @@ import { getRideStatsForBike } from "../../services/stats.js";
 import { builder } from "../builder.js";
 import { mergeComponentFilter, ComponentFilterInput } from "../component-filter.js";
 import { requireGraphQLPermission } from "../context.js";
-import { ComponentRef } from "./component.js";
+import { ComponentPropertiesInput, ComponentRef } from "./component.js";
 import { RideStatsRef } from "./stats.js";
 
 export const BikeRef = builder.objectRef<BikeRow | BikeListItem>("Bike");
@@ -109,6 +109,7 @@ const ComponentInsertInput = builder.inputType("ComponentInsertInput", {
     purchaseDate: t.string({ required: false }),
     purchaseCost: t.float({ required: false }),
     purchaseStore: t.string({ required: false }),
+    properties: t.field({ type: ComponentPropertiesInput, required: false }),
   }),
 });
 
@@ -123,6 +124,7 @@ const ComponentUpdateInput = builder.inputType("ComponentUpdateInput", {
     purchaseDate: t.string({ required: false }),
     purchaseCost: t.float({ required: false }),
     purchaseStore: t.string({ required: false }),
+    properties: t.field({ type: ComponentPropertiesInput, required: false }),
   }),
 });
 

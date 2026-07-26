@@ -77,13 +77,15 @@ export const componentBaseSchema = z.object({
   ...componentOptionalFields,
 });
 
-export const componentInsertSchema = componentBaseSchema
-  .extend({
-    category: z.enum(CATEGORY_IDS),
-    brand: requiredString,
-    model: requiredString,
-    properties: z.unknown().optional(),
-  })
+/** Field shape before property normalization — usable with `.pick()` in MCP tools. */
+export const componentInsertFieldsSchema = componentBaseSchema.extend({
+  category: z.enum(CATEGORY_IDS),
+  brand: requiredString,
+  model: requiredString,
+  properties: z.unknown().optional(),
+});
+
+export const componentInsertSchema = componentInsertFieldsSchema
   .superRefine((data, ctx) => {
     try {
       normalizePropertiesForWrite(data.category, data.properties);
