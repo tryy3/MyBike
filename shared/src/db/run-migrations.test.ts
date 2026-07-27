@@ -3,9 +3,11 @@ import {
   errorMessageChain,
   extractCreatedTableNames,
   isBenignSchemaError,
+  isCreateIndexMissingColumnError,
   isDataMigrationStatement,
   isDuplicateColumnError,
   isNoSuchColumnError,
+  normalizeDriverRow,
   resolveMigrationsToRun,
 } from "./run-migrations.js";
 
@@ -89,6 +91,37 @@ describe("migration helpers", () => {
     expect(isDataMigrationStatement("CREATE TABLE `user` (id text);")).toBe(false);
     expect(isDataMigrationStatement("-- Existing bikes have no owner\nDELETE FROM `bikes`;")).toBe(
       true,
+    );
+  });
+
+  it("maps Turso array-like driver rows onto named columns", () => {
+    const row = { 0: 1, 1: "abc", 2: 99, 3: "mig_a" };
+    expect(normalizeDriverRow(row, ["id", "hash", "created_at", "migration_name"])).toEqual({
+      id: 1,
+      hash: "abc",
+      created_at: 99,
+      migration_name: "mig_a",
+    });
+    expect(
+      normalizeDriverRow({ id: 2, hash: "named", created_at: 1, migration_name: "x" }, [
+        "id",
+        "hash",
+        "created_at",
+        "migration_name",
+      ]),
+    ).toEqual({ id: 2, hash: "named", created_at: 1, migration_name: "x" });
+  });
+
+  it("treats CREATE INDEX on a missing column as benign", () => {
+    const err = new Error("SQLite input error: no such column: account_id");
+    expect(
+      isCreateIndexMissingColumnError(
+        "CREATE UNIQUE INDEX `idx_account_provider_account` ON `account` (`provider_id`,`account_id`);",
+        err,
+      ),
+    ).toBe(true);
+    expect(isCreateIndexMissingColumnError("ALTER TABLE account ADD issuer text;", err)).toBe(
+      false,
     );
   });
 });

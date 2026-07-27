@@ -11,6 +11,7 @@ import {
 import { db } from "../db/index.js";
 import { account, user } from "../db/auth-schema.js";
 import { components, stravaActivities } from "../db/schema.js";
+import { STRAVA_ACCOUNT_ISSUER } from "../lib/strava-client.js";
 
 const app = createApp();
 
@@ -25,7 +26,8 @@ async function connectStravaAccount(email: string) {
     .insert(account)
     .values({
       id: crypto.randomUUID(),
-      accountId: `strava-athlete-${crypto.randomUUID()}`,
+      issuer: STRAVA_ACCOUNT_ISSUER,
+      providerAccountId: `strava-athlete-${crypto.randomUUID()}`,
       providerId: "strava",
       userId: currentUser!.id,
       accessToken: "access-token",

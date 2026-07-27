@@ -110,6 +110,12 @@ export function isBenignSchemaError(err: unknown): boolean {
   return /already exists/i.test(msg) || /duplicate column name/i.test(msg);
 }
 
+/** CREATE INDEX on a column later renamed/dropped by a newer migration. */
+export function isCreateIndexMissingColumnError(statement: string, err: unknown): boolean {
+  if (!/^\s*CREATE\s+(?:UNIQUE\s+)?INDEX\b/i.test(statement)) return false;
+  return isNoSuchColumnError(err);
+}
+
 /** Drizzle wraps driver errors; match against the full cause chain. */
 export function errorMessageChain(err: unknown): string {
   const parts: string[] = [];
@@ -219,28 +225,59 @@ export async function shouldRunFullMigration(
   return true;
 }
 
+/**
+ * Turso serverless + drizzle-orm/libsql can return rows as array-like objects
+ * (enumerable numeric keys only). Named fields may be non-enumerable getters,
+ * so `row.hash` is undefined even though `row[1]` has the hash. That made every
+ * migration look pending and re-ran historical SQL (e.g. CREATE INDEX on a
+ * column later renamed by a newer migration).
+ */
+export function normalizeDriverRow(
+  row: Record<string, unknown>,
+  columns: readonly string[],
+): Record<string, unknown> {
+  const hasNamed = columns.some((col) => row[col] !== undefined);
+  if (hasNamed) return row;
+
+  const out: Record<string, unknown> = {};
+  for (let i = 0; i < columns.length; i++) {
+    const col = columns[i]!;
+    if (row[col] !== undefined) {
+      out[col] = row[col];
+      continue;
+    }
+    if (row[String(i)] !== undefined) {
+      out[col] = row[String(i)];
+      continue;
+    }
+    if (row[i as unknown as string] !== undefined) {
+      out[col] = row[i as unknown as string];
+    }
+  }
+  return out;
+}
+
 async function readDbMigrations(
   db: MigratorDb,
   migrationsTable: string,
 ): Promise<DbMigrationRow[]> {
   const safeTable = quoteIdent(migrationsTable);
-  const rows = await db.all<{
-    id: number;
-    hash: string;
-    created_at: number | string;
-    migration_name: string | null;
-  }>(
+  const columns = ["id", "hash", "created_at", "migration_name"] as const;
+  const rows = await db.all<Record<string, unknown>>(
     sql.raw(
       `SELECT id, hash, created_at, name AS migration_name FROM ${safeTable} ORDER BY id ASC`,
     ),
   );
 
-  return rows.map((row) => ({
-    id: row.id,
-    hash: row.hash,
-    created_at: row.created_at,
-    name: row.migration_name,
-  }));
+  return rows.map((raw) => {
+    const row = normalizeDriverRow(raw, columns);
+    return {
+      id: Number(row.id),
+      hash: typeof row.hash === "string" ? row.hash : "",
+      created_at: (row.created_at as number | string) ?? 0,
+      name: typeof row.migration_name === "string" ? row.migration_name : null,
+    };
+  });
 }
 
 async function backfillMigrationNames(
@@ -305,7 +342,7 @@ async function applyMigrationSql(
     try {
       await db.run(sql.raw(trimmed));
     } catch (err) {
-      if (isBenignSchemaError(err)) continue;
+      if (isBenignSchemaError(err) || isCreateIndexMissingColumnError(trimmed, err)) continue;
       throw err;
     }
   }
