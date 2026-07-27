@@ -195,7 +195,7 @@ Existing deployments that receive this user may delete it after promoting a real
 
 **Restart-required:** write succeeds; mark pending restart (persist enough state to survive and to show banner); do not apply until process restart.
 
-**Restart mutation:** requires `server.restart`; flush logging; `process.exit(0)`; Docker `restart` policy brings the container back; boot loads new effective config.
+**Restart mutation:** requires `server.restart`; flush logging; `process.exit(0)`; Docker must use a restart policy such as `unless-stopped` / `always` so the container comes back; boot loads new effective config. Document this in `compose.yaml` / deploy docs when Phase 1 ships.
 
 ## Encryption
 
