@@ -28,27 +28,27 @@ Split configuration into **bootstrap** (`.env`, required to start) and **runtime
 
 ## Drivers
 
-| Priority | Driver |
-| -------- | ------ |
-| Primary | Operational convenience (adjust config without file edits) |
-| Primary | Foundation for growth (clean place for future knobs) |
-| Later | Multi-admin / compliance polish (roles + audit support this) |
+| Priority | Driver                                                       |
+| -------- | ------------------------------------------------------------ |
+| Primary  | Operational convenience (adjust config without file edits)   |
+| Primary  | Foundation for growth (clean place for future knobs)         |
+| Later    | Multi-admin / compliance polish (roles + audit support this) |
 
 ## Decisions
 
-| Topic | Choice |
-| ----- | ------ |
-| Runtime config storage | DB (`app_settings` key/value), not `config.json` as source of truth |
-| Defaults | Declared in a **code settings registry**; DB stores overrides only |
-| Precedence | Opt-in env override (if declared + set) > DB override > code default |
-| Key shape | Dotted paths; **keyed maps** for collections (`oauth.providers.tsidp.clientId`) |
-| Ordered lists | Prefer one JSON array value on a single key; numbered `.0.` paths only when per-item secret/audit is required |
-| Bootstrap admin | Migration seeds `admin@example.com` / `admin123` with `admin` role (idempotent migration) |
-| Roles | Seeded `admin` (all permissions) and `user` (no admin permissions) |
-| Admin API | GraphQL (`admin*` queries/mutations) |
-| Non-live settings | Save → `pendingRestart` → `restartServer` → `process.exit(0)` → Docker restart |
-| Secrets | AES-256-GCM with bootstrap `CONFIG_ENCRYPTION_KEY`; mask in API/UI |
-| Phase 1 settings | Small sample set proving hot-reload, restart, secret, and env-override paths |
+| Topic                  | Choice                                                                                                        |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Runtime config storage | DB (`app_settings` key/value), not `config.json` as source of truth                                           |
+| Defaults               | Declared in a **code settings registry**; DB stores overrides only                                            |
+| Precedence             | Opt-in env override (if declared + set) > DB override > code default                                          |
+| Key shape              | Dotted paths; **keyed maps** for collections (`oauth.providers.tsidp.clientId`)                               |
+| Ordered lists          | Prefer one JSON array value on a single key; numbered `.0.` paths only when per-item secret/audit is required |
+| Bootstrap admin        | Migration seeds `admin@example.com` / `admin123` with `admin` role (idempotent migration)                     |
+| Roles                  | Seeded `admin` (all permissions) and `user` (no admin permissions)                                            |
+| Admin API              | GraphQL (`admin*` queries/mutations)                                                                          |
+| Non-live settings      | Save → `pendingRestart` → `restartServer` → `process.exit(0)` → Docker restart                                |
+| Secrets                | AES-256-GCM with bootstrap `CONFIG_ENCRYPTION_KEY`; mask in API/UI                                            |
+| Phase 1 settings       | Small sample set proving hot-reload, restart, secret, and env-override paths                                  |
 
 ## Architecture
 
@@ -91,34 +91,34 @@ Split configuration into **bootstrap** (`.env`, required to start) and **runtime
 
 ### Bootstrap (stay `.env`)
 
-| Setting | Notes |
-| ------- | ----- |
-| `PORT` | Process bind |
-| `NODE_ENV` | Platform |
-| `DB_PATH` / Turso URL+token | Required to open config DB |
-| `SQLITE_IMPORT_PATH` | One-shot import |
-| `RUN_MIGRATIONS` | Docker boot |
-| `DRIZZLE_MIGRATIONS_FOLDER` | Tooling |
-| `BETTER_AUTH_SECRET` | Auth crypto root; **secret** |
-| `CONFIG_ENCRYPTION_KEY` | Master key for runtime secrets; **secret** |
+| Setting                     | Notes                                      |
+| --------------------------- | ------------------------------------------ |
+| `PORT`                      | Process bind                               |
+| `NODE_ENV`                  | Platform                                   |
+| `DB_PATH` / Turso URL+token | Required to open config DB                 |
+| `SQLITE_IMPORT_PATH`        | One-shot import                            |
+| `RUN_MIGRATIONS`            | Docker boot                                |
+| `DRIZZLE_MIGRATIONS_FOLDER` | Tooling                                    |
+| `BETTER_AUTH_SECRET`        | Auth crypto root; **secret**               |
+| `CONFIG_ENCRYPTION_KEY`     | Master key for runtime secrets; **secret** |
 
 ### Runtime (target DB) — effect model
 
-| Logical key (suggested) | Today | Effect | Secret | Env override opt-in |
-| ----------------------- | ----- | ------ | ------ | ------------------- |
-| `logging.level` | `LOG_LEVEL` | Hot-reload (wire Pino level) | no | no (default) |
-| `logging.toFile` | `LOG_TO_FILE` | Restart (transport built once) | no | no |
-| `logging.filePath` | `LOG_FILE_PATH` | Restart | no | no |
-| `logging.redact` | `LOG_REDACT` | Restart or hot if rebuilt | no | no |
-| `graphql.timing` | `GRAPHQL_TIMING` | Hot (already per-request) | no | no |
-| `betterAuth.baseUrl` | `BETTER_AUTH_URL` | Restart | no | **yes** |
-| `client.url` | `CLIENT_URL` | Restart | no | **yes** |
-| `strava.clientId` / `clientSecret` / … | Strava env | Restart (Better Auth) | secret where applicable | optional later |
-| `oauth.providers.<id>.*` | tsidp / future | Restart | secrets yes | optional later |
-| `strava.webhook.proxyUrl` | `STRAVA_WEBHOOK_PROXY_URL` | Hot | no | no |
-| `strava.webhook.proxyApiKey` | `STRAVA_WEBHOOK_PROXY_API_KEY` | Hot | **yes** | no |
-| `strava.webhook.subscriptionId` | `STRAVA_SUBSCRIPTION_ID` | Hot | no | no |
-| `strava.webhook.pollIntervalMs` | `STRAVA_WEBHOOK_POLL_INTERVAL_MS` | Hot (reschedule) | no | no |
+| Logical key (suggested)                | Today                             | Effect                         | Secret                  | Env override opt-in |
+| -------------------------------------- | --------------------------------- | ------------------------------ | ----------------------- | ------------------- |
+| `logging.level`                        | `LOG_LEVEL`                       | Hot-reload (wire Pino level)   | no                      | no (default)        |
+| `logging.toFile`                       | `LOG_TO_FILE`                     | Restart (transport built once) | no                      | no                  |
+| `logging.filePath`                     | `LOG_FILE_PATH`                   | Restart                        | no                      | no                  |
+| `logging.redact`                       | `LOG_REDACT`                      | Restart or hot if rebuilt      | no                      | no                  |
+| `graphql.timing`                       | `GRAPHQL_TIMING`                  | Hot (already per-request)      | no                      | no                  |
+| `betterAuth.baseUrl`                   | `BETTER_AUTH_URL`                 | Restart                        | no                      | **yes**             |
+| `client.url`                           | `CLIENT_URL`                      | Restart                        | no                      | **yes**             |
+| `strava.clientId` / `clientSecret` / … | Strava env                        | Restart (Better Auth)          | secret where applicable | optional later      |
+| `oauth.providers.<id>.*`               | tsidp / future                    | Restart                        | secrets yes             | optional later      |
+| `strava.webhook.proxyUrl`              | `STRAVA_WEBHOOK_PROXY_URL`        | Hot                            | no                      | no                  |
+| `strava.webhook.proxyApiKey`           | `STRAVA_WEBHOOK_PROXY_API_KEY`    | Hot                            | **yes**                 | no                  |
+| `strava.webhook.subscriptionId`        | `STRAVA_SUBSCRIPTION_ID`          | Hot                            | no                      | no                  |
+| `strava.webhook.pollIntervalMs`        | `STRAVA_WEBHOOK_POLL_INTERVAL_MS` | Hot (reschedule)               | no                      | no                  |
 
 ### Out of scope (proxy process)
 
@@ -128,13 +128,13 @@ Split configuration into **bootstrap** (`.env`, required to start) and **runtime
 
 ### `app_settings`
 
-| Column | Type | Purpose |
-| ------ | ---- | ------- |
-| `key` | text PK | Stable dotted path |
-| `value` | text | JSON-encoded scalar or small JSON document |
-| `is_secret` | integer/bool | Encrypt at rest; mask in API |
-| `updated_at` | integer/timestamp | Provenance |
-| `updated_by` | text null | User id who last wrote |
+| Column       | Type              | Purpose                                    |
+| ------------ | ----------------- | ------------------------------------------ |
+| `key`        | text PK           | Stable dotted path                         |
+| `value`      | text              | JSON-encoded scalar or small JSON document |
+| `is_secret`  | integer/bool      | Encrypt at rest; mask in API               |
+| `updated_at` | integer/timestamp | Provenance                                 |
+| `updated_by` | text null         | User id who last wrote                     |
 
 Registry in code owns defaults, Zod types, `hotReload` vs `restartRequired`, labels, enums, and optional `envOverride.varName`. DB stores overrides only.
 
@@ -173,13 +173,13 @@ Existing deployments that receive this user may delete it after promoting a real
 
 ### `config_audit_log`
 
-| Column | Purpose |
-| ------ | ------- |
-| id | PK |
-| actor_user_id | Who |
-| key | Setting key (or `role:` / user events if extended) |
-| old_value / new_value | Redacted for secrets (`***` / null) |
-| created_at | When |
+| Column                | Purpose                                            |
+| --------------------- | -------------------------------------------------- |
+| id                    | PK                                                 |
+| actor_user_id         | Who                                                |
+| key                   | Setting key (or `role:` / user events if extended) |
+| old_value / new_value | Redacted for secrets (`***` / null)                |
+| created_at            | When                                               |
 
 ## Env override feature
 

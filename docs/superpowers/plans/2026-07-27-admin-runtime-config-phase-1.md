@@ -33,31 +33,31 @@
 
 ## File map
 
-| File | Responsibility |
-| ---- | -------------- |
-| `shared/src/schemas/admin-permissions.ts` | Permission/role id constants |
-| `shared/src/schemas/app-settings-registry.ts` | Setting key registry metadata + Zod (or server-only if preferred; prefer `shared` for keys used by client labels) |
-| `shared/src/index.ts` | Re-exports |
-| `server/src/db/schema.ts` | `roles`, `permissions`, `role_permissions`, `user_roles`, `app_settings`, `config_audit_log`, restart state if persisted |
-| `server/drizzle/<ts>_admin_rbac_config/` | SQL migration |
-| `server/src/lib/config-crypto.ts` | AES-GCM encrypt/decrypt |
-| `server/src/lib/rbac.ts` | Load user permissions; `requireAppPermission` |
-| `server/src/lib/bootstrap-admin.ts` | Idempotent seed admin user + role |
-| `server/src/services/app-config.ts` | Config service: load/merge/get/set/onChange/pendingRestart |
-| `server/src/services/admin-users.ts` | List users, assign role |
-| `server/src/graphql/schema/admin.ts` | Admin GraphQL types/resolvers |
-| `server/src/graphql/schema/index.ts` | Import admin module |
-| `server/src/graphql/context.ts` | Attach role permissions for session users |
-| `server/src/index.ts` | Boot: load config, seed admin, wire poll interval subscriber; expose restart |
-| `server/src/lib/logging/index.ts` (+ logging pkg if needed) | Allow runtime level change |
-| `server/src/graphql/request-timing.ts` | Read timing flag from config service |
-| `server/src/lib/auth-config.ts` / `auth.ts` | Read base/client URLs from config at **construction** (restart applies) |
-| `compose.yaml` | `restart: unless-stopped`; document `CONFIG_ENCRYPTION_KEY` |
-| `.env.example` | `CONFIG_ENCRYPTION_KEY` |
-| `client/src/routes/admin-*.tsx` + nav | Configuration, Users, Audit UI |
-| `client/src/lib/graphql/operations.ts` | Admin operations |
-| `server/src/test/admin-config.test.ts` | Foundation tests |
-| `server/src/test/admin-rbac.test.ts` | Permission / role assignment tests |
+| File                                                        | Responsibility                                                                                                           |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `shared/src/schemas/admin-permissions.ts`                   | Permission/role id constants                                                                                             |
+| `shared/src/schemas/app-settings-registry.ts`               | Setting key registry metadata + Zod (or server-only if preferred; prefer `shared` for keys used by client labels)        |
+| `shared/src/index.ts`                                       | Re-exports                                                                                                               |
+| `server/src/db/schema.ts`                                   | `roles`, `permissions`, `role_permissions`, `user_roles`, `app_settings`, `config_audit_log`, restart state if persisted |
+| `server/drizzle/<ts>_admin_rbac_config/`                    | SQL migration                                                                                                            |
+| `server/src/lib/config-crypto.ts`                           | AES-GCM encrypt/decrypt                                                                                                  |
+| `server/src/lib/rbac.ts`                                    | Load user permissions; `requireAppPermission`                                                                            |
+| `server/src/lib/bootstrap-admin.ts`                         | Idempotent seed admin user + role                                                                                        |
+| `server/src/services/app-config.ts`                         | Config service: load/merge/get/set/onChange/pendingRestart                                                               |
+| `server/src/services/admin-users.ts`                        | List users, assign role                                                                                                  |
+| `server/src/graphql/schema/admin.ts`                        | Admin GraphQL types/resolvers                                                                                            |
+| `server/src/graphql/schema/index.ts`                        | Import admin module                                                                                                      |
+| `server/src/graphql/context.ts`                             | Attach role permissions for session users                                                                                |
+| `server/src/index.ts`                                       | Boot: load config, seed admin, wire poll interval subscriber; expose restart                                             |
+| `server/src/lib/logging/index.ts` (+ logging pkg if needed) | Allow runtime level change                                                                                               |
+| `server/src/graphql/request-timing.ts`                      | Read timing flag from config service                                                                                     |
+| `server/src/lib/auth-config.ts` / `auth.ts`                 | Read base/client URLs from config at **construction** (restart applies)                                                  |
+| `compose.yaml`                                              | `restart: unless-stopped`; document `CONFIG_ENCRYPTION_KEY`                                                              |
+| `.env.example`                                              | `CONFIG_ENCRYPTION_KEY`                                                                                                  |
+| `client/src/routes/admin-*.tsx` + nav                       | Configuration, Users, Audit UI                                                                                           |
+| `client/src/lib/graphql/operations.ts`                      | Admin operations                                                                                                         |
+| `server/src/test/admin-config.test.ts`                      | Foundation tests                                                                                                         |
+| `server/src/test/admin-rbac.test.ts`                        | Permission / role assignment tests                                                                                       |
 
 ---
 
@@ -229,7 +229,9 @@ interface EffectiveSetting {
   envVar?: string;
 }
 
-export function createAppConfigService(/* db, key */): {
+export function createAppConfigService(
+  /* db, key */
+): {
   load(): Promise<void>;
   get<T>(key: string): T;
   getEffectiveMeta(key: string): EffectiveSetting;
@@ -243,7 +245,7 @@ export function createAppConfigService(/* db, key */): {
 
 **Merge algorithm:** for each registry key: if `envOverride` and `process.env[var]` non-empty → parse/validate → source env; else if DB row → decrypt if secret → validate → source database; else default.
 
-**set():** validate → encrypt if secret → upsert `app_settings` → audit (redact secrets) → if hotReload notify subscribers + update memory; if restartRequired set pending flag (do not update “applied” memory for restart keys until reboot — or update stored but keep `get()` returning old applied until restart; prefer: memory always reflects **effective for next boot** for restart keys while `getApplied()` used by live Better Auth stays from boot snapshot).  
+**set():** validate → encrypt if secret → upsert `app_settings` → audit (redact secrets) → if hotReload notify subscribers + update memory; if restartRequired set pending flag (do not update “applied” memory for restart keys until reboot — or update stored but keep `get()` returning old applied until restart; prefer: memory always reflects **effective for next boot** for restart keys while `getApplied()` used by live Better Auth stays from boot snapshot).
 
 **Simplest correct model for Phase 1:**
 
@@ -316,12 +318,19 @@ git commit -m "feat(server): wire hot-reload settings and docker restart policy"
 **GraphQL shape (implement exactly):**
 
 ```graphql
-enum AdminSettingSource { env database default }
-enum AdminSettingEffect { hotReload restartRequired }
+enum AdminSettingSource {
+  env
+  database
+  default
+}
+enum AdminSettingEffect {
+  hotReload
+  restartRequired
+}
 
 type AdminSetting {
   key: String!
-  value: JSON  # null when secret
+  value: JSON # null when secret
   isSecret: Boolean!
   isSet: Boolean!
   source: AdminSettingSource!
@@ -340,7 +349,7 @@ type AdminUser {
   id: ID!
   email: String!
   name: String!
-  role: String!  # admin | user
+  role: String! # admin | user
 }
 
 type AdminConfigAuditEntry {
@@ -360,7 +369,7 @@ extend type Query {
 
 input UpdateAdminSettingInput {
   key: String!
-  value: JSON  # omit or null for secrets means leave unchanged ONLY if you add a separate flag; Phase 1: require value for non-secrets; for secrets empty string rejected — use isSet replace semantics: value required to rotate
+  value: JSON # omit or null for secrets means leave unchanged ONLY if you add a separate flag; Phase 1: require value for non-secrets; for secrets empty string rejected — use isSet replace semantics: value required to rotate
 }
 
 extend type Mutation {
@@ -419,7 +428,7 @@ git commit -m "feat(server): add GraphQL admin settings and user role APIs"
 
 - [ ] **Step 2: Pages + nav.**
 
-- [ ] **Step 3: Manual smoke (or Playwright if env ready): login as seed admin, change `logging.level`, see effect; set restart-required flag; restart button.
+- [ ] **Step 3: Manual smoke (or Playwright if env ready): login as seed admin, change `logging.level`, see effect; set restart-required flag; restart button.**
 
 - [ ] **Step 4: Commit**
 
@@ -436,11 +445,11 @@ git commit -m "feat(client): add admin configuration, users, and audit pages"
 - Modify: `.env.example`, `compose.yaml` (if not done), optionally short note in `AGENTS.md` under conventions (admin bootstrap user + config layers) — only if concise
 - Run: `npm run verify`
 
-- [ ] **Step 1: Ensure `.env.example` documents `CONFIG_ENCRYPTION_KEY` and bootstrap admin credentials warning.**
+- [x] **Step 1: Ensure `.env.example` documents `CONFIG_ENCRYPTION_KEY` and bootstrap admin credentials warning.**
 
-- [ ] **Step 2: `npm run verify` — fix failures.**
+- [x] **Step 2: `npm run verify` — fix failures.**
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git commit -m "docs: document runtime config bootstrap and encryption key"
@@ -463,17 +472,17 @@ See spec roadmap Phases 2–4. Write separate implementation plans when starting
 
 ## Self-check vs spec
 
-| Spec item | Task |
-| --------- | ---- |
-| DB settings + dotted keys | 2, 5 |
-| Registry + precedence + env override | 5, 6 |
-| AES-GCM secrets | 3, 5 |
-| RBAC + seed admin | 2, 4 |
-| Users list + assign role | 7, 8 |
-| GraphQL admin | 7 |
-| Hot-reload sample keys | 5, 6 |
-| Restart path for Better Auth URLs | 5, 6, 7 |
-| Audit log | 2, 5, 7, 8 |
-| Admin UI | 8 |
-| Docker restart policy | 6 |
-| Small Phase 1 key set only | Global Constraints |
+| Spec item                            | Task               |
+| ------------------------------------ | ------------------ |
+| DB settings + dotted keys            | 2, 5               |
+| Registry + precedence + env override | 5, 6               |
+| AES-GCM secrets                      | 3, 5               |
+| RBAC + seed admin                    | 2, 4               |
+| Users list + assign role             | 7, 8               |
+| GraphQL admin                        | 7                  |
+| Hot-reload sample keys               | 5, 6               |
+| Restart path for Better Auth URLs    | 5, 6, 7            |
+| Audit log                            | 2, 5, 7, 8         |
+| Admin UI                             | 8                  |
+| Docker restart policy                | 6                  |
+| Small Phase 1 key set only           | Global Constraints |
