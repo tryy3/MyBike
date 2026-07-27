@@ -1,7 +1,7 @@
 # Admin Roles & Runtime Configuration
 
 **Date:** 2026-07-27  
-**Status:** Draft (awaiting user review)  
+**Status:** Approved  
 **Context:** After adding secondary OAuth (tsidp), we want durable admin and configuration foundations: in-app settings, hot-reload where possible, restart when not, encrypted secrets, RBAC, and audit.
 
 ## Summary
