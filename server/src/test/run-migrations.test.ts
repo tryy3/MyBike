@@ -41,6 +41,60 @@ describe("runDrizzleMigrations", () => {
     expect(applied.length).toBeGreaterThan(0);
   });
 
+  it("creates admin RBAC, app settings, audit, and runtime state tables with seed data", async () => {
+    await runDrizzleMigrations(db, migrationsFolder);
+
+    const tables = await db.all<{ name: string }>(sql`
+      SELECT name
+      FROM sqlite_master
+      WHERE type = 'table'
+        AND name IN (
+          'roles',
+          'permissions',
+          'role_permissions',
+          'user_roles',
+          'app_settings',
+          'config_audit_log',
+          'app_runtime_state'
+        )
+      ORDER BY name
+    `);
+    expect(tables.map((table) => table.name)).toEqual([
+      "app_runtime_state",
+      "app_settings",
+      "config_audit_log",
+      "permissions",
+      "role_permissions",
+      "roles",
+      "user_roles",
+    ]);
+
+    const roles = await db.all<{ id: string; name: string }>(
+      sql`SELECT id, name FROM roles ORDER BY id`,
+    );
+    expect(roles).toEqual([
+      { id: "admin", name: "admin" },
+      { id: "user", name: "user" },
+    ]);
+
+    const permissions = await db.all<{ id: string; name: string }>(
+      sql`SELECT id, name FROM permissions ORDER BY id`,
+    );
+    expect(permissions).toEqual([
+      { id: "audit.read", name: "audit.read" },
+      { id: "config.read", name: "config.read" },
+      { id: "config.write", name: "config.write" },
+      { id: "server.restart", name: "server.restart" },
+      { id: "users.assign_role", name: "users.assign_role" },
+      { id: "users.read", name: "users.read" },
+    ]);
+
+    const adminPermissionRows = await db.all<{ permissionId: string }>(
+      sql`SELECT permission_id AS permissionId FROM role_permissions WHERE role_id = 'admin'`,
+    );
+    expect(adminPermissionRows).toHaveLength(permissions.length);
+  });
+
   it("does not try to re-add name column when migrations table is already v1", async () => {
     await db.run(sql`
       CREATE TABLE __drizzle_migrations (

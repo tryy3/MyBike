@@ -1,5 +1,13 @@
 import { sql } from "drizzle-orm";
-import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import {
+  index,
+  integer,
+  primaryKey,
+  real,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 import type { ComponentPropertiesRead } from "shared";
 import { user } from "./auth-schema.js";
 
@@ -10,6 +18,73 @@ function uuid() {
 function nowMs() {
   return Date.now();
 }
+
+export const roles = sqliteTable("roles", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull().unique(),
+});
+
+export const permissions = sqliteTable("permissions", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull().unique(),
+});
+
+export const rolePermissions = sqliteTable(
+  "role_permissions",
+  {
+    roleId: text("role_id")
+      .notNull()
+      .references(() => roles.id, { onDelete: "cascade" }),
+    permissionId: text("permission_id")
+      .notNull()
+      .references(() => permissions.id, { onDelete: "cascade" }),
+  },
+  (t) => [primaryKey({ columns: [t.roleId, t.permissionId] })],
+);
+
+export const userRoles = sqliteTable(
+  "user_roles",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    roleId: text("role_id")
+      .notNull()
+      .references(() => roles.id, { onDelete: "cascade" }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.roleId] }),
+    uniqueIndex("idx_user_roles_user").on(t.userId),
+  ],
+);
+
+export const appSettings = sqliteTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  isSecret: integer("is_secret", { mode: "boolean" }).notNull().default(false),
+  updatedAt: integer("updated_at").notNull().$defaultFn(nowMs),
+  updatedBy: text("updated_by").references(() => user.id, { onDelete: "set null" }),
+});
+
+export const configAuditLog = sqliteTable(
+  "config_audit_log",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => uuid()),
+    actorUserId: text("actor_user_id").references(() => user.id, { onDelete: "set null" }),
+    key: text("key").notNull(),
+    oldValue: text("old_value"),
+    newValue: text("new_value"),
+    createdAt: integer("created_at").notNull().$defaultFn(nowMs),
+  },
+  (t) => [index("idx_config_audit_log_created_at").on(t.createdAt)],
+);
+
+export const appRuntimeState = sqliteTable("app_runtime_state", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+});
 
 export const bikes = sqliteTable(
   "bikes",
@@ -172,6 +247,13 @@ export const stravaActivityComponents = sqliteTable(
 );
 
 export type StravaSyncStateRow = typeof stravaSyncState.$inferSelect;
+export type RoleRow = typeof roles.$inferSelect;
+export type PermissionRow = typeof permissions.$inferSelect;
+export type RolePermissionRow = typeof rolePermissions.$inferSelect;
+export type UserRoleRow = typeof userRoles.$inferSelect;
+export type AppSettingRow = typeof appSettings.$inferSelect;
+export type ConfigAuditLogRow = typeof configAuditLog.$inferSelect;
+export type AppRuntimeStateRow = typeof appRuntimeState.$inferSelect;
 export type BikeRow = typeof bikes.$inferSelect;
 export type ComponentRow = typeof components.$inferSelect;
 export type StravaBikeRow = typeof stravaBikes.$inferSelect;
