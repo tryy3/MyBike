@@ -12,9 +12,14 @@ const BATCH_LIMIT = 100;
 let eventSource = createStravaEventSource();
 let pollInFlight: Promise<StravaWebhookProcessResult> | null = null;
 
-export function resetStravaEventSourceForTests(): void {
+export function refreshStravaEventSource(): ReturnType<typeof createStravaEventSource> {
   eventSource = createStravaEventSource();
   pollInFlight = null;
+  return eventSource;
+}
+
+export function resetStravaEventSourceForTests(): void {
+  refreshStravaEventSource();
 }
 
 export function setStravaEventSourceForTests(

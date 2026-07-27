@@ -1,5 +1,6 @@
 import type { StravaWebhookEnvelope } from "shared";
 import { stravaWebhookProxyEventsSchema } from "shared";
+import { getLoadedAppConfigValue } from "../services/app-config.js";
 import { child } from "./logging/index.js";
 
 const log = child({ component: "strava-proxy-client" });
@@ -61,9 +62,18 @@ export class ProxyStravaEventSource implements StravaEventSource {
   }
 }
 
+export function getStravaWebhookProxyApiKey(): string | undefined {
+  const configured = getLoadedAppConfigValue<string>("strava.webhook.proxyApiKey");
+  if (configured?.trim()) {
+    return configured;
+  }
+
+  return process.env.STRAVA_WEBHOOK_PROXY_API_KEY;
+}
+
 export function createStravaEventSource(): StravaEventSource | null {
   const url = process.env.STRAVA_WEBHOOK_PROXY_URL;
-  const apiKey = process.env.STRAVA_WEBHOOK_PROXY_API_KEY;
+  const apiKey = getStravaWebhookProxyApiKey();
   if (!url || !apiKey) return null;
   return new ProxyStravaEventSource(url, apiKey);
 }

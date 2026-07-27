@@ -9,3 +9,7 @@ export const { logger, httpLogger, child, getLog, withLogContext, flushLogs } = 
   defaultLogFilePath: resolve(repoRoot, "server/data/mybike.log"),
   healthCheckPaths: ["/api/health"],
 });
+
+export function setLoggerLevel(level: string): void {
+  logger.level = level;
+}

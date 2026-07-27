@@ -74,6 +74,16 @@ describe("settings registry", () => {
 });
 
 describe("app config service", () => {
+  it("reports whether the service has loaded effective settings", async () => {
+    const service = createAppConfigService({ env: TEST_ENV });
+
+    expect(service.isLoaded()).toBe(false);
+
+    await service.load();
+
+    expect(service.isLoaded()).toBe(true);
+  });
+
   it("uses default source when neither DB nor env override is set", async () => {
     const service = createAppConfigService({ env: TEST_ENV });
     await service.load();

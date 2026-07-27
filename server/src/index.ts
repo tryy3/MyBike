@@ -3,53 +3,94 @@ import type { Server } from "node:http";
 import { flushLogs, logger } from "./lib/logging/index.js";
 
 let server: Server | undefined;
+let webhookPollTimer: ReturnType<typeof setInterval> | undefined;
+const runtimeCleanup: Array<() => void> = [];
+
+function clearWebhookPolling(): void {
+  if (webhookPollTimer) {
+    clearInterval(webhookPollTimer);
+    webhookPollTimer = undefined;
+  }
+}
 
 async function main(): Promise<void> {
   const { initDatabase } = await import("./db/index.js");
   await initDatabase();
 
   const { applyMigrations } = await import("./db/migrate.js");
-  const { createApp } = await import("./app.js");
-  const { createStravaEventSource } = await import("./lib/strava-event-source.js");
-  const { processPendingWebhookEvents } = await import("./lib/strava-webhook-poller.js");
-
   if (process.env.RUN_MIGRATIONS === "true") {
     await applyMigrations();
     logger.info("Migrations applied successfully");
   }
 
-  const app = createApp();
-  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
+  const { appConfig } = await import("./services/app-config.js");
+  const { applyProcessLoggerLevel, syncAuthEnvFromConfig } =
+    await import("./lib/runtime-config.js");
 
-  server = app.listen(port, () => {
-    logger.info({ port }, "Server listening");
+  await appConfig.load();
+  await appConfig.markBootComplete();
 
-    const eventSource = createStravaEventSource();
-    if (eventSource) {
-      const intervalMs = parseInt(process.env.STRAVA_WEBHOOK_POLL_INTERVAL_MS ?? "60000", 10);
-      const poll = () => {
-        void processPendingWebhookEvents().catch((err) => {
-          logger.error({ err, component: "strava-webhook" }, "Webhook poll failed");
-        });
-      };
-      setInterval(poll, intervalMs);
-      poll();
-      logger.info({ intervalMs, component: "strava-webhook" }, "Polling Strava webhook proxy");
-    } else {
+  runtimeCleanup.push(applyProcessLoggerLevel(appConfig));
+
+  const { getStravaWebhookProxyApiKey } = await import("./lib/strava-event-source.js");
+  const { processPendingWebhookEvents, refreshStravaEventSource } =
+    await import("./lib/strava-webhook-poller.js");
+
+  function startWebhookPolling(): void {
+    clearWebhookPolling();
+    const eventSource = refreshStravaEventSource();
+    if (!eventSource) {
       const missingEnvVars = [
         !process.env.STRAVA_WEBHOOK_PROXY_URL ? "STRAVA_WEBHOOK_PROXY_URL" : null,
-        !process.env.STRAVA_WEBHOOK_PROXY_API_KEY ? "STRAVA_WEBHOOK_PROXY_API_KEY" : null,
+        !getStravaWebhookProxyApiKey() ? "STRAVA_WEBHOOK_PROXY_API_KEY" : null,
       ].filter((name): name is string => name !== null);
       logger.info(
         { component: "strava-webhook", missingEnvVars },
         "Webhook proxy not configured; polling disabled",
       );
+      return;
     }
+
+    const intervalMs = appConfig.get<number>("strava.webhook.pollIntervalMs");
+    const poll = () => {
+      void processPendingWebhookEvents().catch((err) => {
+        logger.error({ err, component: "strava-webhook" }, "Webhook poll failed");
+      });
+    };
+    webhookPollTimer = setInterval(poll, intervalMs);
+    poll();
+    logger.info({ intervalMs, component: "strava-webhook" }, "Polling Strava webhook proxy");
+  }
+
+  runtimeCleanup.push(
+    appConfig.onChange("strava.webhook.pollIntervalMs", () => {
+      startWebhookPolling();
+    }),
+  );
+  runtimeCleanup.push(
+    appConfig.onChange("strava.webhook.proxyApiKey", () => {
+      startWebhookPolling();
+    }),
+  );
+
+  syncAuthEnvFromConfig(appConfig);
+
+  const { createApp } = await import("./app.js");
+  const app = createApp();
+  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
+
+  server = app.listen(port, () => {
+    logger.info({ port }, "Server listening");
+    startWebhookPolling();
   });
 }
 
 function shutdown(signal: string): void {
   logger.info({ signal }, "Shutting down");
+  clearWebhookPolling();
+  for (const cleanup of runtimeCleanup.splice(0)) {
+    cleanup();
+  }
   server?.close(() => {
     flushLogs(() => {
       process.exit(0);

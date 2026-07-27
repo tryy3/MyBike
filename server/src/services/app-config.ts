@@ -38,6 +38,7 @@ type ChangeHandler = (value: unknown) => void;
 
 export type AppConfigService = {
   load(): Promise<void>;
+  isLoaded(): boolean;
   get<T>(key: string): T;
   getEffectiveMeta(key: string): EffectiveSetting;
   listEffective(): EffectiveSetting[];
@@ -241,6 +242,10 @@ export function createAppConfigService(options: AppConfigServiceOptions = {}): A
       await clearRestartPending();
     },
 
+    isLoaded(): boolean {
+      return loaded;
+    },
+
     get<T>(key: string): T {
       ensureLoaded();
       const knownKey = assertKnownKey(key);
@@ -375,3 +380,15 @@ export function createAppConfigService(options: AppConfigServiceOptions = {}): A
 }
 
 export const appConfig = createAppConfigService();
+
+export function getLoadedAppConfigValue<T>(key: string): T | null {
+  if (!appConfig.isLoaded()) {
+    return null;
+  }
+
+  try {
+    return appConfig.get<T>(key);
+  } catch {
+    return null;
+  }
+}
