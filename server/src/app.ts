@@ -4,6 +4,7 @@ import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import componentsCsvRouter from "./routes/components-csv.js";
+import oauthProvidersRouter from "./routes/oauth-providers.js";
 import stravaRouter from "./routes/strava.js";
 import { activityRouter, bikeActivitiesRouter } from "./routes/activities.js";
 import { errorHandler } from "./lib/errors.js";
@@ -47,6 +48,7 @@ export function createApp() {
   });
 
   app.use("/api/bikes/:bikeId/components", componentsCsvRouter);
+  app.use("/api/oauth", oauthProvidersRouter);
   app.use("/api/strava", stravaRouter);
   app.use("/api/bikes/:bikeId/activities", bikeActivitiesRouter);
   app.use("/api/activities", activityRouter);

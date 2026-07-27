@@ -8,15 +8,16 @@ import { resolveDefaultApiKeyPermissions } from "./api-key-permissions.js";
 import { resolveAuthMethod } from "./auth-events.js";
 import { resolveAuthConfig } from "./auth-config.js";
 import { child } from "./logging/index.js";
-import { buildStravaOAuthConfig, isStravaOAuthConfigured } from "./strava-oauth.js";
+import { buildConfiguredOAuthProviders } from "./oauth-providers.js";
+import { isStravaOAuthConfigured } from "./strava-oauth.js";
+import { isTsidpOAuthConfigured } from "./tsidp-oauth.js";
 
 const log = child({ component: "auth" });
 
 const { secret, baseURL, clientURL } = resolveAuthConfig();
 
-const stravaOAuthPlugins = isStravaOAuthConfigured()
-  ? [genericOAuth({ config: [buildStravaOAuthConfig()] })]
-  : [];
+const oauthProviders = buildConfiguredOAuthProviders();
+const oauthPlugins = oauthProviders.length > 0 ? [genericOAuth({ config: oauthProviders })] : [];
 
 export const auth = betterAuth({
   secret,
@@ -31,7 +32,7 @@ export const auth = betterAuth({
     enabled: true,
   },
   plugins: [
-    ...stravaOAuthPlugins,
+    ...oauthPlugins,
     apiKey({
       configId: "graphql",
       defaultPrefix: "mbk_",
@@ -83,5 +84,6 @@ export const auth = betterAuth({
 });
 
 export const stravaLoginEnabled = isStravaOAuthConfigured();
+export const tsidpLoginEnabled = isTsidpOAuthConfigured();
 
 export type SessionUser = typeof auth.$Infer.Session.user;

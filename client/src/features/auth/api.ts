@@ -5,10 +5,10 @@ import { api, queryKeys } from "@/lib/api";
 import { clearAuthReturnTo, peekAuthReturnTo } from "@/lib/auth-return-to";
 import type { LoginInput, RegisterInput } from "shared";
 
-export function useStravaAuthConfig() {
+export function useOAuthProvidersConfig() {
   return useQuery({
-    queryKey: queryKeys.stravaConfig,
-    queryFn: () => api.getStravaConfig(),
+    queryKey: queryKeys.oauthProviders,
+    queryFn: () => api.getOAuthProviders(),
     staleTime: 60_000,
   });
 }
@@ -23,6 +23,22 @@ export function useSignInWithStrava() {
       });
       if (result.error) {
         throw new Error(result.error.message ?? "Strava sign-in failed");
+      }
+      return result.data;
+    },
+  });
+}
+
+export function useSignInWithTsidp() {
+  return useMutation({
+    mutationFn: async (options?: { requestSignUp?: boolean }) => {
+      const result = await signIn.social({
+        provider: "tsidp",
+        callbackURL: peekAuthReturnTo(),
+        requestSignUp: options?.requestSignUp,
+      });
+      if (result.error) {
+        throw new Error(result.error.message ?? "Tailscale sign-in failed");
       }
       return result.data;
     },

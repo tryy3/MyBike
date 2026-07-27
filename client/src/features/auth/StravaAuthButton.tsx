@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { useStravaAuthConfig, useSignInWithStrava } from "./api";
+import { useOAuthProvidersConfig, useSignInWithStrava, useSignInWithTsidp } from "./api";
 
 function StravaMark() {
   return (
@@ -10,18 +10,24 @@ function StravaMark() {
   );
 }
 
-interface StravaAuthButtonProps {
+function TailscaleMark() {
+  return (
+    <svg aria-hidden viewBox="0 0 24 24" className="size-4 fill-current">
+      <circle cx="12" cy="5" r="2.25" />
+      <circle cx="5" cy="12" r="2.25" />
+      <circle cx="19" cy="12" r="2.25" />
+      <circle cx="8.5" cy="18.5" r="2.25" />
+      <circle cx="15.5" cy="18.5" r="2.25" />
+    </svg>
+  );
+}
+
+interface OAuthModeProps {
   mode: "login" | "register";
 }
 
-export function StravaAuthButton({ mode }: StravaAuthButtonProps) {
-  const config = useStravaAuthConfig();
+function StravaAuthButton({ mode }: OAuthModeProps) {
   const signInWithStrava = useSignInWithStrava();
-
-  if (config.isLoading || !config.data?.configured) {
-    return null;
-  }
-
   const label = mode === "register" ? "Sign up with Strava" : "Continue with Strava";
 
   return (
@@ -44,6 +50,56 @@ export function StravaAuthButton({ mode }: StravaAuthButtonProps) {
       <StravaMark />
       {signInWithStrava.isPending ? "Redirecting to Strava…" : label}
     </Button>
+  );
+}
+
+function TsidpAuthButton({ mode }: OAuthModeProps) {
+  const signInWithTsidp = useSignInWithTsidp();
+  const label = mode === "register" ? "Sign up with Tailscale" : "Continue with Tailscale";
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      className="w-full"
+      disabled={signInWithTsidp.isPending}
+      onClick={() => {
+        signInWithTsidp.mutate(
+          { requestSignUp: mode === "register" },
+          {
+            onError: (err) => {
+              toast.error(err.message);
+            },
+          },
+        );
+      }}
+    >
+      <TailscaleMark />
+      {signInWithTsidp.isPending ? "Redirecting to Tailscale…" : label}
+    </Button>
+  );
+}
+
+/** Social/OIDC buttons for login/register; divider only when at least one is enabled. */
+export function OAuthSignInButtons({ mode }: OAuthModeProps) {
+  const config = useOAuthProvidersConfig();
+  const providers = config.data?.providers;
+
+  if (config.isLoading || !providers) {
+    return null;
+  }
+
+  const hasAny = providers.tsidp || providers.strava;
+  if (!hasAny) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-3">
+      {providers.tsidp ? <TsidpAuthButton mode={mode} /> : null}
+      {providers.strava ? <StravaAuthButton mode={mode} /> : null}
+      <AuthDivider />
+    </div>
   );
 }
 
