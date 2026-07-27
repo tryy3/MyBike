@@ -128,16 +128,18 @@ export function useReplaceMaintenanceTask(bikeId: string) {
       id,
       newComponentId,
       resetWear,
+      archiveOld,
       notes,
     }: {
       id: string;
       newComponentId?: string;
       resetWear?: boolean;
+      archiveOld?: boolean;
       notes?: string;
     }) => {
       await graphqlFetch(REPLACE_MAINTENANCE_TASK_MUTATION, {
         id,
-        input: { newComponentId, resetWear, notes },
+        input: { newComponentId, resetWear, archiveOld, notes },
       });
     },
     onSuccess: () => invalidateMaintenance(qc, bikeId),

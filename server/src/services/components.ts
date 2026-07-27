@@ -10,7 +10,7 @@ import { db } from "../db/index.js";
 import { affectedRows } from "../db/result.js";
 import { bikes, components } from "../db/schema.js";
 import type { ComponentRow } from "../db/schema.js";
-import { HttpError, notFound } from "../lib/errors.js";
+import { badRequest, HttpError, notFound } from "../lib/errors.js";
 import { requireBike } from "./bikes.js";
 
 function optionalComponentFields(data: {
@@ -135,7 +135,11 @@ export async function deleteComponent(componentId: string, userId: string): Prom
         .select()
         .from(components)
         .where(
-          and(eq(components.bikeId, existing.bikeId), eq(components.category, existing.category)),
+          and(
+            eq(components.bikeId, existing.bikeId),
+            eq(components.category, existing.category),
+            eq(components.isArchived, false),
+          ),
         )
         .orderBy(asc(components.createdAt))
         .get();
@@ -155,6 +159,11 @@ export async function activateComponent(
   userId: string,
 ): Promise<ComponentRow> {
   const component = await requireComponent(componentId, userId);
+  if (component.isArchived) {
+    throw badRequest("Archived components cannot be activated; unarchive first", {
+      code: "COMPONENT_ARCHIVED",
+    });
+  }
   await db.transaction(async (tx) => {
     await tx
       .update(components)
@@ -170,6 +179,44 @@ export async function activateComponent(
     await tx.update(components).set({ isActive: true }).where(eq(components.id, componentId)).run();
   });
   const updated = await db.select().from(components).where(eq(components.id, componentId)).get();
+  if (!updated) throw notFound("Component");
+  return updated;
+}
+
+export async function archiveComponent(componentId: string, userId: string): Promise<ComponentRow> {
+  const component = await requireComponent(componentId, userId);
+  if (component.isActive) {
+    throw badRequest("Active components cannot be archived; activate another part first", {
+      code: "COMPONENT_ACTIVE",
+    });
+  }
+  if (component.isArchived) {
+    throw badRequest("Component is already archived", { code: "COMPONENT_ALREADY_ARCHIVED" });
+  }
+  const updated = await db
+    .update(components)
+    .set({ isArchived: true })
+    .where(eq(components.id, componentId))
+    .returning()
+    .get();
+  if (!updated) throw notFound("Component");
+  return updated;
+}
+
+export async function unarchiveComponent(
+  componentId: string,
+  userId: string,
+): Promise<ComponentRow> {
+  const component = await requireComponent(componentId, userId);
+  if (!component.isArchived) {
+    throw badRequest("Component is not archived", { code: "COMPONENT_NOT_ARCHIVED" });
+  }
+  const updated = await db
+    .update(components)
+    .set({ isArchived: false, isActive: false })
+    .where(eq(components.id, componentId))
+    .returning()
+    .get();
   if (!updated) throw notFound("Component");
   return updated;
 }

@@ -33,6 +33,10 @@ function buildComponentFilterConditions(filter: ComponentFilter): SQL[] {
     conditions.push(eq(components.isActive, filter.isActive));
   }
 
+  if (filter.isArchived !== undefined) {
+    conditions.push(eq(components.isArchived, filter.isArchived));
+  }
+
   if (filter.brands && filter.brands.length > 0) {
     const brandMatches = filter.brands.map(
       (brand) => sql`lower(${components.brand}) = lower(${brand})`,
@@ -128,9 +132,11 @@ export async function getBikeDetail(bikeId: string, userId: string): Promise<Bik
 export async function listComponentsForBike(
   bikeId: string,
   userId: string,
-  options?: { filter?: ComponentFilter },
+  options?: { filter?: ComponentFilter; skipRequireBike?: boolean },
 ): Promise<ComponentRow[]> {
-  await requireBike(bikeId, userId);
+  if (!options?.skipRequireBike) {
+    await requireBike(bikeId, userId);
+  }
   const filterConditions = options?.filter ? buildComponentFilterConditions(options.filter) : [];
   const rows = await db
     .select()

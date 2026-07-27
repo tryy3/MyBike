@@ -33,7 +33,12 @@ import {
 } from "../lib/maintenance-due.js";
 import { badRequest, notFound } from "../lib/errors.js";
 import { requireBike } from "./bikes.js";
-import { activateComponent, requireComponent, updateComponent } from "./components.js";
+import {
+  activateComponent,
+  archiveComponent,
+  requireComponent,
+  updateComponent,
+} from "./components.js";
 
 function templateToRow(bikeId: string, template: (typeof MAINTENANCE_TEMPLATES)[number]) {
   return {
@@ -126,12 +131,15 @@ interface BikeMaintenanceRaw {
 async function loadBikeMaintenanceRaw(
   bikeId: string,
   tasks: MaintenanceTaskRow[],
+  stravaWearByComponentId?: Map<string, WearSnapshot>,
 ): Promise<BikeMaintenanceRaw> {
   const touchUpTaskIds = tasks.filter((task) => task.kind === "touch_up").map((task) => task.id);
 
-  const [stravaWearByComponentId, activeComponents, serviceRecordRows, checklistRows] =
-    await Promise.all([
-      getStravaWearByComponentId(bikeId),
+  const [wearByComponentId, activeComponents, serviceRecordRows, checklistRows] = await Promise.all(
+    [
+      stravaWearByComponentId
+        ? Promise.resolve(stravaWearByComponentId)
+        : getStravaWearByComponentId(bikeId),
       db
         .select()
         .from(components)
@@ -150,7 +158,8 @@ async function loadBikeMaintenanceRaw(
             .where(inArray(maintenanceChecklistState.taskId, touchUpTaskIds))
             .all()
         : Promise.resolve([]),
-    ]);
+    ],
+  );
 
   const activeByCategory = new Map<string, ComponentRow>();
   for (const component of activeComponents) {
@@ -172,7 +181,7 @@ async function loadBikeMaintenanceRaw(
   }
 
   return {
-    stravaWearByComponentId,
+    stravaWearByComponentId: wearByComponentId,
     activeByCategory,
     lastServiceByTaskId,
     checklistLastCheckedByTaskId,
@@ -225,9 +234,10 @@ function enrichTaskFromRaw(task: MaintenanceTaskRow, raw: BikeMaintenanceRaw): M
 async function enrichTasksForBike(
   bikeId: string,
   tasks: MaintenanceTaskRow[],
+  stravaWearByComponentId?: Map<string, WearSnapshot>,
 ): Promise<MaintenanceTaskView[]> {
   if (tasks.length === 0) return [];
-  const raw = await loadBikeMaintenanceRaw(bikeId, tasks);
+  const raw = await loadBikeMaintenanceRaw(bikeId, tasks, stravaWearByComponentId);
   return tasks.map((task) => enrichTaskFromRaw(task, raw));
 }
 
@@ -282,15 +292,21 @@ export async function syncMaintenanceTemplates(): Promise<{ inserted: number; up
 export async function listMaintenanceTasksForBike(
   bikeId: string,
   userId: string,
+  options?: {
+    stravaWearByComponentId?: Map<string, WearSnapshot>;
+    skipRequireBike?: boolean;
+  },
 ): Promise<MaintenanceTaskView[]> {
-  await requireBike(bikeId, userId);
+  if (!options?.skipRequireBike) {
+    await requireBike(bikeId, userId);
+  }
   const rows = await db
     .select()
     .from(maintenanceTasks)
     .where(eq(maintenanceTasks.bikeId, bikeId))
     .orderBy(asc(maintenanceTasks.sortOrder), asc(maintenanceTasks.createdAt))
     .all();
-  return enrichTasksForBike(bikeId, rows);
+  return enrichTasksForBike(bikeId, rows, options?.stravaWearByComponentId);
 }
 
 export async function listMaintenanceTasksForComponentCategory(
@@ -595,6 +611,21 @@ export async function replaceComponentMaintenance(
         code: "COMPONENT_CATEGORY_MISMATCH",
       });
     }
+
+    const category = component.category;
+    const previousActive =
+      (await db
+        .select()
+        .from(components)
+        .where(
+          and(
+            eq(components.bikeId, task.bikeId),
+            eq(components.category, category),
+            eq(components.isActive, true),
+          ),
+        )
+        .get()) ?? null;
+
     await activateComponent(input.newComponentId, userId);
     if (input.resetWear) {
       await updateComponent(
@@ -605,6 +636,15 @@ export async function replaceComponentMaintenance(
           movingTimeMinutes: 0,
         }),
       );
+    }
+
+    if (
+      input.archiveOld &&
+      previousActive &&
+      previousActive.id !== input.newComponentId &&
+      !previousActive.isArchived
+    ) {
+      await archiveComponent(previousActive.id, userId);
     }
   }
 

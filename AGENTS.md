@@ -80,6 +80,8 @@ In GitHub **Settings → Branches** for `master`, require the **CI / Check and t
 - Component categories are a fixed, hardcoded set in `shared/src/categories.ts` (`CATEGORIES` — frame, fork, crankset, … plus an `other` catchall). They are always visible and cannot be created/deleted/edited.
 - Components live under a bike + category (`components` table). One active component per (bike, category) is enforced server-side (transaction + unique partial index); clients set it via the `activateComponent` GraphQL mutation.
 - After mutations the client invalidates the affected TanStack Query keys and refetches from the server
+- **Icon accessibility:** prefer **icon + visible text** so the action is obvious without hover. When space is tight (menus, toolbars, quick-access / icon-sm row actions), use **icon + tooltip** (shadcn `Tooltip` + `aria-label`). Never ship an icon-only control with no visible or tooltip label — even for “obvious” icons (edit, delete, archive, etc.). Screen readers still need a clear `aria-label`; tooltips cover sighted users who don’t recognize the glyph.
+- **Mutation pending feedback:** for list/row actions that hit the API (archive, unarchive, activate, …), prefer **button spinner + row pending** through mutation _and_ query refetch — not optimistic UI. Scope busy to the acting row; keep toast for success/error after settle. Latency should stay visible so slow GraphQL/Turso paths are obvious while dogfooding.
 - **Strava webhooks (private hosting):** deploy `strava-webhook-proxy` on a public URL; MyBike pulls events via `STRAVA_WEBHOOK_PROXY_URL` + API key. One-time: set `STRAVA_WEBHOOK_CALLBACK_URL`, `STRAVA_VERIFY_TOKEN`, run `subscribe`. Main server polls on an interval and on manual sync.
 
 ## API layers (GraphQL vs REST)
@@ -113,7 +115,7 @@ In GitHub **Settings → Branches** for `master`, require the **CI / Check and t
 
 **GraphQL API keys (LLM / script access):** users create keys at `/settings/api-keys` while logged in (Better Auth `@better-auth/api-key` plugin). Keys authenticate `POST /graphql` and the remote MCP endpoint at `POST /mcp` via `Authorization: Bearer mbk_…` or `x-api-key`; REST routes remain session-only. Default scope is read-only (`graphql: ["read"]`); write and delete scopes are available when creating a key. Permission constants live in `shared/src/schemas/api-key.ts`.
 
-**Remote MCP (AI clients):** Streamable HTTP at `/mcp` on the main server (dev: `http://localhost:3001/mcp`). Authenticate with the same GraphQL API key as Bearer token. Tools: `describe_data_model`, `list_bikes`, `get_bike`, `list_component_categories`, `get_bike_components`, `graphql_query` (read-only escape hatch), `find_bike`, `list_maintenance_tasks`, `create_component`, `update_component`, `set_active_component`, and `replace_component`. Read tools require `graphql:read`; mutation tools require a write-scoped API key with `graphql:write`. MCP tool calls are logged server-side with `event: "mcp.tool"`. Hermes example (`~/.hermes/config.yaml`):
+**Remote MCP (AI clients):** Streamable HTTP at `/mcp` on the main server (dev: `http://localhost:3001/mcp`). Authenticate with the same GraphQL API key as Bearer token. Tools: `describe_data_model`, `list_bikes`, `get_bike`, `list_component_categories`, `get_bike_components`, `graphql_query` (read-only escape hatch), `find_bike`, `list_maintenance_tasks`, `create_component`, `update_component`, `set_active_component`, `archive_component`, and `replace_component` (optional `archiveOld`). Read tools require `graphql:read`; mutation tools require a write-scoped API key with `graphql:write`. Unarchive and delete stay UI/GraphQL-only (not on MCP). MCP tool calls are logged server-side with `event: "mcp.tool"`. Hermes example (`~/.hermes/config.yaml`):
 
 ```yaml
 mcp_servers:
@@ -127,7 +129,7 @@ Implementation lives in `server/src/mcp/`. After MCP changes, add or update test
 
 **Component properties:** `Component.properties` is always an object (`{}` when empty). App-defined per category — today only `chain` has `lubeType` (`dry_lube` | `wet_lube` | `drip_wax` | `immersion_wax`; default `wet_lube`). Non-chains reject non-empty properties. Filter with `lubeTypes` on `ComponentFilterInput` / MCP `get_bike_components`. CSV column `lube_type` maps to `properties.lubeType` (current header required; chains require an explicit known `lube_type` — blank/unknown errors).
 
-**Token-efficient component reads:** use field selection plus `bike(id) { components(filter: { … }) }`. Filter by `categories` (GraphQL enum `ComponentCategory`, e.g. `crankset`, `rear_derailleur`), `activeOnly`, `isActive`, `brands`, `nameContains`, `brandContains`, `modelContains`, or `lubeTypes`. Example for drivetrain compatibility on one bike:
+**Token-efficient component reads:** use field selection plus `bike(id) { components(filter: { … }) }`. Filter by `categories` (GraphQL enum `ComponentCategory`, e.g. `crankset`, `rear_derailleur`), `activeOnly`, `isActive`, `isArchived`, `brands`, `nameContains`, `brandContains`, `modelContains`, or `lubeTypes`. Example for drivetrain compatibility on one bike:
 
 ```graphql
 query ($id: ID!) {

@@ -198,6 +198,74 @@ describe("GraphQL maintenance", () => {
     expect(updated.body.data!.updateMaintenanceTask.distanceMeters).toBe(200_000);
   });
 
+  it("EOL replace with archiveOld archives the previous active component", async () => {
+    const { agent } = await createAuthenticatedAgent(app);
+    const bike = await createBikeViaGraphql(agent, "EOL Archive Old");
+
+    const oldChain = await createComponentViaGraphql(agent, bike.id, {
+      category: "chain",
+      name: "Wet Chain",
+      brand: "KMC",
+      model: "Old",
+      isActive: true,
+    });
+    const newChain = await createComponentViaGraphql(agent, bike.id, {
+      category: "chain",
+      name: "Waxed Chain",
+      brand: "KMC",
+      model: "Wax",
+      isActive: false,
+    });
+
+    const tasks = await graphqlRequest<{
+      bike: { maintenanceTasks: { id: string; templateKey: string | null }[] };
+    }>(
+      agent,
+      `query($id: ID!) {
+        bike(id: $id) {
+          maintenanceTasks { id templateKey }
+        }
+      }`,
+      { id: bike.id },
+    );
+    const chainEol = tasks.body.data!.bike.maintenanceTasks.find(
+      (t) => t.templateKey === "chain-eol",
+    );
+    expect(chainEol).toBeDefined();
+
+    const replaced = await graphqlRequest(
+      agent,
+      `mutation($id: ID!, $input: ReplaceMaintenanceInput!) {
+        replaceComponentMaintenance(id: $id, input: $input) { id action }
+      }`,
+      {
+        id: chainEol!.id,
+        input: { newComponentId: newChain.id, archiveOld: true, resetWear: true },
+      },
+    );
+    expect(replaced.body.errors).toBeUndefined();
+
+    const detail = await graphqlRequest<{
+      bike: { components: { id: string; isActive: boolean; isArchived: boolean }[] };
+    }>(
+      agent,
+      `query($id: ID!) {
+        bike(id: $id) {
+          components { id isActive isArchived }
+        }
+      }`,
+      { id: bike.id },
+    );
+    expect(detail.body.data?.bike.components.find((c) => c.id === newChain.id)).toMatchObject({
+      isActive: true,
+      isArchived: false,
+    });
+    expect(detail.body.data?.bike.components.find((c) => c.id === oldChain.id)).toMatchObject({
+      isActive: false,
+      isArchived: true,
+    });
+  });
+
   it("reports EOL due when component wear exceeds limit", async () => {
     const { agent } = await createAuthenticatedAgent(app);
     const bike = await createBikeViaGraphql(agent, "EOL Bike");

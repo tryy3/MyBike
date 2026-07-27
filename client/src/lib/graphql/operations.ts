@@ -55,6 +55,7 @@ export interface ComponentGql {
     lubeType: string | null;
   };
   isActive: boolean;
+  isArchived: boolean;
   purchaseDate: string | null;
   purchaseCost: number | null;
   purchaseStore: string | null;
@@ -119,6 +120,7 @@ export const BIKE_DETAIL_QUERY = /* GraphQL */ `
           lubeType
         }
         isActive
+        isArchived
         purchaseDate
         purchaseCost
         purchaseStore
@@ -199,6 +201,7 @@ export const CREATE_COMPONENT_MUTATION = /* GraphQL */ `
         lubeType
       }
       isActive
+      isArchived
       purchaseDate
       purchaseCost
       purchaseStore
@@ -228,6 +231,7 @@ export const UPDATE_COMPONENT_MUTATION = /* GraphQL */ `
         lubeType
       }
       isActive
+      isArchived
       purchaseDate
       purchaseCost
       purchaseStore
@@ -253,6 +257,27 @@ export const ACTIVATE_COMPONENT_MUTATION = /* GraphQL */ `
     activateComponent(id: $id) {
       id
       isActive
+      isArchived
+    }
+  }
+`;
+
+export const ARCHIVE_COMPONENT_MUTATION = /* GraphQL */ `
+  mutation ArchiveComponent($id: ID!) {
+    archiveComponent(id: $id) {
+      id
+      isActive
+      isArchived
+    }
+  }
+`;
+
+export const UNARCHIVE_COMPONENT_MUTATION = /* GraphQL */ `
+  mutation UnarchiveComponent($id: ID!) {
+    unarchiveComponent(id: $id) {
+      id
+      isActive
+      isArchived
     }
   }
 `;
@@ -275,6 +300,7 @@ export function toComponentRow(c: ComponentGql): Component {
     notes: c.notes,
     properties: isLubeType(c.properties.lubeType) ? { lubeType: c.properties.lubeType } : {},
     isActive: c.isActive,
+    isArchived: c.isArchived,
     distanceMeters: c.wear.distanceMeters,
     movingTimeMinutes: c.wear.movingTimeMinutes,
     purchaseDate: c.purchaseDate,

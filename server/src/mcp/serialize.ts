@@ -42,6 +42,7 @@ export async function serializeComponent(row: ComponentRow): Promise<Record<stri
     notes: row.notes,
     properties: normalizePropertiesForRead(row.category, row.properties),
     isActive: row.isActive,
+    isArchived: row.isArchived,
     purchaseDate: row.purchaseDate,
     purchaseStore: row.purchaseStore,
     purchaseCost: row.purchaseCost,

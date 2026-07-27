@@ -27,6 +27,7 @@ export const COMPONENT_FIELDS = [
   "notes",
   "properties",
   "isActive",
+  "isArchived",
   "purchaseDate",
   "purchaseStore",
   "purchaseCost",
@@ -44,6 +45,7 @@ export const COMPONENT_FILTER_FIELDS = [
   "categories",
   "activeOnly",
   "isActive",
+  "isArchived",
   "brands",
   "nameContains",
   "brandContains",
@@ -84,6 +86,7 @@ export const DEFAULT_COMPONENT_FIELDS = [
   "brand",
   "model",
   "isActive",
+  "isArchived",
 ] as const;
 export const DEFAULT_CATEGORY_FIELDS = ["id", "label"] as const;
 export const DEFAULT_MAINTENANCE_TASK_FIELDS = [
@@ -114,15 +117,15 @@ export function getSchemaCatalog() {
     })),
     notes: {
       typedTools:
-        "Use fields[] on list/get tools to request only needed data. Write tools: create_component (inactive when sibling exists), update_component (brand/model/purchase/notes only — not name), set_active_component (rotate spares), replace_component (EOL service record + activate).",
+        "Use fields[] on list/get tools to request only needed data. Write tools: create_component (inactive when sibling exists), update_component (brand/model/purchase/notes only — not name), set_active_component (rotate spares), archive_component (inactive only), replace_component (EOL service record + activate; optional archiveOld).",
       workflows:
-        "EOL replace: find_bike → create_component → replace_component(bikeId+category+newComponentId). Spare rotation: find_bike → get_bike_components → set_active_component.",
+        "EOL replace: find_bike → create_component → replace_component(bikeId+category+newComponentId, archiveOld?: true). Spare rotation: find_bike → get_bike_components → set_active_component. Archive retired alternates with archive_component (unarchive is UI-only).",
       graphqlQuery:
         "Use graphql_query for ad-hoc read queries when typed tools are not enough. Mutations are rejected.",
       categoryIds:
         "Typed tools use hyphenated category ids (rear-derailleur). Raw GraphQL filter enums use underscores (rear_derailleur).",
       filters:
-        "Component filters: categories, activeOnly, isActive, brands, nameContains, brandContains, modelContains, lubeTypes (chain properties.lubeType: dry_lube|wet_lube|drip_wax|immersion_wax).",
+        "Component filters: categories, activeOnly, isActive, isArchived, brands, nameContains, brandContains, modelContains, lubeTypes (chain properties.lubeType: dry_lube|wet_lube|drip_wax|immersion_wax).",
       properties:
         "components.properties is an object (never null). Chains include lubeType; other categories use {}.",
       auth: "Read tools need graphql:read. Write tools need graphql:write on the API key.",

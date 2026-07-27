@@ -153,6 +153,8 @@ export const replaceMaintenanceInputSchema = z.object({
   cost: z.number().min(0).nullish(),
   newComponentId: z.string().uuid().optional(),
   resetWear: z.boolean().optional(),
+  /** When true and swapping, archive the previous active component after activate. Default false. */
+  archiveOld: z.boolean().optional(),
 });
 
 export type ReplaceMaintenanceInput = z.infer<typeof replaceMaintenanceInputSchema>;

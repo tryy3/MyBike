@@ -4,18 +4,20 @@ import { api, queryKeys } from "@/lib/api";
 import { graphqlFetch } from "@/lib/graphql";
 import {
   ACTIVATE_COMPONENT_MUTATION,
+  ARCHIVE_COMPONENT_MUTATION,
   CREATE_COMPONENT_MUTATION,
   DELETE_COMPONENT_MUTATION,
   FIELD_SUGGESTIONS_QUERY,
   REORDER_COMPONENTS_MUTATION,
+  UNARCHIVE_COMPONENT_MUTATION,
   UPDATE_COMPONENT_MUTATION,
   type BikeDetailGql,
 } from "@/lib/graphql/operations";
 import type { BikeDetailWithStats } from "@/features/bikes/api";
 import { invalidateWearDependentBikeQueries } from "@/features/maintenance/cache-sync";
 
-function invalidateComponentQueries(qc: QueryClient, bikeId: string) {
-  invalidateWearDependentBikeQueries(qc, bikeId);
+async function invalidateComponentQueries(qc: QueryClient, bikeId: string) {
+  await invalidateWearDependentBikeQueries(qc, bikeId);
   void qc.invalidateQueries({ queryKey: queryKeys.fieldSuggestions, exact: true });
 }
 
@@ -78,11 +80,36 @@ export function useActivateComponent(bikeId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const data = await graphqlFetch<{ activateComponent: { id: string; isActive: boolean } }>(
-        ACTIVATE_COMPONENT_MUTATION,
-        { id },
-      );
+      const data = await graphqlFetch<{
+        activateComponent: { id: string; isActive: boolean; isArchived: boolean };
+      }>(ACTIVATE_COMPONENT_MUTATION, { id });
       return data.activateComponent;
+    },
+    onSuccess: () => invalidateComponentQueries(qc, bikeId),
+  });
+}
+
+export function useArchiveComponent(bikeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const data = await graphqlFetch<{
+        archiveComponent: { id: string; isActive: boolean; isArchived: boolean };
+      }>(ARCHIVE_COMPONENT_MUTATION, { id });
+      return data.archiveComponent;
+    },
+    onSuccess: () => invalidateComponentQueries(qc, bikeId),
+  });
+}
+
+export function useUnarchiveComponent(bikeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const data = await graphqlFetch<{
+        unarchiveComponent: { id: string; isActive: boolean; isArchived: boolean };
+      }>(UNARCHIVE_COMPONENT_MUTATION, { id });
+      return data.unarchiveComponent;
     },
     onSuccess: () => invalidateComponentQueries(qc, bikeId),
   });
@@ -129,7 +156,7 @@ export function useImportComponents(bikeId: string) {
     mutationFn: ({ csv, dryRun = false }: { csv: string; dryRun?: boolean }) =>
       api.importComponents(bikeId, csv, dryRun),
     onSuccess: (data, vars) => {
-      if (!vars.dryRun) invalidateComponentQueries(qc, bikeId);
+      if (!vars.dryRun) void invalidateComponentQueries(qc, bikeId);
     },
   });
 }

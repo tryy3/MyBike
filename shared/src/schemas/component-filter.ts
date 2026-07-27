@@ -8,6 +8,7 @@ export const componentFilterSchema = z.object({
   categories: z.array(z.enum(CATEGORY_IDS)).optional(),
   activeOnly: z.boolean().optional(),
   isActive: z.boolean().optional(),
+  isArchived: z.boolean().optional(),
   brands: z.array(optionalNonEmptyString).optional(),
   nameContains: optionalNonEmptyString.optional(),
   brandContains: optionalNonEmptyString.optional(),

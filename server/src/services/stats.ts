@@ -95,6 +95,7 @@ export async function getBikeStats(userId: string, bikeId: string): Promise<Bike
       baselineDistanceMeters: components.distanceMeters,
       baselineMovingTimeMinutes: components.movingTimeMinutes,
       isActive: components.isActive,
+      isArchived: components.isArchived,
       sortOrder: components.sortOrder,
     })
     .from(components)
@@ -120,6 +121,7 @@ export async function getBikeStats(userId: string, bikeId: string): Promise<Bike
           distanceMeters: wear.distanceMeters,
           movingTimeMinutes: wear.movingTimeMinutes,
           isActive: row.isActive,
+          isArchived: row.isArchived,
           sortOrder: row.sortOrder,
         };
       }),

@@ -16,6 +16,7 @@ export const ComponentFilterInput = builder.inputType("ComponentFilterInput", {
     categories: t.field({ type: [ComponentCategoryEnum], required: false }),
     activeOnly: t.boolean({ required: false }),
     isActive: t.boolean({ required: false }),
+    isArchived: t.boolean({ required: false }),
     brands: t.stringList({ required: false }),
     nameContains: t.string({ required: false }),
     brandContains: t.string({ required: false }),
@@ -30,6 +31,7 @@ export function mergeComponentFilter(
     categories?: string[] | null;
     activeOnly?: boolean | null;
     isActive?: boolean | null;
+    isArchived?: boolean | null;
     brands?: string[] | null;
     nameContains?: string | null;
     brandContains?: string | null;

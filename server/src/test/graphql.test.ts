@@ -131,6 +131,158 @@ describe("GraphQL active component invariant", () => {
     expect(wheels?.find((c) => c.id === b.id)?.isActive).toBe(true);
     expect(wheels?.find((c) => c.id === a.id)?.isActive).toBe(false);
   });
+
+  it("archives inactive components and blocks activating archived ones", async () => {
+    const { agent } = await createAuthenticatedAgent(app);
+    const bike = await createBikeViaGraphql(agent, "Archive Bike");
+
+    const active = await createComponentViaGraphql(
+      agent,
+      bike.id,
+      componentInput({ category: "chain", name: "Active", isActive: true }),
+    );
+    const spare = await createComponentViaGraphql(
+      agent,
+      bike.id,
+      componentInput({ category: "chain", name: "Spare", isActive: false }),
+    );
+
+    const archiveActive = await graphqlRequest(
+      agent,
+      `mutation($id: ID!) { archiveComponent(id: $id) { id isArchived } }`,
+      { id: active.id },
+    );
+    expect(archiveActive.body.errors?.[0]?.message).toMatch(/cannot be archived/i);
+
+    const archived = await graphqlRequest<{
+      archiveComponent: { id: string; isArchived: boolean; isActive: boolean };
+    }>(agent, `mutation($id: ID!) { archiveComponent(id: $id) { id isArchived isActive } }`, {
+      id: spare.id,
+    });
+    expect(archived.body.errors).toBeUndefined();
+    expect(archived.body.data?.archiveComponent).toMatchObject({
+      id: spare.id,
+      isArchived: true,
+      isActive: false,
+    });
+
+    const activateArchived = await graphqlRequest(
+      agent,
+      `mutation($id: ID!) { activateComponent(id: $id) { id isActive } }`,
+      { id: spare.id },
+    );
+    expect(activateArchived.body.errors?.[0]?.message).toMatch(/unarchive first/i);
+
+    const restored = await graphqlRequest<{
+      unarchiveComponent: { id: string; isArchived: boolean; isActive: boolean };
+    }>(agent, `mutation($id: ID!) { unarchiveComponent(id: $id) { id isArchived isActive } }`, {
+      id: spare.id,
+    });
+    expect(restored.body.errors).toBeUndefined();
+    expect(restored.body.data?.unarchiveComponent).toMatchObject({
+      id: spare.id,
+      isArchived: false,
+      isActive: false,
+    });
+  });
+
+  it("does not promote archived components when the active one is deleted", async () => {
+    const { agent } = await createAuthenticatedAgent(app);
+    const bike = await createBikeViaGraphql(agent, "Delete Promote Bike");
+
+    const active = await createComponentViaGraphql(
+      agent,
+      bike.id,
+      componentInput({ category: "chain", name: "Active", isActive: true }),
+    );
+    const archived = await createComponentViaGraphql(
+      agent,
+      bike.id,
+      componentInput({ category: "chain", name: "Archived", isActive: false }),
+    );
+    const alternate = await createComponentViaGraphql(
+      agent,
+      bike.id,
+      componentInput({ category: "chain", name: "Alternate", isActive: false }),
+    );
+
+    await graphqlRequest(agent, `mutation($id: ID!) { archiveComponent(id: $id) { id } }`, {
+      id: archived.id,
+    });
+
+    const deleted = await graphqlRequest<{ deleteComponent: boolean }>(
+      agent,
+      `mutation($id: ID!) { deleteComponent(id: $id) }`,
+      { id: active.id },
+    );
+    expect(deleted.body.errors).toBeUndefined();
+    expect(deleted.body.data?.deleteComponent).toBe(true);
+
+    const detail = await graphqlRequest<{
+      bike: { components: { id: string; isActive: boolean; isArchived: boolean }[] };
+    }>(
+      agent,
+      `query($id: ID!) {
+        bike(id: $id) {
+          components { id isActive isArchived }
+        }
+      }`,
+      { id: bike.id },
+    );
+
+    const rows = detail.body.data?.bike.components ?? [];
+    expect(rows.find((c) => c.id === archived.id)).toMatchObject({
+      isArchived: true,
+      isActive: false,
+    });
+    expect(rows.find((c) => c.id === alternate.id)).toMatchObject({
+      isArchived: false,
+      isActive: true,
+    });
+  });
+
+  it("leaves no active component when only archived parts remain after delete", async () => {
+    const { agent } = await createAuthenticatedAgent(app);
+    const bike = await createBikeViaGraphql(agent, "Delete Only Archived Bike");
+
+    const active = await createComponentViaGraphql(
+      agent,
+      bike.id,
+      componentInput({ category: "cassette", name: "Active", isActive: true }),
+    );
+    const archived = await createComponentViaGraphql(
+      agent,
+      bike.id,
+      componentInput({ category: "cassette", name: "Archived", isActive: false }),
+    );
+
+    await graphqlRequest(agent, `mutation($id: ID!) { archiveComponent(id: $id) { id } }`, {
+      id: archived.id,
+    });
+
+    const deleted = await graphqlRequest<{ deleteComponent: boolean }>(
+      agent,
+      `mutation($id: ID!) { deleteComponent(id: $id) }`,
+      { id: active.id },
+    );
+    expect(deleted.body.errors).toBeUndefined();
+
+    const detail = await graphqlRequest<{
+      bike: { components: { id: string; isActive: boolean; isArchived: boolean }[] };
+    }>(
+      agent,
+      `query($id: ID!) {
+        bike(id: $id) {
+          components { id isActive isArchived }
+        }
+      }`,
+      { id: bike.id },
+    );
+
+    expect(detail.body.data?.bike.components).toEqual([
+      { id: archived.id, isActive: false, isArchived: true },
+    ]);
+  });
 });
 
 describe("GraphQL wear and activeOnly", () => {

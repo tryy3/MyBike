@@ -20,7 +20,7 @@ export function useUpdateActivity(bikeId: string) {
       api.updateActivity(id, data),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.bikeActivities(bikeId), exact: true });
-      invalidateWearDependentBikeQueries(qc, bikeId);
+      void invalidateWearDependentBikeQueries(qc, bikeId);
     },
   });
 }

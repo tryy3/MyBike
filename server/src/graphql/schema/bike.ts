@@ -12,17 +12,19 @@ import {
   deleteBike,
   listBikes,
   listComponentsForBike,
-  requireBike,
   updateBike,
 } from "../../services/bikes.js";
 import {
   activateComponent,
+  archiveComponent,
   createComponent,
   deleteComponent,
   reorderComponents,
+  unarchiveComponent,
   updateComponent,
 } from "../../services/components.js";
 import { getRideStatsForBike } from "../../services/stats.js";
+import { getCachedBike } from "../bike-cache.js";
 import { builder } from "../builder.js";
 import { mergeComponentFilter, ComponentFilterInput } from "../component-filter.js";
 import { requireGraphQLPermission } from "../context.js";
@@ -46,7 +48,8 @@ builder.objectType(BikeRef, {
       resolve: async (parent, _args, context) => {
         if ("componentCount" in parent) return parent.componentCount;
         const userId = requireGraphQLPermission(context, "read");
-        return (await listComponentsForBike(parent.id, userId)).length;
+        await getCachedBike(context, parent.id, userId);
+        return (await listComponentsForBike(parent.id, userId, { skipRequireBike: true })).length;
       },
     }),
     rideStats: t.field({
@@ -54,8 +57,10 @@ builder.objectType(BikeRef, {
       nullable: true,
       resolve: async (parent, _args, context) => {
         const userId = requireGraphQLPermission(context, "read");
-        const rideStats = await getRideStatsForBike(userId, parent.id);
-        return rideStats;
+        const load = () => getRideStatsForBike(userId, parent.id);
+        return context.timing?.enabled
+          ? context.timing.time(`rideStats:${parent.id.slice(0, 8)}`, load)
+          : load();
       },
     }),
     components: t.field({
@@ -66,11 +71,16 @@ builder.objectType(BikeRef, {
       },
       resolve: async (parent, args, context) => {
         const userId = requireGraphQLPermission(context, "read");
+        await getCachedBike(context, parent.id, userId);
         const mergedFilter = mergeComponentFilter(args.activeOnly ?? false, args.filter);
-        const componentList = await listComponentsForBike(parent.id, userId, {
-          filter: mergedFilter,
-        });
-        return componentList;
+        const load = () =>
+          listComponentsForBike(parent.id, userId, {
+            filter: mergedFilter,
+            skipRequireBike: true,
+          });
+        return context.timing?.enabled
+          ? context.timing.time(`components:${parent.id.slice(0, 8)}`, load)
+          : load();
       },
     }),
   }),
@@ -148,8 +158,7 @@ builder.queryField("bike", (t) =>
     },
     resolve: async (_root, args, context) => {
       const userId = requireGraphQLPermission(context, "read");
-      const bike = await requireBike(args.id, userId);
-      return bike;
+      return getCachedBike(context, args.id, userId);
     },
   }),
 );
@@ -253,6 +262,32 @@ builder.mutationField("activateComponent", (t) =>
       const userId = requireGraphQLPermission(context, "write");
       const component = await activateComponent(args.id, userId);
       return component;
+    },
+  }),
+);
+
+builder.mutationField("archiveComponent", (t) =>
+  t.field({
+    type: ComponentRef,
+    args: {
+      id: t.arg.id({ required: true }),
+    },
+    resolve: async (_root, args, context) => {
+      const userId = requireGraphQLPermission(context, "write");
+      return archiveComponent(args.id, userId);
+    },
+  }),
+);
+
+builder.mutationField("unarchiveComponent", (t) =>
+  t.field({
+    type: ComponentRef,
+    args: {
+      id: t.arg.id({ required: true }),
+    },
+    resolve: async (_root, args, context) => {
+      const userId = requireGraphQLPermission(context, "write");
+      return unarchiveComponent(args.id, userId);
     },
   }),
 );

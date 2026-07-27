@@ -1,12 +1,25 @@
 import { createYoga } from "graphql-yoga";
 import { getOperationAST, type DocumentNode } from "graphql";
 import { formatError } from "./errors.js";
-import { createContext } from "./context.js";
+import { createContext, type GraphQLContext } from "./context.js";
+import { logRequestTiming } from "./request-timing.js";
 import { schema } from "./schema/index.js";
 
 let yogaSingleton: ReturnType<
   typeof createYoga<Record<string, never>, Awaited<ReturnType<typeof createContext>>>
 > | null = null;
+
+function useGraphQLTiming() {
+  return {
+    onExecute({ args }: { args: { contextValue: GraphQLContext; operationName?: string | null } }) {
+      return {
+        onExecuteDone() {
+          logRequestTiming(args.contextValue, args.operationName ?? null);
+        },
+      };
+    },
+  };
+}
 
 function getYoga() {
   if (!yogaSingleton) {
@@ -15,6 +28,7 @@ function getYoga() {
       context: createContext,
       maskedErrors: formatError,
       graphqlEndpoint: "/graphql",
+      plugins: [useGraphQLTiming()],
     });
   }
   return yogaSingleton;
