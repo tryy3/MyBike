@@ -86,6 +86,8 @@ export const api = {
   disconnectStrava: () =>
     apiFetch<{ disconnected: boolean }>("/api/strava/disconnect", { method: "POST" }),
   getStravaConfig: () => apiFetch<{ configured: boolean }>("/api/strava/config"),
+  getOAuthProviders: () =>
+    apiFetch<{ providers: { strava: boolean; tsidp: boolean } }>("/api/oauth/config"),
 
   // --- Activities (REST) ---------------------------------------------------
   listBikeActivities: (bikeId: string, cursor?: string | null) => {
@@ -119,6 +121,7 @@ export const queryKeys = {
   fieldSuggestions: ["field-suggestions"] as const,
   stravaStatus: ["strava", "status"] as const,
   stravaConfig: ["strava", "config"] as const,
+  oauthProviders: ["oauth", "providers"] as const,
   apiKeys: ["api-keys"] as const,
   bikeActivities: (id: string) => ["activities", "bike", id] as const,
 };
