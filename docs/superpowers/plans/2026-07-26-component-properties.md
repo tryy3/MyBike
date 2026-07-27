@@ -150,8 +150,7 @@ export const chainPropertiesSchema = z
 export const emptyPropertiesSchema = z.object({}).strict();
 
 export type ComponentProperties =
-  | z.infer<typeof chainPropertiesSchema>
-  | z.infer<typeof emptyPropertiesSchema>;
+  z.infer<typeof chainPropertiesSchema> | z.infer<typeof emptyPropertiesSchema>;
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

@@ -53,6 +53,8 @@ export interface StravaTokenResponse {
 }
 
 export const STRAVA_PROVIDER_ID = "strava";
+/** Better Auth issuer for Strava (plain OAuth without OIDC discovery). */
+export const STRAVA_ACCOUNT_ISSUER = `local:oauth:${STRAVA_PROVIDER_ID}`;
 
 export function stravaPlaceholderEmail(athleteId: string): string {
   return `strava+${athleteId}@strava.users.mybike`;

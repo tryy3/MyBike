@@ -13,6 +13,7 @@ import {
   setStravaEventSourceForTests,
 } from "../lib/strava-webhook-poller.js";
 import { getLastProxyEventId, setLastProxyEventId } from "../lib/strava-webhook-cursor.js";
+import { STRAVA_ACCOUNT_ISSUER } from "../lib/strava-client.js";
 
 const app = createApp();
 const originalFetch = globalThis.fetch;
@@ -61,7 +62,8 @@ async function seedConnectedUser() {
     .insert(account)
     .values({
       id: crypto.randomUUID(),
-      accountId: athleteId,
+      issuer: STRAVA_ACCOUNT_ISSUER,
+      providerAccountId: athleteId,
       providerId: "strava",
       userId,
       accessToken: "access-token",
@@ -97,7 +99,8 @@ async function connectStravaAccount(email: string, athleteId?: string) {
     .insert(account)
     .values({
       id: crypto.randomUUID(),
-      accountId: athleteId ?? `strava-athlete-${currentUser!.id}`,
+      issuer: STRAVA_ACCOUNT_ISSUER,
+      providerAccountId: athleteId ?? `strava-athlete-${currentUser!.id}`,
       providerId: "strava",
       userId: currentUser!.id,
       accessToken: "access-token",

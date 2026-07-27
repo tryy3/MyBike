@@ -25,7 +25,9 @@ export {
   ensureMigrationsTableV1,
   extractCreatedTableNames,
   isBenignSchemaError,
+  isCreateIndexMissingColumnError,
   isDuplicateColumnError,
   isNoSuchColumnError,
+  normalizeDriverRow,
   resolveMigrationsToRun,
 } from "shared";

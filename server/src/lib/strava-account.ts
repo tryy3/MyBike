@@ -4,6 +4,7 @@ import { db } from "../db/index.js";
 import { HttpError } from "./errors.js";
 import { child } from "./logging/index.js";
 import {
+  STRAVA_ACCOUNT_ISSUER,
   STRAVA_PROVIDER_ID,
   revokeStravaAccessToken,
   type StravaTokenResponse,
@@ -16,7 +17,7 @@ export async function findStravaAccountByAthleteId(athleteId: string) {
   return db
     .select()
     .from(account)
-    .where(and(eq(account.providerId, STRAVA_PROVIDER_ID), eq(account.accountId, athleteId)))
+    .where(and(eq(account.issuer, STRAVA_ACCOUNT_ISSUER), eq(account.providerAccountId, athleteId)))
     .get();
 }
 
@@ -48,7 +49,8 @@ export async function upsertStravaAccount(
 
   const existing = await findStravaAccount(userId);
   const values = {
-    accountId: token.athleteId,
+    issuer: STRAVA_ACCOUNT_ISSUER,
+    providerAccountId: token.athleteId,
     providerId: STRAVA_PROVIDER_ID,
     userId,
     accessToken: token.accessToken,

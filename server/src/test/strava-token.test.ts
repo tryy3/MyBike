@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import { and, eq } from "drizzle-orm";
 import { account, user } from "../db/auth-schema.js";
 import { db } from "../db/index.js";
-import { refreshStravaAccessToken } from "../lib/strava-client.js";
+import { refreshStravaAccessToken, STRAVA_ACCOUNT_ISSUER } from "../lib/strava-client.js";
 import { findStravaAccount, getStravaAccessToken } from "../lib/strava-token.js";
 
 const originalFetch = globalThis.fetch;
@@ -35,7 +35,8 @@ async function seedExpiredStravaAccount() {
     .insert(account)
     .values({
       id: crypto.randomUUID(),
-      accountId: athleteId,
+      issuer: STRAVA_ACCOUNT_ISSUER,
+      providerAccountId: athleteId,
       providerId: "strava",
       userId,
       accessToken: "old-access-token",
@@ -103,7 +104,7 @@ describe("getStravaAccessToken", () => {
     const row = await findStravaAccount(userId);
     expect(row?.accessToken).toBe("new-access-token");
     expect(row?.refreshToken).toBe("new-refresh-token");
-    expect(row?.accountId).toBe(athleteId);
+    expect(row?.providerAccountId).toBe(athleteId);
 
     await db
       .delete(account)

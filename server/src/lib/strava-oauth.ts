@@ -1,5 +1,6 @@
 import type { GenericOAuthConfig } from "better-auth/plugins";
 import {
+  STRAVA_ACCOUNT_ISSUER,
   STRAVA_PROVIDER_ID,
   exchangeStravaCode,
   stravaAthleteDisplayName,
@@ -50,6 +51,7 @@ export function buildStravaOAuthConfig(): GenericOAuthConfig {
   return {
     providerId: STRAVA_PROVIDER_ID,
     name: "Strava",
+    accountIssuer: STRAVA_ACCOUNT_ISSUER,
     authorizationUrl: "https://www.strava.com/oauth/authorize",
     tokenUrl: "https://www.strava.com/oauth/token",
     clientId,

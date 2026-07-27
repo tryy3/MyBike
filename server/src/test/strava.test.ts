@@ -4,6 +4,7 @@ import { account, user } from "../db/auth-schema.js";
 import { db } from "../db/index.js";
 import { components, stravaSyncState } from "../db/schema.js";
 import { createApp } from "../app.js";
+import { STRAVA_ACCOUNT_ISSUER } from "../lib/strava-client.js";
 import { createAuthenticatedAgent } from "./auth-helper.js";
 import {
   createBikeViaGraphql,
@@ -110,7 +111,8 @@ async function connectStravaAccount(email: string) {
     .insert(account)
     .values({
       id: crypto.randomUUID(),
-      accountId: `strava-athlete-${currentUser!.id}`,
+      issuer: STRAVA_ACCOUNT_ISSUER,
+      providerAccountId: `strava-athlete-${currentUser!.id}`,
       providerId: "strava",
       userId: currentUser!.id,
       accessToken: "access-token",
