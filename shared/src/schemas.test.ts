@@ -1,4 +1,6 @@
 import { bikeInsertSchema } from "./schemas/bike.js";
+import { APP_PERMISSIONS, APP_ROLES } from "./schemas/admin-permissions.js";
+import { APP_SETTING_KEYS } from "./schemas/app-settings.js";
 import {
   COMPONENT_CSV_COLUMNS,
   COMPONENT_IMPORT_MAX_BYTES,
@@ -14,6 +16,36 @@ import {
 import { stravaImportCommitSchema } from "./schemas/strava.js";
 import { CATEGORY_IDS } from "./categories.js";
 import { describe, expect, it } from "vite-plus/test";
+
+describe("admin permissions and app settings constants", () => {
+  it("exports the admin permission ids", () => {
+    expect(APP_PERMISSIONS).toEqual([
+      "config.read",
+      "config.write",
+      "server.restart",
+      "users.read",
+      "users.assign_role",
+      "audit.read",
+    ]);
+  });
+
+  it("exports the built-in app roles", () => {
+    expect(APP_ROLES).toEqual(["admin", "user"]);
+  });
+
+  it("exports the Phase 1 setting keys", () => {
+    expect(APP_SETTING_KEYS).toHaveLength(7);
+    expect(APP_SETTING_KEYS).toEqual([
+      "logging.level",
+      "graphql.timing",
+      "strava.webhook.pollIntervalMs",
+      "strava.webhook.proxyApiKey",
+      "logging.toFile",
+      "betterAuth.baseUrl",
+      "client.url",
+    ]);
+  });
+});
 
 describe("bikeInsertSchema", () => {
   it("accepts a valid year", () => {
