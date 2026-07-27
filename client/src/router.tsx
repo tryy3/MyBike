@@ -17,6 +17,9 @@ import { ApiKeysPage } from "./routes/api-keys";
 import { LoginPage } from "./routes/login";
 import { RegisterPage } from "./routes/register";
 import { redirectIfAuthenticated } from "./lib/auth-guard";
+import { AdminAuditPage } from "./features/admin/AuditPage";
+import { AdminConfigurationPage } from "./features/admin/ConfigurationPage";
+import { AdminUsersPage } from "./features/admin/UsersPage";
 
 const indexRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
@@ -88,6 +91,24 @@ const apiKeysRoute = createRoute({
   component: ApiKeysPage,
 });
 
+const adminConfigurationRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/settings/admin/configuration",
+  component: AdminConfigurationPage,
+});
+
+const adminUsersRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/settings/admin/users",
+  component: AdminUsersPage,
+});
+
+const adminAuditRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/settings/admin/audit",
+  component: AdminAuditPage,
+});
+
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/login",
@@ -127,7 +148,15 @@ function NotFound() {
 }
 
 const routeTree = rootRoute.addChildren([
-  appLayoutRoute.addChildren([indexRoute, bikeRoute, integrationsRoute, apiKeysRoute]),
+  appLayoutRoute.addChildren([
+    indexRoute,
+    bikeRoute,
+    integrationsRoute,
+    apiKeysRoute,
+    adminConfigurationRoute,
+    adminUsersRoute,
+    adminAuditRoute,
+  ]),
   loginRoute,
   registerRoute,
 ]);

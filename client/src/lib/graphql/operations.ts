@@ -288,6 +288,123 @@ export const REORDER_COMPONENTS_MUTATION = /* GraphQL */ `
   }
 `;
 
+export type AdminSettingSourceGql = "env" | "database" | "default";
+export type AdminSettingEffectGql = "hotReload" | "restartRequired";
+export type AdminUserRoleGql = "admin" | "user";
+export type AdminSettingValueGql = string | number | boolean | null;
+
+export interface AdminSettingGql {
+  key: string;
+  value: AdminSettingValueGql;
+  isSecret: boolean;
+  isSet: boolean;
+  source: AdminSettingSourceGql;
+  effect: AdminSettingEffectGql;
+  envVar: string | null;
+  label: string;
+  group: string;
+}
+
+export interface AdminSettingsPayloadGql {
+  pendingRestart: boolean;
+  settings: AdminSettingGql[];
+}
+
+export interface AdminUserGql {
+  id: string;
+  email: string;
+  name: string;
+  role: AdminUserRoleGql;
+}
+
+export interface AdminConfigAuditEntryGql {
+  id: string;
+  actorUserId: string | null;
+  key: string;
+  oldValue: string | null;
+  newValue: string | null;
+  createdAt: number | string;
+}
+
+export const ADMIN_SETTINGS_QUERY = /* GraphQL */ `
+  query AdminSettings {
+    adminSettings {
+      pendingRestart
+      settings {
+        key
+        value
+        isSecret
+        isSet
+        source
+        effect
+        envVar
+        label
+        group
+      }
+    }
+  }
+`;
+
+export const UPDATE_ADMIN_SETTINGS_MUTATION = /* GraphQL */ `
+  mutation UpdateAdminSettings($inputs: [UpdateAdminSettingInput!]!) {
+    updateAdminSettings(inputs: $inputs) {
+      pendingRestart
+      settings {
+        key
+        value
+        isSecret
+        isSet
+        source
+        effect
+        envVar
+        label
+        group
+      }
+    }
+  }
+`;
+
+export const RESTART_SERVER_MUTATION = /* GraphQL */ `
+  mutation RestartServer {
+    restartServer
+  }
+`;
+
+export const ADMIN_USERS_QUERY = /* GraphQL */ `
+  query AdminUsers {
+    adminUsers {
+      id
+      email
+      name
+      role
+    }
+  }
+`;
+
+export const ASSIGN_USER_ROLE_MUTATION = /* GraphQL */ `
+  mutation AssignUserRole($userId: ID!, $role: String!) {
+    assignUserRole(userId: $userId, role: $role) {
+      id
+      email
+      name
+      role
+    }
+  }
+`;
+
+export const ADMIN_CONFIG_AUDIT_QUERY = /* GraphQL */ `
+  query AdminConfigAudit($limit: Int) {
+    adminConfigAudit(limit: $limit) {
+      id
+      actorUserId
+      key
+      oldValue
+      newValue
+      createdAt
+    }
+  }
+`;
+
 /** Map GraphQL component to shared Component (baseline fields from wear for compat). */
 export function toComponentRow(c: ComponentGql): Component {
   return {

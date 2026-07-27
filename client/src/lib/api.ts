@@ -123,5 +123,8 @@ export const queryKeys = {
   stravaConfig: ["strava", "config"] as const,
   oauthProviders: ["oauth", "providers"] as const,
   apiKeys: ["api-keys"] as const,
+  adminSettings: ["admin", "settings"] as const,
+  adminUsers: ["admin", "users"] as const,
+  adminConfigAudit: (limit: number) => ["admin", "audit", limit] as const,
   bikeActivities: (id: string) => ["activities", "bike", id] as const,
 };
