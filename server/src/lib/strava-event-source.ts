@@ -64,15 +64,18 @@ export class ProxyStravaEventSource implements StravaEventSource {
 
 export function getStravaWebhookProxyApiKey(): string | undefined {
   const configured = getLoadedAppConfigValue<string>("strava.webhook.proxyApiKey");
-  if (configured?.trim()) {
-    return configured;
-  }
+  const trimmed = configured?.trim();
+  return trimmed ? trimmed : undefined;
+}
 
-  return process.env.STRAVA_WEBHOOK_PROXY_API_KEY;
+export function getStravaWebhookProxyUrl(): string | undefined {
+  const configured = getLoadedAppConfigValue<string>("strava.webhook.proxyUrl");
+  const trimmed = configured?.trim();
+  return trimmed ? trimmed : undefined;
 }
 
 export function createStravaEventSource(): StravaEventSource | null {
-  const url = process.env.STRAVA_WEBHOOK_PROXY_URL;
+  const url = getStravaWebhookProxyUrl();
   const apiKey = getStravaWebhookProxyApiKey();
   if (!url || !apiKey) return null;
   return new ProxyStravaEventSource(url, apiKey);

@@ -38,7 +38,8 @@ async function main(): Promise<void> {
 
   runtimeCleanup.push(applyProcessLoggerLevel(appConfig));
 
-  const { getStravaWebhookProxyApiKey } = await import("./lib/strava-event-source.js");
+  const { getStravaWebhookProxyApiKey, getStravaWebhookProxyUrl } =
+    await import("./lib/strava-event-source.js");
   const { processPendingWebhookEvents, refreshStravaEventSource } =
     await import("./lib/strava-webhook-poller.js");
 
@@ -46,12 +47,12 @@ async function main(): Promise<void> {
     clearWebhookPolling();
     const eventSource = refreshStravaEventSource();
     if (!eventSource) {
-      const missingEnvVars = [
-        !process.env.STRAVA_WEBHOOK_PROXY_URL ? "STRAVA_WEBHOOK_PROXY_URL" : null,
-        !getStravaWebhookProxyApiKey() ? "STRAVA_WEBHOOK_PROXY_API_KEY" : null,
+      const missingSettingKeys = [
+        !getStravaWebhookProxyUrl() ? "strava.webhook.proxyUrl" : null,
+        !getStravaWebhookProxyApiKey() ? "strava.webhook.proxyApiKey" : null,
       ].filter((name): name is string => name !== null);
       logger.info(
-        { component: "strava-webhook", missingEnvVars },
+        { component: "strava-webhook", missingSettingKeys },
         "Webhook proxy not configured; polling disabled",
       );
       return;
@@ -75,6 +76,16 @@ async function main(): Promise<void> {
   );
   runtimeCleanup.push(
     appConfig.onChange("strava.webhook.proxyApiKey", () => {
+      startWebhookPolling();
+    }),
+  );
+  runtimeCleanup.push(
+    appConfig.onChange("strava.webhook.proxyUrl", () => {
+      startWebhookPolling();
+    }),
+  );
+  runtimeCleanup.push(
+    appConfig.onChange("strava.webhook.subscriptionId", () => {
       startWebhookPolling();
     }),
   );

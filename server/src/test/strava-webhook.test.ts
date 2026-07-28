@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { account, user } from "../db/auth-schema.js";
 import { db } from "../db/index.js";
 import { bikes, stravaActivities, stravaBikes } from "../db/schema.js";
 import { createApp } from "../app.js";
 import { createAuthenticatedAgent } from "./auth-helper.js";
 import type { StravaWebhookEnvelope } from "shared";
-import type { StravaEventSource } from "../lib/strava-event-source.js";
+import { createStravaEventSource, type StravaEventSource } from "../lib/strava-event-source.js";
 import { processWebhookEvent } from "../lib/strava-webhook-processor.js";
 import {
   processPendingWebhookEvents,
@@ -14,6 +14,7 @@ import {
 } from "../lib/strava-webhook-poller.js";
 import { getLastProxyEventId, setLastProxyEventId } from "../lib/strava-webhook-cursor.js";
 import { STRAVA_ACCOUNT_ISSUER } from "../lib/strava-client.js";
+import { appConfig } from "../services/app-config.js";
 
 const app = createApp();
 const originalFetch = globalThis.fetch;
@@ -36,6 +37,8 @@ function mockActivityResponse(activity: {
 }
 
 beforeEach(async () => {
+  await db.run(sql`DELETE FROM app_settings`);
+  await appConfig.load();
   await setLastProxyEventId(0);
   setStravaEventSourceForTests(null);
 });
@@ -112,6 +115,25 @@ async function connectStravaAccount(email: string, athleteId?: string) {
 }
 
 describe("processWebhookEvent", () => {
+  it("skips events from a subscription other than the configured one", async () => {
+    await appConfig.set("strava.webhook.subscriptionId", "999", null);
+
+    const outcome = await processWebhookEvent({
+      id: 0,
+      receivedAt: new Date().toISOString(),
+      payload: {
+        aspect_type: "create",
+        event_time: Math.floor(Date.now() / 1000),
+        object_id: 999000,
+        object_type: "activity",
+        owner_id: 123456,
+        subscription_id: 1,
+      },
+    });
+
+    expect(outcome).toBe("skipped");
+  });
+
   it("imports activity create events for linked gear", async () => {
     const { userId, athleteId } = await seedConnectedUser();
 
@@ -346,12 +368,44 @@ describe("processPendingWebhookEvents", () => {
 });
 
 describe("POST /api/strava/sync with proxy", () => {
+  it("creates an event source from configured proxy credentials", async () => {
+    await appConfig.setMany(
+      [
+        { key: "strava.webhook.proxyUrl", value: "https://configured-proxy.test/" },
+        { key: "strava.webhook.proxyApiKey", value: "configured-key" },
+      ],
+      null,
+    );
+
+    const source = createStravaEventSource();
+    expect(source).not.toBeNull();
+
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(
+        typeof input === "string" ? input : input instanceof URL ? input.href : input.url,
+      );
+      expect(url.href).toBe("https://configured-proxy.test/api/events?after_id=5");
+      expect(init?.headers).toMatchObject({ Authorization: "Bearer configured-key" });
+      return new Response(JSON.stringify({ events: [], nextAfterId: null }), { status: 200 });
+    });
+
+    await expect(source!.fetchEvents({ afterId: 5 })).resolves.toEqual({
+      events: [],
+      nextAfterId: null,
+    });
+  });
+
   it("continues activity sync when proxy fetch fails", async () => {
     const { agent, user: testUser } = await createAuthenticatedAgent(app);
     await connectStravaAccount(testUser.email);
 
-    process.env.STRAVA_WEBHOOK_PROXY_URL = "https://proxy.test";
-    process.env.STRAVA_WEBHOOK_PROXY_API_KEY = "test-key";
+    await appConfig.setMany(
+      [
+        { key: "strava.webhook.proxyUrl", value: "https://proxy.test" },
+        { key: "strava.webhook.proxyApiKey", value: "test-key" },
+      ],
+      null,
+    );
     setStravaEventSourceForTests({
       async fetchEvents() {
         throw new Error("proxy down");
@@ -378,8 +432,6 @@ describe("POST /api/strava/sync with proxy", () => {
     expect(res.body.webhook?.errors?.[0]).toMatch(/fetch: proxy down/);
     expect(res.body.processedActivities).toBe(0);
 
-    delete process.env.STRAVA_WEBHOOK_PROXY_URL;
-    delete process.env.STRAVA_WEBHOOK_PROXY_API_KEY;
     setStravaEventSourceForTests(null);
   });
 });
