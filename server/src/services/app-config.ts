@@ -30,6 +30,7 @@ export type EffectiveSetting = {
   isSet: boolean;
   envVar?: string;
   label: string;
+  description: string;
   group: string;
   pendingRestart: boolean;
 };
@@ -220,6 +221,7 @@ export function createAppConfigService(options: AppConfigServiceOptions = {}): A
       isSet: effective.source !== "default",
       envVar: definition.envOverride?.varName,
       label: definition.label,
+      description: definition.description,
       group: definition.group,
       pendingRestart: settingPendingRestart(key),
     };
@@ -315,6 +317,7 @@ export function createAppConfigService(options: AppConfigServiceOptions = {}): A
         key: knownKey,
         oldValue: auditOldValue,
         newValue: auditNewValue,
+        db: getDb(),
       });
 
       storedEffective = await computeEffective();

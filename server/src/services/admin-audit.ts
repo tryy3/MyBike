@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
-import { db } from "../db/index.js";
+import { db, type AppDb } from "../db/index.js";
 
 export const SERVER_RESTART_AUDIT_KEY = "server.restart";
 
@@ -13,8 +13,10 @@ export async function writeAdminAudit(input: {
   key: string;
   oldValue: string | null;
   newValue: string | null;
+  db?: AppDb;
 }): Promise<void> {
-  await db.run(sql`
+  const dbClient = input.db ?? db;
+  await dbClient.run(sql`
     INSERT INTO config_audit_log (
       id,
       actor_user_id,
