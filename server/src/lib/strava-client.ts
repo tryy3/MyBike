@@ -354,8 +354,23 @@ function parseRefreshTokenResponse(raw: unknown, fallbackScope?: string): Strava
   return parseTokenFields(raw, fallbackScope);
 }
 
-export async function exchangeStravaCode(code: string): Promise<StravaTokenResponse> {
-  const { clientId, clientSecret } = requireStravaCredentials();
+export interface StravaOAuthCredentials {
+  clientId: string;
+  clientSecret: string;
+}
+
+/**
+ * Exchanges an OAuth `code` for tokens. Pass `credentials` explicitly for
+ * login flows backed by `oauth.providers.strava.*` config (see
+ * `buildStravaOAuthConfig()`); callers that omit it fall back to
+ * `STRAVA_CLIENT_ID`/`STRAVA_CLIENT_SECRET` env vars (legacy `/api/strava`
+ * sync path, pending migration to `integration.strava.*`).
+ */
+export async function exchangeStravaCode(
+  code: string,
+  credentials?: StravaOAuthCredentials,
+): Promise<StravaTokenResponse> {
+  const { clientId, clientSecret } = credentials ?? requireStravaCredentials();
   const raw = await fetchJson(STRAVA_OAUTH_URL, {
     method: "POST",
     headers: { "content-type": "application/json" },
