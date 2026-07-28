@@ -1,6 +1,6 @@
 import { bikeInsertSchema } from "./schemas/bike.js";
 import { APP_PERMISSIONS, APP_ROLES } from "./schemas/admin-permissions.js";
-import { APP_SETTING_KEYS } from "./schemas/app-settings.js";
+import { APP_SETTING_KEYS, SETTING_VALUE_SOURCES } from "./schemas/app-settings.js";
 import {
   COMPONENT_CSV_COLUMNS,
   COMPONENT_IMPORT_MAX_BYTES,
@@ -33,17 +33,40 @@ describe("admin permissions and app settings constants", () => {
     expect(APP_ROLES).toEqual(["admin", "user"]);
   });
 
-  it("exports the Phase 1 setting keys", () => {
-    expect(APP_SETTING_KEYS).toHaveLength(7);
+  it("exports the full app setting keys", () => {
+    expect(APP_SETTING_KEYS).toHaveLength(26);
     expect(APP_SETTING_KEYS).toEqual([
       "logging.level",
+      "logging.toFile",
+      "logging.filePath",
+      "logging.redact",
       "graphql.timing",
       "strava.webhook.pollIntervalMs",
       "strava.webhook.proxyApiKey",
-      "logging.toFile",
+      "strava.webhook.proxyUrl",
+      "strava.webhook.subscriptionId",
       "betterAuth.baseUrl",
       "client.url",
+      "oauth.providers.tsidp.enabled",
+      "oauth.providers.tsidp.clientId",
+      "oauth.providers.tsidp.clientSecret",
+      "oauth.providers.tsidp.issuer",
+      "oauth.providers.tsidp.scopes",
+      "oauth.providers.strava.enabled",
+      "oauth.providers.strava.clientId",
+      "oauth.providers.strava.clientSecret",
+      "oauth.providers.strava.scopes",
+      "integration.strava.enabled",
+      "integration.strava.inheritCredentials",
+      "integration.strava.clientId",
+      "integration.strava.clientSecret",
+      "integration.strava.redirectUri",
+      "integration.strava.scopes",
     ]);
+  });
+
+  it("includes inherited in setting value sources", () => {
+    expect(SETTING_VALUE_SOURCES).toContain("inherited");
   });
 });
 
