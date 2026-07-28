@@ -6,7 +6,7 @@ import {
   GRAPHQL_API_KEY_SCOPE_LABELS,
   type GraphQLApiKeyScopeId,
 } from "shared";
-import { SettingsNav } from "@/components/SettingsNav";
+import { SettingsLayout } from "@/components/SettingsLayout";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -114,16 +114,7 @@ export function ApiKeysPage() {
   const mcpUrl = typeof window !== "undefined" ? `${window.location.origin}/mcp` : "/mcp";
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage integrations and programmatic access to your bike data.
-        </p>
-      </div>
-
-      <SettingsNav active="/settings/api-keys" />
-
+    <SettingsLayout active="/settings/api-keys">
       <div className="flex flex-col gap-1">
         <h2 className="text-lg font-semibold tracking-tight">API keys</h2>
         <p className="text-sm text-muted-foreground">
@@ -337,6 +328,6 @@ MYBIKE_API_KEY=mbk_<your-key>`}
         loadingLabel="Revoking…"
         onConfirm={handleRevoke}
       />
-    </div>
+    </SettingsLayout>
   );
 }

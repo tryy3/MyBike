@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Loader2Icon, ShieldIcon, UsersIcon } from "lucide-react";
 import { toast } from "sonner";
-import { SettingsNav } from "@/components/SettingsNav";
+import { SettingsLayout } from "@/components/SettingsLayout";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -61,16 +61,7 @@ export function AdminUsersPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage integrations, programmatic access, and administrator-only runtime settings.
-        </p>
-      </div>
-
-      <SettingsNav active="/settings/admin/users" />
-
+    <SettingsLayout active="/settings/admin/users">
       <div className="flex flex-col gap-1">
         <h2 className="text-lg font-semibold tracking-tight">Admin users</h2>
         <p className="text-sm text-muted-foreground">
@@ -163,6 +154,6 @@ export function AdminUsersPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </SettingsLayout>
   );
 }

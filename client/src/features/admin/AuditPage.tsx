@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { HistoryIcon, Loader2Icon } from "lucide-react";
-import { SettingsNav } from "@/components/SettingsNav";
+import { SettingsLayout } from "@/components/SettingsLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -35,16 +35,7 @@ export function AdminAuditPage() {
   }, []);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage integrations, programmatic access, and administrator-only runtime settings.
-        </p>
-      </div>
-
-      <SettingsNav active="/settings/admin/audit" />
-
+    <SettingsLayout active="/settings/admin/audit">
       <div className="flex flex-col gap-1">
         <h2 className="text-lg font-semibold tracking-tight">Admin audit</h2>
         <p className="text-sm text-muted-foreground">
@@ -106,6 +97,6 @@ export function AdminAuditPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </SettingsLayout>
   );
 }

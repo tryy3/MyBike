@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2Icon, RefreshCwIcon, SaveIcon, SettingsIcon } from "lucide-react";
 import { toast } from "sonner";
-import { SettingsNav } from "@/components/SettingsNav";
+import { SettingsLayout } from "@/components/SettingsLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -171,16 +171,7 @@ export function AdminConfigurationPage() {
   const isSaving = updateSettings.isPending;
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage integrations, programmatic access, and administrator-only runtime settings.
-        </p>
-      </div>
-
-      <SettingsNav active="/settings/admin/configuration" />
-
+    <SettingsLayout active="/settings/admin/configuration">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-1">
           <h2 className="text-lg font-semibold tracking-tight">Admin configuration</h2>
@@ -375,6 +366,6 @@ export function AdminConfigurationPage() {
           ))}
         </>
       )}
-    </div>
+    </SettingsLayout>
   );
 }
