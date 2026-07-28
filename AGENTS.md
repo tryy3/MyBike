@@ -84,7 +84,6 @@ In GitHub **Settings → Branches** for `master`, require the **CI / Check and t
   On boot, missing rows may be **seeded once** from legacy env (`seedFromEnv`); afterward DB > default (plus inherit). Leftover env is ignored with a warning — remove it after seed.
   Migrations seed `admin@example.com` / `admin123`; change its password or delete it after promoting a real admin.
   Admin APIs are GraphQL-only (`adminSettings`, `adminUsers`, `adminConfigAudit`, admin mutations); UI lives under `/settings/admin/*`.
-  See `docs/admin-runtime-config-migration.md`.
   Operator migration guide: `docs/admin-runtime-config-migration.md` (env → registry map, deploy steps, Strava login vs sync + inherit).
 - **Icon accessibility:** prefer **icon + visible text** so the action is obvious without hover. When space is tight (menus, toolbars, quick-access / icon-sm row actions), use **icon + tooltip** (shadcn `Tooltip` + `aria-label`). Never ship an icon-only control with no visible or tooltip label — even for “obvious” icons (edit, delete, archive, etc.). Screen readers still need a clear `aria-label`; tooltips cover sighted users who don’t recognize the glyph.
 - **Mutation pending feedback:** for list/row actions that hit the API (archive, unarchive, activate, …), prefer **button spinner + row pending** through mutation _and_ query refetch — not optimistic UI. Scope busy to the acting row; keep toast for success/error after settle. Latency should stay visible so slow GraphQL/Turso paths are obvious while dogfooding.
