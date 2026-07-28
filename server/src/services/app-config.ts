@@ -37,6 +37,11 @@ export type EffectiveSetting = {
 
 type ChangeHandler = (value: unknown) => void;
 
+export type AppConfigUpdate = {
+  key: string;
+  value: unknown;
+};
+
 export type AppConfigService = {
   load(): Promise<void>;
   isLoaded(): boolean;
@@ -46,6 +51,10 @@ export type AppConfigService = {
   set(
     key: string,
     value: unknown,
+    actorUserId: string | null,
+  ): Promise<{ pendingRestart: boolean }>;
+  setMany(
+    updates: AppConfigUpdate[],
     actorUserId: string | null,
   ): Promise<{ pendingRestart: boolean }>;
   onChange(key: string, fn: ChangeHandler): () => void;
@@ -231,6 +240,85 @@ export function createAppConfigService(options: AppConfigServiceOptions = {}): A
     await getDb().run(sql`DELETE FROM app_runtime_state WHERE key = ${PENDING_RESTART_KEY}`);
   }
 
+  async function setMany(
+    updates: AppConfigUpdate[],
+    actorUserId: string | null,
+  ): Promise<{ pendingRestart: boolean }> {
+    ensureLoaded();
+    if (updates.length === 0) {
+      return { pendingRestart: computePendingRestart() };
+    }
+
+    // Validate and prepare every update before any writes so a late failure
+    // cannot leave earlier keys partially persisted.
+    const prepared = updates.map((update) => {
+      const knownKey = assertKnownKey(update.key);
+      const definition = SETTINGS_REGISTRY[knownKey];
+      const parsed = definition.schema.parse(update.value);
+
+      if (definition.secret && parsed === "") {
+        throw new Error(`Secret app setting ${knownKey} requires a non-empty value`);
+      }
+
+      const previous = storedEffective.get(knownKey);
+      const plaintext = JSON.stringify(parsed);
+      const storedValue = definition.secret
+        ? encryptSecret(plaintext, getEncryptionKey())
+        : plaintext;
+
+      return {
+        knownKey,
+        definition,
+        storedValue,
+        auditOldValue: definition.secret ? "***" : JSON.stringify(previous?.value),
+        auditNewValue: definition.secret ? "***" : plaintext,
+      };
+    });
+
+    const now = Date.now();
+    await getDb().transaction(async (tx) => {
+      for (const item of prepared) {
+        await tx.run(sql`
+          INSERT INTO app_settings (key, value, is_secret, updated_at, updated_by)
+          VALUES (
+            ${item.knownKey},
+            ${item.storedValue},
+            ${item.definition.secret ? 1 : 0},
+            ${now},
+            ${actorUserId}
+          )
+          ON CONFLICT(key) DO UPDATE SET
+            value = excluded.value,
+            is_secret = excluded.is_secret,
+            updated_at = excluded.updated_at,
+            updated_by = excluded.updated_by
+        `);
+        await writeAdminAudit({
+          actorUserId,
+          key: item.knownKey,
+          oldValue: item.auditOldValue,
+          newValue: item.auditNewValue,
+          db: tx,
+        });
+      }
+    });
+
+    storedEffective = await computeEffective();
+
+    for (const item of prepared) {
+      if (item.definition.effect !== "hotReload") continue;
+      const current = storedEffective.get(item.knownKey);
+      if (!current) continue;
+      bootSnapshot.set(item.knownKey, { ...current, value: cloneValue(current.value) });
+      for (const subscriber of subscribers.get(item.knownKey) ?? []) {
+        subscriber(current.value);
+      }
+    }
+
+    await persistPendingRestart();
+    return { pendingRestart: computePendingRestart() };
+  }
+
   return {
     async load(): Promise<void> {
       storedEffective = await computeEffective();
@@ -279,62 +367,10 @@ export function createAppConfigService(options: AppConfigServiceOptions = {}): A
       value: unknown,
       actorUserId: string | null,
     ): Promise<{ pendingRestart: boolean }> {
-      ensureLoaded();
-      const knownKey = assertKnownKey(key);
-      const definition = SETTINGS_REGISTRY[knownKey];
-      const parsed = definition.schema.parse(value);
-
-      if (definition.secret && parsed === "") {
-        throw new Error(`Secret app setting ${knownKey} requires a non-empty value`);
-      }
-
-      const previous = storedEffective.get(knownKey);
-      const plaintext = JSON.stringify(parsed);
-      const storedValue = definition.secret
-        ? encryptSecret(plaintext, getEncryptionKey())
-        : plaintext;
-      const auditOldValue = definition.secret ? "***" : JSON.stringify(previous?.value);
-      const auditNewValue = definition.secret ? "***" : plaintext;
-      const now = Date.now();
-
-      await getDb().run(sql`
-        INSERT INTO app_settings (key, value, is_secret, updated_at, updated_by)
-        VALUES (
-          ${knownKey},
-          ${storedValue},
-          ${definition.secret ? 1 : 0},
-          ${now},
-          ${actorUserId}
-        )
-        ON CONFLICT(key) DO UPDATE SET
-          value = excluded.value,
-          is_secret = excluded.is_secret,
-          updated_at = excluded.updated_at,
-          updated_by = excluded.updated_by
-      `);
-      await writeAdminAudit({
-        actorUserId,
-        key: knownKey,
-        oldValue: auditOldValue,
-        newValue: auditNewValue,
-        db: getDb(),
-      });
-
-      storedEffective = await computeEffective();
-
-      if (definition.effect === "hotReload") {
-        const current = storedEffective.get(knownKey);
-        if (current) {
-          bootSnapshot.set(knownKey, { ...current, value: cloneValue(current.value) });
-          for (const subscriber of subscribers.get(knownKey) ?? []) {
-            subscriber(current.value);
-          }
-        }
-      }
-
-      await persistPendingRestart();
-      return { pendingRestart: computePendingRestart() };
+      return setMany([{ key, value }], actorUserId);
     },
+
+    setMany,
 
     onChange(key: string, fn: ChangeHandler): () => void {
       const knownKey = assertKnownKey(key);

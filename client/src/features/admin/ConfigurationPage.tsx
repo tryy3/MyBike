@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ComponentType, type SVGProps } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentType, type SVGProps } from "react";
 import {
   ChevronDownIcon,
   HexagonIcon,
@@ -33,9 +33,15 @@ import {
   useUpdateAdminSettings,
   type UpdateAdminSettingInput,
 } from "./api";
+import {
+  draftsFromSettings,
+  initialConfigDraftValue,
+  mergeConfigDrafts,
+  type ConfigDraftValue,
+} from "./config-draft";
 import type { AdminSettingGql } from "@/lib/graphql/operations";
 
-type DraftValue = string | boolean;
+type DraftValue = ConfigDraftValue;
 type SettingKind = "logLevel" | "boolean" | "number" | "url" | "text" | "secret";
 type IconComponent = ComponentType<SVGProps<SVGSVGElement> & { className?: string }>;
 
@@ -69,10 +75,7 @@ function settingKind(setting: AdminSettingGql): SettingKind {
 }
 
 function initialDraftValue(setting: AdminSettingGql): DraftValue {
-  if (setting.isSecret) return "";
-  if (typeof setting.value === "boolean") return setting.value;
-  if (setting.value === null || setting.value === undefined) return "";
-  return String(setting.value);
+  return initialConfigDraftValue(setting);
 }
 
 function valueForSubmit(setting: AdminSettingGql, value: DraftValue): unknown {
@@ -306,6 +309,8 @@ export function AdminConfigurationPage() {
   const restartServer = useRestartServer();
   const [draftValues, setDraftValues] = useState<Record<string, DraftValue>>({});
   const [dirtyKeys, setDirtyKeys] = useState<Set<string>>(() => new Set());
+  const dirtyKeysRef = useRef(dirtyKeys);
+  dirtyKeysRef.current = dirtyKeys;
   const [filter, setFilter] = useState("");
   const [openKeys, setOpenKeys] = useState<Set<string>>(() => new Set());
 
@@ -318,12 +323,8 @@ export function AdminConfigurationPage() {
 
   useEffect(() => {
     if (!settings.data) return;
-    const nextValues: Record<string, DraftValue> = {};
-    for (const setting of settings.data.settings) {
-      nextValues[setting.key] = initialDraftValue(setting);
-    }
-    setDraftValues(nextValues);
-    setDirtyKeys(new Set());
+    const dirty = dirtyKeysRef.current;
+    setDraftValues((current) => mergeConfigDrafts(settings.data.settings, current, dirty));
   }, [settings.data]);
 
   const filteredSettings = useMemo(() => {
@@ -390,7 +391,9 @@ export function AdminConfigurationPage() {
     if (!inputs.length) return;
 
     try {
-      await updateSettings.mutateAsync(inputs);
+      const payload = await updateSettings.mutateAsync(inputs);
+      setDirtyKeys(new Set());
+      setDraftValues(draftsFromSettings(payload.settings));
       toast.success("Configuration saved");
     } catch (error) {
       toast.error("Could not save configuration", {

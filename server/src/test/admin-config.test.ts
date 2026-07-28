@@ -248,4 +248,60 @@ describe("app config service", () => {
       },
     ]);
   });
+
+  it("applies setMany atomically and rolls back when a later value is invalid", async () => {
+    const service = createAppConfigService({ env: TEST_ENV });
+    await service.load();
+
+    await expect(
+      service.setMany(
+        [
+          { key: "logging.level", value: "debug" },
+          { key: "graphql.timing", value: "not-a-boolean" },
+        ],
+        ACTOR_USER_ID,
+      ),
+    ).rejects.toThrow();
+
+    expect(service.get<string>("logging.level")).toBe("info");
+    expect(service.getEffectiveMeta("logging.level").source).toBe("default");
+
+    const settingRows = await db.all<{ key: string }>(sql`
+      SELECT key FROM app_settings WHERE key IN ('logging.level', 'graphql.timing')
+    `);
+    expect(settingRows).toEqual([]);
+
+    const auditRows = await db.all<{ key: string }>(sql`
+      SELECT key FROM config_audit_log
+    `);
+    expect(auditRows).toEqual([]);
+  });
+
+  it("persists multiple setMany updates in one batch", async () => {
+    const service = createAppConfigService({ env: TEST_ENV });
+    await service.load();
+    const seen: unknown[] = [];
+    const unsubscribe = service.onChange("logging.level", (value) => {
+      seen.push(value);
+    });
+
+    const result = await service.setMany(
+      [
+        { key: "logging.level", value: "warn" },
+        { key: "graphql.timing", value: true },
+      ],
+      ACTOR_USER_ID,
+    );
+    unsubscribe();
+
+    expect(result).toEqual({ pendingRestart: false });
+    expect(service.get<string>("logging.level")).toBe("warn");
+    expect(service.get<boolean>("graphql.timing")).toBe(true);
+    expect(seen).toEqual(["warn"]);
+
+    const auditKeys = await db.all<{ key: string }>(sql`
+      SELECT key FROM config_audit_log ORDER BY key
+    `);
+    expect(auditKeys.map((row) => row.key)).toEqual(["graphql.timing", "logging.level"]);
+  });
 });

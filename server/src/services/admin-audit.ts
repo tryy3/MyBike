@@ -13,7 +13,8 @@ export async function writeAdminAudit(input: {
   key: string;
   oldValue: string | null;
   newValue: string | null;
-  db?: AppDb;
+  /** Optional DB or transaction client with `run`. */
+  db?: Pick<AppDb, "run">;
 }): Promise<void> {
   const dbClient = input.db ?? db;
   await dbClient.run(sql`

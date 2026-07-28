@@ -149,12 +149,13 @@ builder.mutationField("updateAdminSettings", (t) =>
     },
     resolve: async (_root, args, context) => {
       const actorUserId = requireAppPermission(context, "config.write");
-      for (const input of args.inputs) {
+      const updates = args.inputs.map((input) => {
         if (input.value === null || input.value === undefined) {
           throw new HttpError(400, `Admin setting ${input.key} requires a value`);
         }
-        await appConfig.set(input.key, input.value, actorUserId);
-      }
+        return { key: input.key, value: input.value };
+      });
+      await appConfig.setMany(updates, actorUserId);
       return adminSettingsPayload();
     },
   }),
