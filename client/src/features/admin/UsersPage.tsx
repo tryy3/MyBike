@@ -58,12 +58,23 @@ export function AdminUsersPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (currentUserId == null) return;
+    setDrafts((current) => {
+      if (current[currentUserId] == null) return current;
+      const next = { ...current };
+      delete next[currentUserId];
+      return next;
+    });
+  }, [currentUserId]);
+
   const serverUsers = users.data ?? [];
-  const dirty = dirtyRoleAssignments(serverUsers, drafts);
+  const dirty =
+    currentUserId == null ? [] : dirtyRoleAssignments(serverUsers, drafts, currentUserId);
   const dirtyCount = dirty.length;
 
   function setDraftRole(user: AdminUserGql, role: AdminUserRoleGql): void {
-    if (currentUserId != null && user.id === currentUserId) return;
+    if (currentUserId == null || user.id === currentUserId) return;
     setDrafts((current) => applyRoleDraft(current, user.id, user.role, role));
   }
 
@@ -179,7 +190,7 @@ export function AdminUsersPage() {
                           ) : (
                             <Select
                               value={selectedRole}
-                              disabled={isSaving}
+                              disabled={currentUserId == null || isSaving}
                               onValueChange={(role) => setDraftRole(user, role as AdminUserRoleGql)}
                             >
                               <SelectTrigger

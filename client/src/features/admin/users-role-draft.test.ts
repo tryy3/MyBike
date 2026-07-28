@@ -48,6 +48,16 @@ describe("dirtyRoleAssignments", () => {
   it("ignores draft keys for users not in the list", () => {
     expect(dirtyRoleAssignments([{ id: "u1", role: "user" }], { gone: "admin" })).toEqual([]);
   });
+
+  it("excludes the current user's draft", () => {
+    const users = [
+      { id: "self", role: "admin" as const },
+      { id: "other", role: "user" as const },
+    ];
+    expect(dirtyRoleAssignments(users, { self: "user", other: "admin" }, "self")).toEqual([
+      { userId: "other", role: "admin" },
+    ]);
+  });
 });
 
 describe("reconcileRoleDrafts", () => {

@@ -26,9 +26,11 @@ export function applyRoleDraft(
 export function dirtyRoleAssignments(
   users: Array<{ id: string; role: AdminRole }>,
   drafts: Record<string, AdminRole>,
+  excludedUserId?: string,
 ): Array<{ userId: string; role: AdminRole }> {
   const out: Array<{ userId: string; role: AdminRole }> = [];
   for (const user of users) {
+    if (user.id === excludedUserId) continue;
     const draft = drafts[user.id];
     if (draft != null && draft !== user.role) {
       out.push({ userId: user.id, role: draft });
