@@ -1,6 +1,6 @@
 import "./load-env.js";
 import type { Server } from "node:http";
-import { flushLogs, logger } from "./lib/logging/index.js";
+import { flushLogs, initLogging, logger } from "./lib/logging/index.js";
 
 let server: Server | undefined;
 let webhookPollTimer: ReturnType<typeof setInterval> | undefined;
@@ -17,18 +17,24 @@ async function main(): Promise<void> {
   const { initDatabase } = await import("./db/index.js");
   await initDatabase();
 
+  // DB connect + migrations run before app config can load (config is
+  // DB-backed), so the config-backed logger isn't ready yet — this path logs
+  // to console rather than the shared logger.
   const { applyMigrations } = await import("./db/migrate.js");
   if (process.env.RUN_MIGRATIONS === "true") {
     await applyMigrations();
-    logger.info("Migrations applied successfully");
+    console.info("Migrations applied successfully");
   }
 
   const { appConfig } = await import("./services/app-config.js");
-  const { applyProcessLoggerLevel, syncAuthEnvFromConfig } =
+  const { applyProcessLoggerLevel, syncAuthEnvFromConfig, syncLoggingEnvFromConfig } =
     await import("./lib/runtime-config.js");
 
   await appConfig.load();
   await appConfig.markBootComplete();
+
+  syncLoggingEnvFromConfig(appConfig);
+  initLogging();
 
   runtimeCleanup.push(applyProcessLoggerLevel(appConfig));
 
@@ -86,6 +92,7 @@ async function main(): Promise<void> {
 }
 
 function shutdown(signal: string): void {
+  initLogging();
   logger.info({ signal }, "Shutting down");
   clearWebhookPolling();
   for (const cleanup of runtimeCleanup.splice(0)) {
@@ -102,6 +109,10 @@ process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
 
 void main().catch((err) => {
+  // main() may fail before initLogging() runs (e.g. DB connect failure);
+  // initLogging() is idempotent, so calling it here guarantees the fatal
+  // error is captured by the real logger rather than being lost.
+  initLogging();
   logger.fatal({ err }, "Server failed to start");
   flushLogs(() => {
     process.exit(1);

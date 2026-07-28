@@ -16,13 +16,7 @@ export interface RequestTiming {
 }
 
 export function isGraphQLTimingEnabled(): boolean {
-  const configured = getLoadedAppConfigValue<boolean>("graphql.timing");
-  if (configured !== null) {
-    return configured;
-  }
-
-  const flag = process.env.GRAPHQL_TIMING?.trim().toLowerCase();
-  return flag === "1" || flag === "true" || flag === "yes";
+  return getLoadedAppConfigValue<boolean>("graphql.timing") ?? false;
 }
 
 export function createRequestTiming(enabled = isGraphQLTimingEnabled()): RequestTiming {

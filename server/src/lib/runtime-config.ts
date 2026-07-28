@@ -36,3 +36,25 @@ export function syncAuthEnvFromConfig(
     env.CLIENT_URL = config.get<string>("client.url");
   }
 }
+
+/**
+ * Writes the effective `logging.*` config into `LOG_*` env vars, always
+ * overwriting whatever `.env` set. Must run before `initLogging()` so the
+ * DB-backed `logging.toFile` / `logging.filePath` / `logging.redact` values
+ * apply. `LOG_*` are not registry `envOverride`s — operators should clear
+ * them from `.env` after migrating to Admin → Configuration.
+ */
+export function syncLoggingEnvFromConfig(
+  config: AppConfigService = appConfig,
+  env: NodeJS.ProcessEnv = process.env,
+): void {
+  env.LOG_LEVEL = config.get<string>("logging.level");
+  env.LOG_TO_FILE = config.get<boolean>("logging.toFile") ? "true" : "false";
+  const filePath = config.get<string>("logging.filePath");
+  if (filePath.trim()) {
+    env.LOG_FILE_PATH = filePath;
+  } else {
+    delete env.LOG_FILE_PATH;
+  }
+  env.LOG_REDACT = config.get<boolean>("logging.redact") ? "true" : "false";
+}
