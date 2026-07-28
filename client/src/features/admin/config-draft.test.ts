@@ -91,10 +91,10 @@ describe("draftsFromSettings", () => {
 });
 
 describe("editableDirtyConfigSettings", () => {
-  it("excludes read-only, environment, and inherited settings from submits", () => {
+  it("excludes read-only and inherited settings from submits", () => {
     expect(
       editableDirtyConfigSettings(
-        [logging, readOnly, { ...timing, source: "env" }, inherited],
+        [logging, readOnly, inherited],
         new Set([logging.key, readOnly.key, timing.key, inherited.key]),
       ).map((setting) => setting.key),
     ).toEqual([logging.key]);

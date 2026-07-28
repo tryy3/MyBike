@@ -244,11 +244,6 @@ function SettingRow({
                   database
                 </span>
               ) : null}
-              {setting.source === "env" ? (
-                <span className="text-[11px] font-semibold text-sky-700 dark:text-sky-400">
-                  env
-                </span>
-              ) : null}
               {setting.source === "inherited" ? (
                 <span className="text-[11px] font-semibold text-violet-700 dark:text-violet-400">
                   inherited
@@ -293,13 +288,6 @@ function SettingRow({
                 <p className="mt-1 text-xs text-muted-foreground">
                   Current value: {setting.isSet ? "••••" : "not set"}. Type a new value only when
                   rotating this secret.
-                </p>
-              ) : null}
-              {setting.source === "env" ? (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {setting.envVar
-                    ? `${setting.envVar} is set, so the environment value wins and this field is read-only.`
-                    : "This value is controlled by the environment and is read-only."}
                 </p>
               ) : null}
               {setting.source === "inherited" ? (
@@ -441,7 +429,8 @@ export function AdminConfigurationPage() {
         <div className="flex flex-col gap-1">
           <h2 className="text-lg font-semibold tracking-tight">Admin configuration</h2>
           <p className="text-sm text-muted-foreground">
-            Runtime settings merge from environment, database overrides, and defaults.
+            Runtime settings are stored in the database; missing values use code defaults. Env vars
+            only seed empty rows on first boot.
           </p>
         </div>
         <Button onClick={() => void saveChanges()} disabled={dirtyCount === 0 || isSaving}>
@@ -511,8 +500,6 @@ export function AdminConfigurationPage() {
                 <CardTitle>Runtime settings</CardTitle>
                 <CardDescription>
                   Precedence:{" "}
-                  <span className="font-medium text-sky-700 dark:text-sky-400">env</span>
-                  {" > "}
                   <span className="font-medium text-emerald-700 dark:text-emerald-400">
                     database
                   </span>
