@@ -35,7 +35,9 @@ import {
 } from "./api";
 import {
   draftsFromSettings,
+  editableDirtyConfigSettings,
   initialConfigDraftValue,
+  isConfigSettingReadOnly,
   mergeConfigDrafts,
   type ConfigDraftValue,
 } from "./config-draft";
@@ -247,6 +249,11 @@ function SettingRow({
                   env
                 </span>
               ) : null}
+              {setting.source === "inherited" ? (
+                <span className="text-[11px] font-semibold text-violet-700 dark:text-violet-400">
+                  inherited
+                </span>
+              ) : null}
               <ChevronDownIcon
                 className={cn(
                   "size-3.5 text-muted-foreground transition-transform",
@@ -293,6 +300,12 @@ function SettingRow({
                   {setting.envVar
                     ? `${setting.envVar} is set, so the environment value wins and this field is read-only.`
                     : "This value is controlled by the environment and is read-only."}
+                </p>
+              ) : null}
+              {setting.source === "inherited" ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Inherited from {setting.inheritFrom ?? "its parent setting"}; turn off{" "}
+                  {setting.inheritWhen ?? "the inheritance setting"} to edit.
                 </p>
               ) : null}
             </div>
@@ -350,6 +363,11 @@ export function AdminConfigurationPage() {
     return Array.from(groups.entries());
   }, [filteredSettings]);
 
+  const editableDirtySettings = useMemo(
+    () => editableDirtyConfigSettings<AdminSettingGql>(settings.data?.settings ?? [], dirtyKeys),
+    [dirtyKeys, settings.data?.settings],
+  );
+
   function updateDraft(setting: AdminSettingGql, value: DraftValue): void {
     setDraftValues((current) => ({ ...current, [setting.key]: value }));
     setDirtyKeys((current) => {
@@ -376,8 +394,7 @@ export function AdminConfigurationPage() {
     if (!settings.data) return;
     const inputs: UpdateAdminSettingInput[] = [];
     try {
-      for (const setting of settings.data.settings) {
-        if (!dirtyKeys.has(setting.key) || setting.source === "env") continue;
+      for (const setting of editableDirtySettings) {
         inputs.push({
           key: setting.key,
           value: valueForSubmit(setting, draftValues[setting.key] ?? ""),
@@ -415,7 +432,7 @@ export function AdminConfigurationPage() {
     }
   }
 
-  const dirtyCount = dirtyKeys.size;
+  const dirtyCount = editableDirtySettings.length;
   const isSaving = updateSettings.isPending;
 
   return (
@@ -533,7 +550,7 @@ export function AdminConfigurationPage() {
                             key={setting.key}
                             setting={setting}
                             draftValue={draftValues[setting.key] ?? initialDraftValue(setting)}
-                            disabled={setting.source === "env"}
+                            disabled={isConfigSettingReadOnly(setting)}
                             isSaving={isSaving}
                             open={openKeys.has(setting.key)}
                             onOpenChange={(open) => setRowOpen(setting.key, open)}

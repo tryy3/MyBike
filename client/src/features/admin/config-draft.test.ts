@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
   draftsFromSettings,
+  editableDirtyConfigSettings,
   initialConfigDraftValue,
   mergeConfigDrafts,
   type ConfigDraftSetting,
@@ -22,6 +23,20 @@ const secret: ConfigDraftSetting = {
   key: "strava.webhook.proxyApiKey",
   isSecret: true,
   value: null,
+};
+
+const readOnly: ConfigDraftSetting = {
+  key: "oauth.providers.strava.clientId",
+  isSecret: false,
+  value: "client-id",
+  readOnly: true,
+};
+
+const inherited: ConfigDraftSetting = {
+  key: "strava.enabled",
+  isSecret: false,
+  value: true,
+  source: "inherited",
 };
 
 describe("initialConfigDraftValue", () => {
@@ -72,5 +87,16 @@ describe("draftsFromSettings", () => {
       "logging.level": "info",
       "strava.webhook.proxyApiKey": "",
     });
+  });
+});
+
+describe("editableDirtyConfigSettings", () => {
+  it("excludes read-only, environment, and inherited settings from submits", () => {
+    expect(
+      editableDirtyConfigSettings(
+        [logging, readOnly, { ...timing, source: "env" }, inherited],
+        new Set([logging.key, readOnly.key, timing.key, inherited.key]),
+      ).map((setting) => setting.key),
+    ).toEqual([logging.key]);
   });
 });

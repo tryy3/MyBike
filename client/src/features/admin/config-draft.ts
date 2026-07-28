@@ -4,6 +4,8 @@ export type ConfigDraftSetting = {
   key: string;
   isSecret: boolean;
   value: unknown;
+  readOnly?: boolean;
+  source?: "env" | "inherited" | "database" | "default";
 };
 
 export function initialConfigDraftValue(setting: ConfigDraftSetting): ConfigDraftValue {
@@ -43,4 +45,17 @@ export function draftsFromSettings(
     next[setting.key] = initialConfigDraftValue(setting);
   }
   return next;
+}
+
+export function editableDirtyConfigSettings<T extends ConfigDraftSetting>(
+  settings: T[],
+  dirtyKeys: ReadonlySet<string>,
+): T[] {
+  return settings.filter(
+    (setting) => dirtyKeys.has(setting.key) && !isConfigSettingReadOnly(setting),
+  );
+}
+
+export function isConfigSettingReadOnly(setting: ConfigDraftSetting): boolean {
+  return setting.readOnly || setting.source === "env" || setting.source === "inherited";
 }
