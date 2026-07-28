@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { bikes, components, stravaBikes } from "../db/schema.js";
 import type { BikeRow } from "../db/schema.js";
 import { db } from "../db/index.js";
-import { badRequest, notFound } from "../lib/errors.js";
+import { badRequest, HttpError, notFound } from "../lib/errors.js";
 import { getAuthContext, requireAuth } from "../lib/require-auth.js";
 import { parseBody } from "../lib/validation.js";
 import {
@@ -12,9 +12,10 @@ import {
   fetchStravaActivities,
   fetchStravaAthleteBikes,
   fetchStravaGearName,
+  getStravaIntegrationCredentials,
+  isStravaIntegrationEnabled,
   type StravaActivity,
 } from "../lib/strava-client.js";
-import { isStravaOAuthConfigured } from "../lib/strava-oauth.js";
 import { getSyncAfterSeconds, markSyncedNow } from "../lib/strava-sync-state.js";
 import { disconnectStravaUser, upsertStravaAccount } from "../lib/strava-account.js";
 import { detectImportDrift } from "../lib/strava-import-drift.js";
@@ -34,7 +35,7 @@ const OAUTH_STATE_COOKIE = "mybike_strava_state";
 export const stravaRouter = Router();
 
 stravaRouter.get("/config", (_req, res) => {
-  res.json({ configured: isStravaOAuthConfigured() });
+  res.json({ configured: isStravaIntegrationEnabled() });
 });
 
 interface GearAggregate {
@@ -49,6 +50,21 @@ interface GearAggregate {
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 stravaRouter.use(requireAuth);
+
+stravaRouter.use((_req, _res, next) => {
+  if (!isStravaIntegrationEnabled()) {
+    throw new HttpError(501, "Strava integration is not enabled");
+  }
+  next();
+});
+
+function requireIntegrationCredentials() {
+  try {
+    return getStravaIntegrationCredentials();
+  } catch (err) {
+    throw new HttpError(501, err instanceof Error ? err.message : "Strava is not configured");
+  }
+}
 
 function clientUrl(): string {
   return process.env.CLIENT_URL ?? "http://localhost:5173";
@@ -311,7 +327,7 @@ stravaRouter.get("/callback", async (req, res) => {
     throw badRequest("Invalid Strava OAuth callback");
   }
 
-  const token = await exchangeStravaCode(code);
+  const token = await exchangeStravaCode(code, requireIntegrationCredentials());
   await upsertStravaAccount(userId, token);
   req.log.info({ athleteId: token.athleteId, userId }, "Strava OAuth connected");
   res.setHeader(

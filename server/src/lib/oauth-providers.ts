@@ -7,7 +7,7 @@ export interface OAuthProviderFlags {
   tsidp: boolean;
 }
 
-/** Which social/OIDC login providers are configured via env. */
+/** Which social/OIDC login providers are configured via app config. */
 export function resolveOAuthProviderFlags(): OAuthProviderFlags {
   return {
     strava: isStravaOAuthConfigured(),

@@ -39,6 +39,8 @@ function mockActivityResponse(activity: {
 beforeEach(async () => {
   await db.run(sql`DELETE FROM app_settings`);
   await appConfig.load();
+  await appConfig.setMany([{ key: "integration.strava.enabled", value: true }], null);
+  await appConfig.load();
   await setLastProxyEventId(0);
   setStravaEventSourceForTests(null);
 });

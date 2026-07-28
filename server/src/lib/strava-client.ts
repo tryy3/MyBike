@@ -1,5 +1,6 @@
 import { HttpError } from "./errors.js";
 import { child } from "./logging/index.js";
+import { appConfig, getLoadedAppConfigValue } from "../services/app-config.js";
 
 const log = child({ component: "strava" });
 
@@ -107,13 +108,34 @@ function isCyclingActivity(raw: RawStravaActivity): boolean {
   return CYCLING_SPORT_TYPES.has(sport);
 }
 
-function requireStravaCredentials() {
-  const clientId = process.env.STRAVA_CLIENT_ID;
-  const clientSecret = process.env.STRAVA_CLIENT_SECRET;
+export interface StravaOAuthCredentials {
+  clientId: string;
+  clientSecret: string;
+}
+
+export function isStravaIntegrationEnabled(): boolean {
+  return getLoadedAppConfigValue<boolean>("integration.strava.enabled") === true;
+}
+
+/** Reads `integration.strava.clientId`/`clientSecret` (inherit applies automatically). */
+export function getStravaIntegrationCredentials(): StravaOAuthCredentials {
+  const clientId = appConfig.get<string>("integration.strava.clientId").trim();
+  const clientSecret = appConfig.get<string>("integration.strava.clientSecret").trim();
   if (!clientId || !clientSecret) {
-    throw new HttpError(501, "Strava is not configured");
+    throw new Error("Strava integration credentials are not configured");
   }
   return { clientId, clientSecret };
+}
+
+function requireStravaCredentials(): StravaOAuthCredentials {
+  if (!isStravaIntegrationEnabled()) {
+    throw new HttpError(501, "Strava is not configured");
+  }
+  try {
+    return getStravaIntegrationCredentials();
+  } catch {
+    throw new HttpError(501, "Strava is not configured");
+  }
 }
 
 function normalizeActivity(raw: RawStravaActivity): StravaActivity | null {
@@ -286,9 +308,8 @@ export async function fetchStravaGearName(
 
 export function buildStravaAuthorizationUrl(state: string): string {
   const { clientId } = requireStravaCredentials();
-  const redirectUri =
-    process.env.STRAVA_REDIRECT_URI ?? "http://localhost:3001/api/strava/callback";
-  const scopes = process.env.STRAVA_SCOPES ?? "read,activity:read_all,profile:read_all";
+  const redirectUri = appConfig.get<string>("integration.strava.redirectUri");
+  const scopes = appConfig.get<string>("integration.strava.scopes");
   const url = new URL("https://www.strava.com/oauth/authorize");
   url.searchParams.set("client_id", clientId);
   url.searchParams.set("redirect_uri", redirectUri);
@@ -354,17 +375,13 @@ function parseRefreshTokenResponse(raw: unknown, fallbackScope?: string): Strava
   return parseTokenFields(raw, fallbackScope);
 }
 
-export interface StravaOAuthCredentials {
-  clientId: string;
-  clientSecret: string;
-}
-
 /**
- * Exchanges an OAuth `code` for tokens. Pass `credentials` explicitly for
- * login flows backed by `oauth.providers.strava.*` config (see
- * `buildStravaOAuthConfig()`); callers that omit it fall back to
- * `STRAVA_CLIENT_ID`/`STRAVA_CLIENT_SECRET` env vars (legacy `/api/strava`
- * sync path, pending migration to `integration.strava.*`).
+ * Exchanges an OAuth `code` for tokens. Pass `credentials` explicitly when the
+ * caller has already resolved them — login flows use
+ * `oauth.providers.strava.*` (see `buildStravaOAuthConfig()`), the `/api/strava`
+ * sync callback uses `getStravaIntegrationCredentials()`
+ * (`integration.strava.*`). Callers that omit it fall back to
+ * `getStravaIntegrationCredentials()` via `requireStravaCredentials()`.
  */
 export async function exchangeStravaCode(
   code: string,
@@ -403,16 +420,22 @@ export async function refreshStravaAccessToken(
 }
 
 export async function revokeStravaAccessToken(accessToken: string): Promise<void> {
-  const clientId = process.env.STRAVA_CLIENT_ID;
-  const clientSecret = process.env.STRAVA_CLIENT_SECRET;
-  if (!clientId || !clientSecret) return;
+  if (!isStravaIntegrationEnabled()) return;
 
-  const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+  let clientId: string;
+  let clientSecret: string;
+  try {
+    ({ clientId, clientSecret } = getStravaIntegrationCredentials());
+  } catch {
+    return;
+  }
+
+  const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
   try {
     await fetch("https://www.strava.com/oauth/deauthorize", {
       method: "POST",
       headers: {
-        Authorization: `Basic ${credentials}`,
+        Authorization: `Basic ${basicAuth}`,
         "content-type": "application/x-www-form-urlencoded",
       },
       body: new URLSearchParams({ access_token: accessToken }),
