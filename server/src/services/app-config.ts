@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import type { AppSettingKey, SettingEffect, SettingValueSource } from "shared";
 import { db as defaultDb, type AppDb } from "../db/index.js";
@@ -8,6 +7,7 @@ import {
   SETTINGS_REGISTRY,
   type SettingDefinition,
 } from "../lib/settings-registry.js";
+import { writeAdminAudit } from "./admin-audit.js";
 
 type StoredSettingRow = {
   key: string;
@@ -310,24 +310,12 @@ export function createAppConfigService(options: AppConfigServiceOptions = {}): A
           updated_at = excluded.updated_at,
           updated_by = excluded.updated_by
       `);
-      await getDb().run(sql`
-        INSERT INTO config_audit_log (
-          id,
-          actor_user_id,
-          key,
-          old_value,
-          new_value,
-          created_at
-        )
-        VALUES (
-          ${randomUUID()},
-          ${actorUserId},
-          ${knownKey},
-          ${auditOldValue},
-          ${auditNewValue},
-          ${now}
-        )
-      `);
+      await writeAdminAudit({
+        actorUserId,
+        key: knownKey,
+        oldValue: auditOldValue,
+        newValue: auditNewValue,
+      });
 
       storedEffective = await computeEffective();
 
