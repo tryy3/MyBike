@@ -367,6 +367,24 @@ describe("processPendingWebhookEvents", () => {
     expect(result.errors?.[0]).toMatch(/fetch: proxy down/);
     await expect(getLastProxyEventId()).resolves.toBe(0);
   });
+
+  it("skips polling without touching the event source when integration is disabled", async () => {
+    await appConfig.setMany([{ key: "integration.strava.enabled", value: false }], null);
+    await appConfig.load();
+
+    let fetchEventsCalled = false;
+    setStravaEventSourceForTests({
+      async fetchEvents() {
+        fetchEventsCalled = true;
+        return { events: [], nextAfterId: null };
+      },
+    });
+
+    const result = await processPendingWebhookEvents();
+
+    expect(fetchEventsCalled).toBe(false);
+    expect(result).toEqual({ eventsProcessed: 0, activitiesImported: 0, skipped: 0 });
+  });
 });
 
 describe("POST /api/strava/sync with proxy", () => {

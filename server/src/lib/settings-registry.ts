@@ -231,7 +231,7 @@ const settingDefinitions = [
     secret: false,
     group: "Integration · Strava",
     label: "Enable Strava integration",
-    description: "Enable syncing activities from Strava.",
+    description: "Enable all Strava activity sync, including manual sync and webhook imports.",
   },
   {
     key: "integration.strava.inheritCredentials",

@@ -468,6 +468,43 @@ describe("Strava backfill", () => {
   });
 });
 
+describe("Strava integration disabled", () => {
+  async function disableStravaIntegration() {
+    await appConfig.setMany([{ key: "integration.strava.enabled", value: false }], null);
+    await appConfig.load();
+  }
+
+  it("returns 503 for sync routes once the integration is disabled", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    await connectStravaAccount(testUser.email);
+    await disableStravaIntegration();
+
+    await agent.post("/api/strava/sync").expect(503);
+    await agent.get("/api/strava/import/preview").expect(503);
+    await agent.post("/api/strava/backfill-components").expect(503);
+  });
+
+  it("still returns connection status when the integration is disabled", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    await connectStravaAccount(testUser.email);
+    await disableStravaIntegration();
+
+    const res = await agent.get("/api/strava/status").expect(200);
+    expect(res.body).toMatchObject({ connected: true, needsReconnect: false });
+  });
+
+  it("still allows disconnect when the integration is disabled", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    await connectStravaAccount(testUser.email);
+    await disableStravaIntegration();
+
+    await agent.post("/api/strava/disconnect").expect(200);
+
+    const res = await agent.get("/api/strava/status").expect(200);
+    expect(res.body).toMatchObject({ connected: false });
+  });
+});
+
 describe("Strava import drift", () => {
   it("returns warnings when Strava data drifted since preview snapshot", async () => {
     const { agent, user: testUser } = await createAuthenticatedAgent(app);

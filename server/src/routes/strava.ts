@@ -51,8 +51,15 @@ type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 stravaRouter.use(requireAuth);
 
-stravaRouter.use((_req, _res, next) => {
-  if (!isStravaIntegrationEnabled()) {
+/**
+ * Users must still be able to see their connection state and disconnect
+ * even after an admin disables the integration, so these two routes are
+ * exempt from the enabled-gate below.
+ */
+const INTEGRATION_GATE_EXEMPT_PATHS = new Set(["/status", "/disconnect"]);
+
+stravaRouter.use((req, _res, next) => {
+  if (!isStravaIntegrationEnabled() && !INTEGRATION_GATE_EXEMPT_PATHS.has(req.path)) {
     throw new HttpError(503, "Strava integration is not enabled");
   }
   next();

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { StravaWebhookProcessResult } from "shared";
 import { child, withLogContext } from "./logging/index.js";
 import { createStravaEventSource } from "./strava-event-source.js";
+import { isStravaIntegrationEnabled } from "./strava-client.js";
 import { getLastProxyEventId, setLastProxyEventId } from "./strava-webhook-cursor.js";
 import { processWebhookEvent } from "./strava-webhook-processor.js";
 
@@ -33,6 +34,10 @@ async function runPoll(): Promise<StravaWebhookProcessResult> {
   const pollId = randomUUID();
 
   return withLogContext({ pollId, operation: "webhook-poll" }, async () => {
+    if (!isStravaIntegrationEnabled()) {
+      return { eventsProcessed: 0, activitiesImported: 0, skipped: 0 };
+    }
+
     if (!eventSource) {
       return { eventsProcessed: 0, activitiesImported: 0, skipped: 0 };
     }

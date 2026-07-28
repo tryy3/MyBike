@@ -518,6 +518,11 @@ export function AdminConfigurationPage() {
                   </span>
                   {" > "}
                   <span className="text-muted-foreground">default</span>
+                  {". "}
+                  <span className="font-medium text-violet-700 dark:text-violet-400">
+                    Inherited
+                  </span>{" "}
+                  fields override this by copying another setting's value.
                 </CardDescription>
               </div>
               <Input
