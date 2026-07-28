@@ -53,7 +53,7 @@ stravaRouter.use(requireAuth);
 
 stravaRouter.use((_req, _res, next) => {
   if (!isStravaIntegrationEnabled()) {
-    throw new HttpError(501, "Strava integration is not enabled");
+    throw new HttpError(503, "Strava integration is not enabled");
   }
   next();
 });

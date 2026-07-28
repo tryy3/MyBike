@@ -88,8 +88,8 @@ export function buildStravaOAuthConfig(): GenericOAuthConfig {
     accessTokenExpiresIn: STRAVA_ACCESS_TOKEN_TTL_SECONDS,
     getToken: async ({ code }) => {
       // Pass credentials explicitly so login always uses oauth.providers.strava.*
-      // config, independent of STRAVA_CLIENT_ID/SECRET env vars used by the
-      // legacy /api/strava sync path (see exchangeStravaCode()).
+      // config, independent of integration.strava.* used by the /api/strava sync
+      // path (see exchangeStravaCode() / requireIntegrationCredentials()).
       const token = await exchangeStravaCode(code, { clientId, clientSecret });
       return {
         accessToken: token.accessToken,
