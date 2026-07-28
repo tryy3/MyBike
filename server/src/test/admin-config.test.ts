@@ -50,7 +50,7 @@ beforeEach(async () => {
 describe("settings registry", () => {
   it("contains the exact Phase 2 setting definitions", () => {
     expect(Object.keys(SETTINGS_REGISTRY)).toEqual([...APP_SETTING_KEYS]);
-    expect(Object.keys(SETTINGS_REGISTRY)).toHaveLength(26);
+    expect(Object.keys(SETTINGS_REGISTRY)).toHaveLength(27);
     expect(SETTINGS_REGISTRY["logging.level"]).toMatchObject({
       key: "logging.level",
       defaultValue: "info",
@@ -66,12 +66,19 @@ describe("settings registry", () => {
       effect: "hotReload",
       secret: true,
     });
-    expect(SETTINGS_REGISTRY["betterAuth.baseUrl"].envOverride).toEqual({
+    expect(SETTINGS_REGISTRY["betterAuth.baseUrl"].seedFromEnv).toEqual({
       varName: "BETTER_AUTH_URL",
     });
-    expect(SETTINGS_REGISTRY["client.url"].envOverride).toEqual({
+    expect(SETTINGS_REGISTRY["client.url"].seedFromEnv).toEqual({
       varName: "CLIENT_URL",
     });
+    expect(SETTINGS_REGISTRY["server.port"]).toMatchObject({
+      key: "server.port",
+      defaultValue: 3001,
+      effect: "restartRequired",
+      group: "Server",
+    });
+    expect(SETTINGS_REGISTRY["server.port"].seedFromEnv?.varName).toBe("PORT");
   });
 
   it("declares Strava integration credential inheritance metadata", () => {
@@ -97,7 +104,7 @@ describe("app config service", () => {
     expect(service.isLoaded()).toBe(true);
   });
 
-  it("uses default source when neither DB nor env override is set", async () => {
+  it("uses default source when neither DB nor env seed applies", async () => {
     const service = createAppConfigService({ env: TEST_ENV });
     await service.load();
 
@@ -130,8 +137,48 @@ describe("app config service", () => {
     });
   });
 
-  it("uses opted-in env overrides ahead of DB values", async () => {
-    await insertSetting("betterAuth.baseUrl", "http://db.example.test");
+  it("seeds client.url from CLIENT_URL when no row exists", async () => {
+    const service = createAppConfigService({
+      env: { ...TEST_ENV, CLIENT_URL: "https://app.example.test" },
+    });
+    await service.load();
+
+    expect(service.get<string>("client.url")).toBe("https://app.example.test");
+    expect(service.getEffectiveMeta("client.url").source).toBe("database");
+
+    const rows = await db.all<{ value: string }>(sql`
+      SELECT value FROM app_settings WHERE key = 'client.url'
+    `);
+    expect(rows).toEqual([{ value: JSON.stringify("https://app.example.test") }]);
+
+    const auditRows = await db.all<{ actorUserId: string | null; key: string }>(sql`
+      SELECT actor_user_id AS actorUserId, key FROM config_audit_log WHERE key = 'client.url'
+    `);
+    expect(auditRows).toEqual([{ actorUserId: null, key: "client.url" }]);
+  });
+
+  it("ignores CLIENT_URL when row exists and warns", async () => {
+    const warns: string[] = [];
+    const original = console.warn;
+    console.warn = (msg?: unknown) => {
+      warns.push(String(msg));
+    };
+    try {
+      await insertSetting("client.url", "https://db.example.test");
+      const service = createAppConfigService({
+        env: { ...TEST_ENV, CLIENT_URL: "https://env.example.test" },
+      });
+      await service.load();
+
+      expect(service.get<string>("client.url")).toBe("https://db.example.test");
+      expect(warns.some((w) => w.includes("CLIENT_URL") && w.includes("client.url"))).toBe(true);
+    } finally {
+      console.warn = original;
+    }
+  });
+
+  it("does not use env as live override for betterAuth.baseUrl", async () => {
+    await insertSetting("betterAuth.baseUrl", "https://db.example.test");
 
     const service = createAppConfigService({
       env: {
@@ -141,13 +188,61 @@ describe("app config service", () => {
     });
     await service.load();
 
-    expect(service.get<string>("betterAuth.baseUrl")).toBe("https://env.example.test");
-    expect(service.getEffectiveMeta("betterAuth.baseUrl")).toMatchObject({
-      value: "https://env.example.test",
-      source: "env",
-      envVar: "BETTER_AUTH_URL",
-      isSet: true,
+    expect(service.getEffectiveMeta("betterAuth.baseUrl").source).toBe("database");
+    expect(service.get<string>("betterAuth.baseUrl")).toBe("https://db.example.test");
+  });
+
+  it("skips seeding and warns when an env value fails schema validation", async () => {
+    const warns: string[] = [];
+    const original = console.warn;
+    console.warn = (msg?: unknown) => {
+      warns.push(String(msg));
+    };
+    try {
+      const service = createAppConfigService({
+        env: { ...TEST_ENV, PORT: "not-a-number" },
+      });
+      await service.load();
+
+      expect(service.get<number>("server.port")).toBe(3001);
+      expect(service.getEffectiveMeta("server.port").source).toBe("default");
+      expect(warns.some((w) => w.includes("server.port"))).toBe(true);
+    } finally {
+      console.warn = original;
+    }
+  });
+
+  it("seeds server.port from PORT when no row exists", async () => {
+    const service = createAppConfigService({
+      env: { ...TEST_ENV, PORT: "4000" },
     });
+    await service.load();
+
+    expect(service.get<number>("server.port")).toBe(4000);
+    expect(service.getEffectiveMeta("server.port").source).toBe("database");
+  });
+
+  it("seeds a secret setting from env encrypted at rest", async () => {
+    const service = createAppConfigService({
+      env: { ...TEST_ENV, STRAVA_WEBHOOK_PROXY_API_KEY: "seeded-secret" },
+    });
+    await service.load();
+
+    expect(service.get<string>("strava.webhook.proxyApiKey")).toBe("seeded-secret");
+    expect(service.getEffectiveMeta("strava.webhook.proxyApiKey").isSet).toBe(true);
+    expect(service.getEffectiveMeta("strava.webhook.proxyApiKey").value).toBeNull();
+
+    const rows = await db.all<{ value: string; isSecret: number }>(sql`
+      SELECT value, is_secret AS isSecret
+      FROM app_settings
+      WHERE key = 'strava.webhook.proxyApiKey'
+    `);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.isSecret).toBe(1);
+    expect(rows[0]?.value).not.toContain("seeded-secret");
+    expect(decryptSecret(rows[0]!.value, requireConfigEncryptionKey(TEST_ENV))).toBe(
+      JSON.stringify("seeded-secret"),
+    );
   });
 
   it("encrypts secret settings in DB and masks them in listEffective", async () => {

@@ -7,7 +7,15 @@ export type SettingDefinition<T = unknown> = {
   defaultValue: T;
   effect: SettingEffect;
   secret?: boolean;
-  envOverride?: { varName: string };
+  /**
+   * First-boot seed source: if the env var is set and no `app_settings` row
+   * exists yet for this key, the parsed value is written to the DB once.
+   * Never resolved live — see `docs/superpowers/specs/2026-07-29-env-seed-if-absent-design.md`.
+   */
+  seedFromEnv?: {
+    varName: string;
+    parse?: (raw: string) => unknown;
+  };
   inheritWhen?: AppSettingKey;
   inheritFrom?: AppSettingKey;
   group: string;
@@ -16,17 +24,44 @@ export type SettingDefinition<T = unknown> = {
   description: string;
 };
 
+function parseEnvBoolDefaultTrue(raw: string): boolean {
+  return raw.trim().toLowerCase() !== "false";
+}
+
+function parseEnvBoolLoose(raw: string): boolean {
+  const v = raw.trim().toLowerCase();
+  return v === "1" || v === "true" || v === "yes";
+}
+
+function parseEnvInt(raw: string): number {
+  const n = Number.parseInt(raw.trim(), 10);
+  if (!Number.isFinite(n)) throw new Error(`Invalid integer: ${raw}`);
+  return n;
+}
+
 const loggingLevelSchema = z.enum(["trace", "debug", "info", "warn", "error", "fatal", "silent"]);
 const urlSchema = z.string().url();
 const optionalUrlSchema = z.union([z.literal(""), urlSchema]);
 
 const settingDefinitions = [
   {
+    key: "server.port",
+    schema: z.number().int().positive(),
+    defaultValue: 3001,
+    effect: "restartRequired",
+    secret: false,
+    seedFromEnv: { varName: "PORT", parse: parseEnvInt },
+    group: "Server",
+    label: "HTTP port",
+    description: "TCP port the API listens on.",
+  },
+  {
     key: "logging.level",
     schema: loggingLevelSchema,
     defaultValue: "info",
     effect: "hotReload",
     secret: false,
+    seedFromEnv: { varName: "LOG_LEVEL" },
     group: "Logging",
     label: "Log level",
     description: "How much the server writes to logs.",
@@ -37,6 +72,7 @@ const settingDefinitions = [
     defaultValue: true,
     effect: "restartRequired",
     secret: false,
+    seedFromEnv: { varName: "LOG_TO_FILE", parse: parseEnvBoolDefaultTrue },
     group: "Logging",
     label: "Write logs to file",
     description: "Also write logs to a file on disk.",
@@ -47,6 +83,7 @@ const settingDefinitions = [
     defaultValue: "",
     effect: "restartRequired",
     secret: false,
+    seedFromEnv: { varName: "LOG_FILE_PATH" },
     group: "Logging",
     label: "Log file path",
     description: "Path for the server log file.",
@@ -57,6 +94,7 @@ const settingDefinitions = [
     defaultValue: true,
     effect: "restartRequired",
     secret: false,
+    seedFromEnv: { varName: "LOG_REDACT", parse: parseEnvBoolDefaultTrue },
     group: "Logging",
     label: "Redact sensitive log data",
     description: "Remove sensitive values from log output.",
@@ -67,6 +105,7 @@ const settingDefinitions = [
     defaultValue: false,
     effect: "hotReload",
     secret: false,
+    seedFromEnv: { varName: "GRAPHQL_TIMING", parse: parseEnvBoolLoose },
     group: "GraphQL",
     label: "Request timing",
     description: "Log how long GraphQL requests take.",
@@ -77,6 +116,7 @@ const settingDefinitions = [
     defaultValue: 60_000,
     effect: "hotReload",
     secret: false,
+    seedFromEnv: { varName: "STRAVA_WEBHOOK_POLL_INTERVAL_MS", parse: parseEnvInt },
     group: "Strava webhook",
     label: "Poll interval (ms)",
     description: "How often to pull events from the proxy.",
@@ -87,6 +127,7 @@ const settingDefinitions = [
     defaultValue: "",
     effect: "hotReload",
     secret: true,
+    seedFromEnv: { varName: "STRAVA_WEBHOOK_PROXY_API_KEY" },
     group: "Strava webhook",
     label: "Proxy API key",
     description: "Secret used to authenticate with the proxy.",
@@ -97,6 +138,7 @@ const settingDefinitions = [
     defaultValue: "",
     effect: "hotReload",
     secret: false,
+    seedFromEnv: { varName: "STRAVA_WEBHOOK_PROXY_URL" },
     group: "Strava webhook",
     label: "Proxy URL",
     description: "Public URL of the Strava webhook proxy.",
@@ -107,6 +149,7 @@ const settingDefinitions = [
     defaultValue: "",
     effect: "hotReload",
     secret: false,
+    seedFromEnv: { varName: "STRAVA_SUBSCRIPTION_ID" },
     group: "Strava webhook",
     label: "Subscription ID",
     description: "Strava webhook subscription identifier.",
@@ -117,7 +160,7 @@ const settingDefinitions = [
     defaultValue: "http://localhost:3001",
     effect: "restartRequired",
     secret: false,
-    envOverride: { varName: "BETTER_AUTH_URL" },
+    seedFromEnv: { varName: "BETTER_AUTH_URL" },
     group: "Authentication",
     label: "Better Auth base URL",
     description: "Public base URL used by Better Auth.",
@@ -128,7 +171,7 @@ const settingDefinitions = [
     defaultValue: "http://localhost:5173",
     effect: "restartRequired",
     secret: false,
-    envOverride: { varName: "CLIENT_URL" },
+    seedFromEnv: { varName: "CLIENT_URL" },
     group: "Client",
     label: "Client URL",
     description: "Browser origin allowed to talk to the API.",
@@ -149,6 +192,7 @@ const settingDefinitions = [
     defaultValue: "",
     effect: "restartRequired",
     secret: false,
+    seedFromEnv: { varName: "TSIDP_CLIENT_ID" },
     group: "OAuth · tsidp",
     label: "Client ID",
     description: "OAuth client ID for tsidp.",
@@ -159,6 +203,7 @@ const settingDefinitions = [
     defaultValue: "",
     effect: "restartRequired",
     secret: true,
+    seedFromEnv: { varName: "TSIDP_CLIENT_SECRET" },
     group: "OAuth · tsidp",
     label: "Client secret",
     description: "OAuth client secret for tsidp.",
@@ -169,6 +214,7 @@ const settingDefinitions = [
     defaultValue: "",
     effect: "restartRequired",
     secret: false,
+    seedFromEnv: { varName: "TSIDP_ISSUER" },
     group: "OAuth · tsidp",
     label: "Issuer URL",
     description: "OpenID Connect issuer URL for tsidp.",
@@ -179,6 +225,7 @@ const settingDefinitions = [
     defaultValue: "openid profile email",
     effect: "restartRequired",
     secret: false,
+    seedFromEnv: { varName: "TSIDP_SCOPES" },
     group: "OAuth · tsidp",
     label: "Scopes",
     description: "OAuth scopes requested from tsidp.",
@@ -199,6 +246,7 @@ const settingDefinitions = [
     defaultValue: "",
     effect: "restartRequired",
     secret: false,
+    seedFromEnv: { varName: "STRAVA_CLIENT_ID" },
     group: "OAuth · Strava",
     label: "Client ID",
     description: "OAuth client ID for Strava.",
@@ -209,6 +257,7 @@ const settingDefinitions = [
     defaultValue: "",
     effect: "restartRequired",
     secret: true,
+    seedFromEnv: { varName: "STRAVA_CLIENT_SECRET" },
     group: "OAuth · Strava",
     label: "Client secret",
     description: "OAuth client secret for Strava.",
@@ -219,6 +268,7 @@ const settingDefinitions = [
     defaultValue: "read,activity:read_all,profile:read_all",
     effect: "restartRequired",
     secret: false,
+    seedFromEnv: { varName: "STRAVA_SCOPES" },
     group: "OAuth · Strava",
     label: "Scopes",
     description: "OAuth scopes requested from Strava.",
@@ -249,6 +299,7 @@ const settingDefinitions = [
     defaultValue: "",
     effect: "restartRequired",
     secret: false,
+    seedFromEnv: { varName: "STRAVA_CLIENT_ID" },
     inheritWhen: "integration.strava.inheritCredentials",
     inheritFrom: "oauth.providers.strava.clientId",
     group: "Integration · Strava",
@@ -261,6 +312,7 @@ const settingDefinitions = [
     defaultValue: "",
     effect: "restartRequired",
     secret: true,
+    seedFromEnv: { varName: "STRAVA_CLIENT_SECRET" },
     inheritWhen: "integration.strava.inheritCredentials",
     inheritFrom: "oauth.providers.strava.clientSecret",
     group: "Integration · Strava",
@@ -273,6 +325,7 @@ const settingDefinitions = [
     defaultValue: "http://localhost:3001/api/strava/callback",
     effect: "restartRequired",
     secret: false,
+    seedFromEnv: { varName: "STRAVA_REDIRECT_URI" },
     group: "Integration · Strava",
     label: "Redirect URI",
     description: "Callback URL registered with Strava.",
@@ -283,6 +336,7 @@ const settingDefinitions = [
     defaultValue: "read,activity:read_all,profile:read_all",
     effect: "restartRequired",
     secret: false,
+    seedFromEnv: { varName: "STRAVA_SCOPES" },
     group: "Integration · Strava",
     label: "Scopes",
     description: "Strava API scopes used for activity sync.",

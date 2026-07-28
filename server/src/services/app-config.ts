@@ -28,7 +28,6 @@ export type EffectiveSetting = {
   effect: SettingEffect;
   isSecret: boolean;
   isSet: boolean;
-  envVar?: string;
   label: string;
   description: string;
   group: string;
@@ -101,20 +100,6 @@ function displayValue(definition: SettingDefinition, value: unknown): unknown {
   return definition.secret ? null : value;
 }
 
-function hasEnvOverride(definition: SettingDefinition, env: NodeJS.ProcessEnv): string | undefined {
-  const envVar = definition.envOverride?.varName;
-  if (!envVar) {
-    return undefined;
-  }
-
-  const value = env[envVar];
-  if (value === undefined || value.trim() === "") {
-    return undefined;
-  }
-
-  return value;
-}
-
 export function createAppConfigService(options: AppConfigServiceOptions = {}): AppConfigService {
   const env = options.env ?? process.env;
   const subscribers = new Map<AppSettingKey, Set<ChangeHandler>>();
@@ -150,15 +135,6 @@ export function createAppConfigService(options: AppConfigServiceOptions = {}): A
     definition: SettingDefinition,
     row: StoredSettingRow | undefined,
   ): ResolvedSetting {
-    const envValue = hasEnvOverride(definition, env);
-    if (envValue !== undefined) {
-      return {
-        key: definition.key,
-        value: definition.schema.parse(envValue),
-        source: "env",
-      };
-    }
-
     if (row) {
       const stored = definition.secret ? decryptSecret(row.value, getEncryptionKey()) : row.value;
       return {
@@ -175,10 +151,73 @@ export function createAppConfigService(options: AppConfigServiceOptions = {}): A
     };
   }
 
-  async function computeEffective(): Promise<Map<AppSettingKey, ResolvedSetting>> {
-    const rows = await loadDbRows();
+  /**
+   * First-boot seeding: for every registry entry with `seedFromEnv`, write the
+   * parsed env value into `app_settings` once if no row exists yet. Never
+   * resolved live afterward — DB always wins once a row exists. If the env
+   * var remains set with an existing row, warn (non-fatal) so operators know
+   * to remove the leftover env var. Invalid env values are skipped with a
+   * warning rather than crashing boot.
+   */
+  async function seedMissingFromEnv(rows: Map<AppSettingKey, StoredSettingRow>): Promise<void> {
+    for (const definition of SETTINGS_DEFINITIONS) {
+      const seed = definition.seedFromEnv;
+      if (!seed) continue;
 
-    // Phase 1: resolve every key on its own terms (env > DB > default).
+      const raw = env[seed.varName];
+      if (raw === undefined || raw.trim() === "") continue;
+
+      if (rows.has(definition.key)) {
+        console.warn(
+          `${seed.varName} is set in the environment but ${definition.key} already exists in app_settings; the env value is ignored. Remove ${seed.varName} from .env to avoid accidental re-seed if the database row is deleted.`,
+        );
+        continue;
+      }
+
+      try {
+        const parsedRaw = seed.parse ? seed.parse(raw) : raw;
+        const parsed = definition.schema.parse(parsedRaw);
+        const plaintext = JSON.stringify(parsed);
+        const storedValue = definition.secret
+          ? encryptSecret(plaintext, getEncryptionKey())
+          : plaintext;
+        const now = Date.now();
+
+        await getDb().run(sql`
+          INSERT INTO app_settings (key, value, is_secret, updated_at, updated_by)
+          VALUES (${definition.key}, ${storedValue}, ${definition.secret ? 1 : 0}, ${now}, ${null})
+          ON CONFLICT(key) DO UPDATE SET
+            value = excluded.value,
+            is_secret = excluded.is_secret,
+            updated_at = excluded.updated_at,
+            updated_by = excluded.updated_by
+        `);
+        await writeAdminAudit({
+          actorUserId: null,
+          key: definition.key,
+          oldValue: null,
+          newValue: definition.secret ? "***" : plaintext,
+        });
+
+        rows.set(definition.key, {
+          key: definition.key,
+          value: storedValue,
+          isSecret: definition.secret ? 1 : 0,
+        });
+      } catch (err) {
+        console.warn(
+          `Skipping seed of ${definition.key} from ${seed.varName}: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+      }
+    }
+  }
+
+  function resolveEffective(
+    rows: Map<AppSettingKey, StoredSettingRow>,
+  ): Map<AppSettingKey, ResolvedSetting> {
+    // Phase 1: resolve every key on its own terms (DB > default).
     const resolved = new Map<AppSettingKey, ResolvedSetting>(
       SETTINGS_DEFINITIONS.map((definition) => [
         definition.key,
@@ -205,6 +244,10 @@ export function createAppConfigService(options: AppConfigServiceOptions = {}): A
     }
 
     return resolved;
+  }
+
+  async function computeEffective(): Promise<Map<AppSettingKey, ResolvedSetting>> {
+    return resolveEffective(await loadDbRows());
   }
 
   function ensureLoaded(): void {
@@ -262,12 +305,11 @@ export function createAppConfigService(options: AppConfigServiceOptions = {}): A
       effect: definition.effect,
       isSecret: definition.secret === true,
       isSet,
-      envVar: definition.envOverride?.varName,
       label: definition.label,
       description: definition.description,
       group: definition.group,
       pendingRestart: settingPendingRestart(key),
-      readOnly: effective.source === "env" || effective.source === "inherited",
+      readOnly: effective.source === "inherited",
       inheritWhen: definition.inheritWhen,
       inheritFrom: definition.inheritFrom,
     };
@@ -383,7 +425,9 @@ export function createAppConfigService(options: AppConfigServiceOptions = {}): A
 
   return {
     async load(): Promise<void> {
-      storedEffective = await computeEffective();
+      const rows = await loadDbRows();
+      await seedMissingFromEnv(rows);
+      storedEffective = resolveEffective(rows);
       bootSnapshot = new Map(
         [...storedEffective.entries()].map(([key, value]) => [
           key,

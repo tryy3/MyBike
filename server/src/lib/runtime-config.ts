@@ -41,7 +41,7 @@ export function syncAuthEnvFromConfig(
  * Writes the effective `logging.*` config into `LOG_*` env vars, always
  * overwriting whatever `.env` set. Must run before `initLogging()` so the
  * DB-backed `logging.toFile` / `logging.filePath` / `logging.redact` values
- * apply. `LOG_*` are not registry `envOverride`s — operators should clear
+ * apply. `LOG_*` are seed-from-env only — operators should clear
  * them from `.env` after migrating to Admin → Configuration.
  */
 export function syncLoggingEnvFromConfig(
