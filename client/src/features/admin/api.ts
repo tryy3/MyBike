@@ -68,10 +68,14 @@ export function useUpdateAdminSettings() {
 }
 
 export function useRestartServer() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => {
       const data = await graphqlFetch<{ restartServer: boolean }>(RESTART_SERVER_MUTATION);
       return data.restartServer;
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["admin", "audit"] });
     },
   });
 }
@@ -97,7 +101,10 @@ export function useAssignUserRole() {
       return data.assignUserRole;
     },
     onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: adminQueryKeys.users });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: adminQueryKeys.users }),
+        qc.invalidateQueries({ queryKey: ["admin", "audit"] }),
+      ]);
     },
   });
 }

@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAdminConfigAudit } from "./api";
+import { formatAdminAuditKey } from "./audit-display";
 
 function formatError(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
@@ -38,9 +39,7 @@ export function AdminAuditPage() {
     <SettingsLayout active="/settings/admin/audit">
       <div className="flex flex-col gap-1">
         <h2 className="text-lg font-semibold tracking-tight">Admin audit</h2>
-        <p className="text-sm text-muted-foreground">
-          Review recent runtime configuration changes.
-        </p>
+        <p className="text-sm text-muted-foreground">Review recent admin changes.</p>
       </div>
 
       <Card>
@@ -49,7 +48,9 @@ export function AdminAuditPage() {
             <HistoryIcon />
             Recent changes
           </CardTitle>
-          <CardDescription>Secret values are redacted by the server audit log.</CardDescription>
+          <CardDescription>
+            Secret values are redacted. Role changes and server restarts are included.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {audit.isLoading ? (
@@ -78,7 +79,15 @@ export function AdminAuditPage() {
                     <TableCell className="text-muted-foreground">
                       {formatDate(entry.createdAt)}
                     </TableCell>
-                    <TableCell className="font-mono">{entry.key}</TableCell>
+                    <TableCell
+                      className={
+                        entry.key === "server.restart" || entry.key.startsWith("users.role:")
+                          ? undefined
+                          : "font-mono"
+                      }
+                    >
+                      {formatAdminAuditKey(entry.key)}
+                    </TableCell>
                     <TableCell className="max-w-xs truncate font-mono text-muted-foreground">
                       {formatAuditValue(entry.oldValue)}
                     </TableCell>
