@@ -1,7 +1,11 @@
 import { sql } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import { db } from "../db/index.js";
-import { applyLoggingLevelConfig, syncLoggingEnvFromConfig } from "../lib/runtime-config.js";
+import {
+  applyLoggingLevelConfig,
+  syncAuthEnvFromConfig,
+  syncLoggingEnvFromConfig,
+} from "../lib/runtime-config.js";
 import { logger } from "../lib/logging/index.js";
 import { createAppConfigService } from "../services/app-config.js";
 
@@ -56,6 +60,28 @@ describe("runtime config consumers", () => {
     unsubscribe();
 
     expect(logger.level).toBe("debug");
+  });
+});
+
+describe("syncAuthEnvFromConfig", () => {
+  it("always overwrites leftover CLIENT_URL and BETTER_AUTH_URL from effective config", async () => {
+    await db.run(sql`
+      INSERT INTO app_settings (key, value, is_secret, updated_at, updated_by)
+      VALUES
+        ('client.url', ${JSON.stringify("https://app.from-db.test")}, 0, ${Date.now()}, ${ACTOR_USER_ID}),
+        ('betterAuth.baseUrl', ${JSON.stringify("https://api.from-db.test")}, 0, ${Date.now()}, ${ACTOR_USER_ID})
+    `);
+    const service = createAppConfigService({ env: TEST_ENV });
+    await service.load();
+
+    const env: NodeJS.ProcessEnv = {
+      CLIENT_URL: "https://stale.env.test",
+      BETTER_AUTH_URL: "https://stale-api.env.test",
+    };
+    syncAuthEnvFromConfig(service, env);
+
+    expect(env.CLIENT_URL).toBe("https://app.from-db.test");
+    expect(env.BETTER_AUTH_URL).toBe("https://api.from-db.test");
   });
 });
 

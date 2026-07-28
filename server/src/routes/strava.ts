@@ -28,6 +28,7 @@ import {
   type SyncCounters,
 } from "../lib/strava-activity-sync.js";
 import { drainWebhookEventsBestEffort } from "../lib/strava-webhook-poller.js";
+import { appConfig } from "../services/app-config.js";
 import { stravaImportCommitSchema, type StravaImportDecision } from "shared";
 
 const OAUTH_STATE_COOKIE = "mybike_strava_state";
@@ -74,7 +75,7 @@ function requireIntegrationCredentials() {
 }
 
 function clientUrl(): string {
-  return process.env.CLIENT_URL ?? "http://localhost:5173";
+  return appConfig.get<string>("client.url");
 }
 
 function oauthCookieSuffix(): string {

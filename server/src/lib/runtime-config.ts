@@ -29,12 +29,8 @@ export function syncAuthEnvFromConfig(
   config: AppConfigService = appConfig,
   env: NodeJS.ProcessEnv = process.env,
 ): void {
-  if (!env.BETTER_AUTH_URL) {
-    env.BETTER_AUTH_URL = config.get<string>("betterAuth.baseUrl");
-  }
-  if (!env.CLIENT_URL) {
-    env.CLIENT_URL = config.get<string>("client.url");
-  }
+  env.BETTER_AUTH_URL = config.get<string>("betterAuth.baseUrl");
+  env.CLIENT_URL = config.get<string>("client.url");
 }
 
 /**

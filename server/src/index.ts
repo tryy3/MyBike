@@ -94,7 +94,7 @@ async function main(): Promise<void> {
 
   const { createApp } = await import("./app.js");
   const app = createApp();
-  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
+  const port = appConfig.get<number>("server.port");
 
   server = app.listen(port, () => {
     logger.info({ port }, "Server listening");
