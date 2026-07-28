@@ -288,7 +288,7 @@ export const REORDER_COMPONENTS_MUTATION = /* GraphQL */ `
   }
 `;
 
-export type AdminSettingSourceGql = "env" | "database" | "default";
+export type AdminSettingSourceGql = "env" | "database" | "default" | "inherited";
 export type AdminSettingEffectGql = "hotReload" | "restartRequired";
 export type AdminUserRoleGql = "admin" | "user";
 export type AdminSettingValueGql = string | number | boolean | null;
@@ -298,9 +298,12 @@ export interface AdminSettingGql {
   value: AdminSettingValueGql;
   isSecret: boolean;
   isSet: boolean;
+  readOnly: boolean;
   source: AdminSettingSourceGql;
   effect: AdminSettingEffectGql;
   envVar: string | null;
+  inheritWhen: string | null;
+  inheritFrom: string | null;
   label: string;
   description: string;
   group: string;
@@ -336,9 +339,12 @@ export const ADMIN_SETTINGS_QUERY = /* GraphQL */ `
         value
         isSecret
         isSet
+        readOnly
         source
         effect
         envVar
+        inheritWhen
+        inheritFrom
         label
         description
         group
@@ -356,9 +362,12 @@ export const UPDATE_ADMIN_SETTINGS_MUTATION = /* GraphQL */ `
         value
         isSecret
         isSet
+        readOnly
         source
         effect
         envVar
+        inheritWhen
+        inheritFrom
         label
         description
         group

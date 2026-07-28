@@ -56,6 +56,9 @@ describe("GraphQL admin API", () => {
           effect: string;
           isSecret: boolean;
           isSet: boolean;
+          readOnly: boolean;
+          inheritWhen: string | null;
+          inheritFrom: string | null;
           label: string;
           description: string;
           group: string;
@@ -73,6 +76,9 @@ describe("GraphQL admin API", () => {
             effect
             isSecret
             isSet
+            readOnly
+            inheritWhen
+            inheritFrom
             label
             description
             group
@@ -91,9 +97,59 @@ describe("GraphQL admin API", () => {
         effect: "hotReload",
         isSecret: false,
         isSet: false,
+        readOnly: false,
+        inheritWhen: null,
+        inheritFrom: null,
         label: "Log level",
         description: "How much the server writes to logs.",
         group: "Logging",
+      }),
+    );
+  });
+
+  it("returns inheritance metadata and inherited source for effective settings", async () => {
+    const agent = await createAdminAgent();
+    await appConfig.setMany(
+      [
+        { key: "oauth.providers.strava.clientId", value: "shared-client-id" },
+        { key: "integration.strava.inheritCredentials", value: true },
+      ],
+      null,
+    );
+
+    const res = await graphqlRequest<{
+      adminSettings: {
+        settings: Array<{
+          key: string;
+          source: string;
+          readOnly: boolean;
+          inheritWhen: string | null;
+          inheritFrom: string | null;
+        }>;
+      };
+    }>(
+      agent,
+      `query {
+        adminSettings {
+          settings {
+            key
+            source
+            readOnly
+            inheritWhen
+            inheritFrom
+          }
+        }
+      }`,
+    );
+
+    expect(res.body.errors).toBeUndefined();
+    expect(res.body.data?.adminSettings.settings).toContainEqual(
+      expect.objectContaining({
+        key: "integration.strava.clientId",
+        source: "inherited",
+        readOnly: true,
+        inheritWhen: "integration.strava.inheritCredentials",
+        inheritFrom: "oauth.providers.strava.clientId",
       }),
     );
   });
