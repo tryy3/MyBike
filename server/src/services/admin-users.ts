@@ -4,6 +4,7 @@ import { user } from "../db/auth-schema.js";
 import { db } from "../db/index.js";
 import { HttpError } from "../lib/errors.js";
 import { getUserRole } from "../lib/rbac.js";
+import { roleAuditKey, writeAdminAudit } from "./admin-audit.js";
 
 export type AdminUserView = {
   id: string;
@@ -41,7 +42,15 @@ export async function listAdminUsers(): Promise<AdminUserView[]> {
   return rows;
 }
 
-export async function assignUserRole(userId: string, role: AppRole): Promise<AdminUserView> {
+export async function assignUserRole(
+  userId: string,
+  role: AppRole,
+  actorUserId: string,
+): Promise<AdminUserView> {
+  if (userId === actorUserId) {
+    throw new HttpError(400, "Cannot change your own role");
+  }
+
   const knownRole = assertAppRole(role);
   const target = await db.select().from(user).where(eq(user.id, userId)).get();
   if (!target) {
@@ -58,6 +67,13 @@ export async function assignUserRole(userId: string, role: AppRole): Promise<Adm
     VALUES (${userId}, ${knownRole})
     ON CONFLICT(user_id) DO UPDATE SET role_id = ${knownRole}
   `);
+
+  await writeAdminAudit({
+    actorUserId,
+    key: roleAuditKey(userId),
+    oldValue: JSON.stringify(currentRole),
+    newValue: JSON.stringify(knownRole),
+  });
 
   return {
     id: target.id,

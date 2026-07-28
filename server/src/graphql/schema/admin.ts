@@ -3,6 +3,7 @@ import type { AppRole } from "shared";
 import type { EffectiveSetting } from "../../services/app-config.js";
 import { appConfig } from "../../services/app-config.js";
 import { assignUserRole, listAdminUsers, type AdminUserView } from "../../services/admin-users.js";
+import { SERVER_RESTART_AUDIT_KEY, writeAdminAudit } from "../../services/admin-audit.js";
 import { HttpError } from "../../lib/errors.js";
 import { requestProcessRestart } from "../../lib/process-restart.js";
 import { builder } from "../builder.js";
@@ -43,6 +44,7 @@ builder.objectType(AdminSettingRef, {
     effect: t.field({ type: AdminSettingEffectEnum, resolve: (parent) => parent.effect }),
     envVar: t.exposeString("envVar", { nullable: true }),
     label: t.exposeString("label"),
+    description: t.exposeString("description"),
     group: t.exposeString("group"),
   }),
 });
@@ -160,8 +162,14 @@ builder.mutationField("updateAdminSettings", (t) =>
 
 builder.mutationField("restartServer", (t) =>
   t.boolean({
-    resolve: (_root, _args, context) => {
-      requireAppPermission(context, "server.restart");
+    resolve: async (_root, _args, context) => {
+      const actorUserId = requireAppPermission(context, "server.restart");
+      await writeAdminAudit({
+        actorUserId,
+        key: SERVER_RESTART_AUDIT_KEY,
+        oldValue: null,
+        newValue: null,
+      });
       requestProcessRestart();
       return true;
     },
@@ -176,8 +184,8 @@ builder.mutationField("assignUserRole", (t) =>
       role: t.arg.string({ required: true }),
     },
     resolve: async (_root, args, context) => {
-      requireAppPermission(context, "users.assign_role");
-      return assignUserRole(args.userId, args.role as AppRole);
+      const actorUserId = requireAppPermission(context, "users.assign_role");
+      return assignUserRole(args.userId, args.role as AppRole, actorUserId);
     },
   }),
 );

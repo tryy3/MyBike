@@ -57,6 +57,7 @@ describe("GraphQL admin API", () => {
           isSecret: boolean;
           isSet: boolean;
           label: string;
+          description: string;
           group: string;
         }>;
       };
@@ -73,6 +74,7 @@ describe("GraphQL admin API", () => {
             isSecret
             isSet
             label
+            description
             group
           }
         }
@@ -90,6 +92,7 @@ describe("GraphQL admin API", () => {
         isSecret: false,
         isSet: false,
         label: "Log level",
+        description: "How much the server writes to logs.",
         group: "Logging",
       }),
     );
@@ -179,13 +182,14 @@ describe("GraphQL admin API", () => {
     expect(await getUserRole(userId)).toBe("admin");
 
     const users = await graphqlRequest<{
-      adminUsers: Array<{ id: string; email: string; role: string }>;
+      adminUsers: Array<{ id: string; email: string; name: string; role: string }>;
     }>(
       adminAgent,
       `query {
         adminUsers {
           id
           email
+          name
           role
         }
       }`,
@@ -196,12 +200,65 @@ describe("GraphQL admin API", () => {
       expect.objectContaining({
         id: userId,
         email: user.email,
+        name: user.name,
         role: "admin",
       }),
     );
+
+    const audit = await graphqlRequest<{
+      adminConfigAudit: Array<{
+        key: string;
+        oldValue: string | null;
+        newValue: string | null;
+      }>;
+    }>(
+      adminAgent,
+      `query {
+        adminConfigAudit(limit: 1) {
+          key
+          oldValue
+          newValue
+        }
+      }`,
+    );
+
+    expect(audit.body.errors).toBeUndefined();
+    expect(audit.body.data?.adminConfigAudit).toEqual([
+      {
+        key: `users.role:${userId}`,
+        oldValue: JSON.stringify("user"),
+        newValue: JSON.stringify("admin"),
+      },
+    ]);
   });
 
-  it("returns true for restartServer without exiting the test process", async () => {
+  it("rejects an admin changing their own role", async () => {
+    const adminAgent = await createAdminAgent();
+    const adminId = await userIdForEmail("admin@example.com");
+    // Second admin so last-admin demotion is not the blocking reason
+    const { user } = await createAuthenticatedAgent(app);
+    const otherId = await userIdForEmail(user.email);
+    await graphqlRequest(
+      adminAgent,
+      `mutation($userId: ID!, $role: String!) {
+        assignUserRole(userId: $userId, role: $role) { id }
+      }`,
+      { userId: otherId, role: "admin" },
+    );
+
+    const res = await graphqlRequest(
+      adminAgent,
+      `mutation($userId: ID!, $role: String!) {
+        assignUserRole(userId: $userId, role: $role) { id role }
+      }`,
+      { userId: adminId, role: "user" },
+    );
+
+    expect(res.body.errors?.[0]?.message).toBe("Cannot change your own role");
+    expect(await getUserRole(adminId)).toBe("admin");
+  });
+
+  it("returns true for restartServer and writes an audit row", async () => {
     const agent = await createAdminAgent();
 
     const res = await graphqlRequest<{ restartServer: boolean }>(
@@ -211,5 +268,31 @@ describe("GraphQL admin API", () => {
 
     expect(res.body.errors).toBeUndefined();
     expect(res.body.data?.restartServer).toBe(true);
+
+    const audit = await graphqlRequest<{
+      adminConfigAudit: Array<{
+        key: string;
+        oldValue: string | null;
+        newValue: string | null;
+      }>;
+    }>(
+      agent,
+      `query {
+        adminConfigAudit(limit: 1) {
+          key
+          oldValue
+          newValue
+        }
+      }`,
+    );
+
+    expect(audit.body.errors).toBeUndefined();
+    expect(audit.body.data?.adminConfigAudit).toEqual([
+      {
+        key: "server.restart",
+        oldValue: null,
+        newValue: null,
+      },
+    ]);
   });
 });
