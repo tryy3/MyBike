@@ -48,8 +48,9 @@ beforeEach(async () => {
 });
 
 describe("settings registry", () => {
-  it("contains the exact Phase 1 setting definitions", () => {
+  it("contains the exact Phase 2 setting definitions", () => {
     expect(Object.keys(SETTINGS_REGISTRY)).toEqual([...APP_SETTING_KEYS]);
+    expect(Object.keys(SETTINGS_REGISTRY)).toHaveLength(26);
     expect(SETTINGS_REGISTRY["logging.level"]).toMatchObject({
       key: "logging.level",
       defaultValue: "info",
@@ -70,6 +71,17 @@ describe("settings registry", () => {
     });
     expect(SETTINGS_REGISTRY["client.url"].envOverride).toEqual({
       varName: "CLIENT_URL",
+    });
+  });
+
+  it("declares Strava integration credential inheritance metadata", () => {
+    expect(SETTINGS_REGISTRY["integration.strava.clientId"]).toMatchObject({
+      inheritWhen: "integration.strava.inheritCredentials",
+      inheritFrom: "oauth.providers.strava.clientId",
+    });
+    expect(SETTINGS_REGISTRY["integration.strava.clientSecret"]).toMatchObject({
+      inheritWhen: "integration.strava.inheritCredentials",
+      inheritFrom: "oauth.providers.strava.clientSecret",
     });
   });
 });
