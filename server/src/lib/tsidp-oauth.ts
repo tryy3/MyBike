@@ -1,26 +1,35 @@
 import type { GenericOAuthConfig } from "better-auth/plugins";
+import { getLoadedAppConfigValue } from "../services/app-config.js";
 
 export const TSIDP_PROVIDER_ID = "tsidp";
 
 const DEFAULT_SCOPES = ["openid", "profile", "email"] as const;
 
-interface TsidpEnv {
-  TSIDP_CLIENT_ID?: string;
-  TSIDP_CLIENT_SECRET?: string;
-  TSIDP_ISSUER?: string;
-  TSIDP_SCOPES?: string;
-}
-
 function trimTrailingSlash(url: string): string {
   return url.endsWith("/") ? url.slice(0, -1) : url;
 }
 
-export function isTsidpOAuthConfigured(env: TsidpEnv = process.env): boolean {
-  return Boolean(env.TSIDP_CLIENT_ID && env.TSIDP_CLIENT_SECRET && env.TSIDP_ISSUER);
+function tsidpClientId(): string | undefined {
+  return getLoadedAppConfigValue<string>("oauth.providers.tsidp.clientId")?.trim() || undefined;
 }
 
-export function resolveTsidpScopes(env: TsidpEnv = process.env): string[] {
-  const raw = env.TSIDP_SCOPES?.trim();
+function tsidpClientSecret(): string | undefined {
+  return getLoadedAppConfigValue<string>("oauth.providers.tsidp.clientSecret")?.trim() || undefined;
+}
+
+function tsidpIssuer(): string | undefined {
+  return getLoadedAppConfigValue<string>("oauth.providers.tsidp.issuer")?.trim() || undefined;
+}
+
+export function isTsidpOAuthConfigured(): boolean {
+  if (!getLoadedAppConfigValue<boolean>("oauth.providers.tsidp.enabled")) {
+    return false;
+  }
+  return Boolean(tsidpClientId() && tsidpClientSecret() && tsidpIssuer());
+}
+
+export function resolveTsidpScopes(): string[] {
+  const raw = getLoadedAppConfigValue<string>("oauth.providers.tsidp.scopes")?.trim();
   if (!raw) {
     return [...DEFAULT_SCOPES];
   }
@@ -30,12 +39,14 @@ export function resolveTsidpScopes(env: TsidpEnv = process.env): string[] {
     .filter(Boolean);
 }
 
-export function buildTsidpOAuthConfig(env: TsidpEnv = process.env): GenericOAuthConfig {
-  const clientId = env.TSIDP_CLIENT_ID;
-  const clientSecret = env.TSIDP_CLIENT_SECRET;
-  const issuerRaw = env.TSIDP_ISSUER;
+export function buildTsidpOAuthConfig(): GenericOAuthConfig {
+  const clientId = tsidpClientId();
+  const clientSecret = tsidpClientSecret();
+  const issuerRaw = tsidpIssuer();
   if (!clientId || !clientSecret || !issuerRaw) {
-    throw new Error("tsidp OAuth requires TSIDP_CLIENT_ID, TSIDP_CLIENT_SECRET, and TSIDP_ISSUER");
+    throw new Error(
+      "tsidp OAuth requires oauth.providers.tsidp.clientId, clientSecret, and issuer to be configured",
+    );
   }
 
   const issuer = trimTrailingSlash(issuerRaw);
@@ -43,10 +54,10 @@ export function buildTsidpOAuthConfig(env: TsidpEnv = process.env): GenericOAuth
   try {
     discoveryOrigin = new URL(issuer);
   } catch {
-    throw new Error("TSIDP_ISSUER must be a valid absolute URL");
+    throw new Error("oauth.providers.tsidp.issuer must be a valid absolute URL");
   }
   if (discoveryOrigin.protocol !== "https:" && discoveryOrigin.protocol !== "http:") {
-    throw new Error("TSIDP_ISSUER must use http:// or https://");
+    throw new Error("oauth.providers.tsidp.issuer must use http:// or https://");
   }
 
   return {
@@ -58,6 +69,6 @@ export function buildTsidpOAuthConfig(env: TsidpEnv = process.env): GenericOAuth
     // Stable account namespace if discovery is briefly unavailable at startup.
     accountIssuer: issuer,
     pkce: true,
-    scopes: resolveTsidpScopes(env),
+    scopes: resolveTsidpScopes(),
   };
 }

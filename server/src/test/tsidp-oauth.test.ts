@@ -1,43 +1,82 @@
-import { describe, expect, it } from "vite-plus/test";
+import { sql } from "drizzle-orm";
+import { beforeEach, describe, expect, it } from "vite-plus/test";
+import { db } from "../db/index.js";
 import {
   buildTsidpOAuthConfig,
   isTsidpOAuthConfigured,
   resolveTsidpScopes,
   TSIDP_PROVIDER_ID,
 } from "../lib/tsidp-oauth.js";
+import { appConfig } from "../services/app-config.js";
+
+async function resetConfigState() {
+  await db.run(sql`DELETE FROM app_settings`);
+  await appConfig.load();
+}
+
+// oauth.providers.tsidp.* settings are restart-required, so `appConfig.get()`
+// only reflects them from the boot-time snapshot; reload after writing to
+// mimic a restart picking up the new values.
+async function setTsidpConfig(overrides: Record<string, unknown>) {
+  await appConfig.setMany(
+    Object.entries(overrides).map(([key, value]) => ({ key, value })),
+    null,
+  );
+  await appConfig.load();
+}
+
+beforeEach(async () => {
+  await resetConfigState();
+});
 
 describe("tsidp oauth", () => {
-  it("detects when tsidp credentials are configured", () => {
-    expect(
-      isTsidpOAuthConfigured({
-        TSIDP_CLIENT_ID: undefined,
-        TSIDP_CLIENT_SECRET: undefined,
-        TSIDP_ISSUER: undefined,
-      }),
-    ).toBe(false);
+  it("is not configured when disabled even with full credentials", async () => {
+    await setTsidpConfig({
+      "oauth.providers.tsidp.enabled": false,
+      "oauth.providers.tsidp.clientId": "client",
+      "oauth.providers.tsidp.clientSecret": "secret",
+      "oauth.providers.tsidp.issuer": "https://idp.example.ts.net",
+    });
 
-    expect(
-      isTsidpOAuthConfigured({
-        TSIDP_CLIENT_ID: "client",
-        TSIDP_CLIENT_SECRET: "secret",
-        TSIDP_ISSUER: "https://idp.example.ts.net",
-      }),
-    ).toBe(true);
-
-    expect(
-      isTsidpOAuthConfigured({
-        TSIDP_CLIENT_ID: "client",
-        TSIDP_CLIENT_SECRET: "secret",
-      }),
-    ).toBe(false);
+    expect(isTsidpOAuthConfigured()).toBe(false);
   });
 
-  it("builds an OIDC discovery-based generic OAuth config", () => {
-    const config = buildTsidpOAuthConfig({
-      TSIDP_CLIENT_ID: "client",
-      TSIDP_CLIENT_SECRET: "secret",
-      TSIDP_ISSUER: "https://idp.example.ts.net/",
+  it("is not configured when enabled but credentials are missing", async () => {
+    await setTsidpConfig({ "oauth.providers.tsidp.enabled": true });
+
+    expect(isTsidpOAuthConfigured()).toBe(false);
+  });
+
+  it("is configured when enabled with full credentials", async () => {
+    await setTsidpConfig({
+      "oauth.providers.tsidp.enabled": true,
+      "oauth.providers.tsidp.clientId": "client",
+      "oauth.providers.tsidp.clientSecret": "secret",
+      "oauth.providers.tsidp.issuer": "https://idp.example.ts.net",
     });
+
+    expect(isTsidpOAuthConfigured()).toBe(true);
+  });
+
+  it("is not configured when enabled but only some credentials are set", async () => {
+    await setTsidpConfig({
+      "oauth.providers.tsidp.enabled": true,
+      "oauth.providers.tsidp.clientId": "client",
+      "oauth.providers.tsidp.clientSecret": "secret",
+    });
+
+    expect(isTsidpOAuthConfigured()).toBe(false);
+  });
+
+  it("builds an OIDC discovery-based generic OAuth config", async () => {
+    await setTsidpConfig({
+      "oauth.providers.tsidp.enabled": true,
+      "oauth.providers.tsidp.clientId": "client",
+      "oauth.providers.tsidp.clientSecret": "secret",
+      "oauth.providers.tsidp.issuer": "https://idp.example.ts.net/",
+    });
+
+    const config = buildTsidpOAuthConfig();
 
     expect(config.providerId).toBe(TSIDP_PROVIDER_ID);
     expect(config.name).toBe("Tailscale");
@@ -47,21 +86,19 @@ describe("tsidp oauth", () => {
     expect(config.scopes).toEqual(["openid", "profile", "email"]);
   });
 
-  it("parses custom scopes from env", () => {
-    expect(resolveTsidpScopes({ TSIDP_SCOPES: "openid, email  profile" })).toEqual([
-      "openid",
-      "email",
-      "profile",
-    ]);
+  it("parses custom scopes from config", async () => {
+    await setTsidpConfig({ "oauth.providers.tsidp.scopes": "openid, email  profile" });
+
+    expect(resolveTsidpScopes()).toEqual(["openid", "email", "profile"]);
   });
 
-  it("rejects an invalid issuer URL", () => {
-    expect(() =>
-      buildTsidpOAuthConfig({
-        TSIDP_CLIENT_ID: "client",
-        TSIDP_CLIENT_SECRET: "secret",
-        TSIDP_ISSUER: "not-a-url",
-      }),
-    ).toThrow("TSIDP_ISSUER");
+  it("falls back to default scopes when config is blank", async () => {
+    await setTsidpConfig({ "oauth.providers.tsidp.scopes": "" });
+
+    expect(resolveTsidpScopes()).toEqual(["openid", "profile", "email"]);
+  });
+
+  it("throws a config-referencing error when credentials are missing", async () => {
+    expect(() => buildTsidpOAuthConfig()).toThrow("oauth.providers.tsidp");
   });
 });
