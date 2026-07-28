@@ -1,8 +1,9 @@
-import { useEffect } from "react";
-import { Loader2Icon, ShieldIcon, UsersIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Loader2Icon, SaveIcon, ShieldIcon, UsersIcon } from "lucide-react";
 import { toast } from "sonner";
 import { SettingsLayout } from "@/components/SettingsLayout";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -20,9 +21,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
-import { useAdminUsers, useAssignUserRole } from "./api";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useSession } from "@/lib/auth-client";
 import type { AdminUserGql, AdminUserRoleGql } from "@/lib/graphql/operations";
+import { useAdminUsers, useAssignUserRole } from "./api";
+import {
+  applyRoleDraft,
+  dirtyRoleAssignments,
+  effectiveRole,
+  reconcileRoleDrafts,
+  type AdminRole,
+} from "./users-role-draft";
 
 const roleOptions: AdminUserRoleGql[] = ["admin", "user"];
 
@@ -31,13 +40,16 @@ function formatError(error: unknown, fallback: string): string {
 }
 
 function displayName(user: AdminUserGql): string {
-  return user.name.trim() || "Unnamed user";
+  return user.name?.trim() || "Unnamed user";
 }
 
 export function AdminUsersPage() {
+  const { data: session } = useSession();
+  const currentUserId = session?.user?.id;
   const users = useAdminUsers();
   const assignRole = useAssignUserRole();
-  const pendingUserId = assignRole.isPending ? assignRole.variables?.userId : null;
+  const [drafts, setDrafts] = useState<Record<string, AdminRole>>({});
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     document.title = "Admin users | MyBike";
@@ -46,27 +58,66 @@ export function AdminUsersPage() {
     };
   }, []);
 
-  async function changeRole(user: AdminUserGql, role: AdminUserRoleGql): Promise<void> {
-    if (user.role === role) return;
+  const serverUsers = users.data ?? [];
+  const dirty = dirtyRoleAssignments(serverUsers, drafts);
+  const dirtyCount = dirty.length;
+
+  function setDraftRole(user: AdminUserGql, role: AdminUserRoleGql): void {
+    if (currentUserId != null && user.id === currentUserId) return;
+    setDrafts((current) => applyRoleDraft(current, user.id, user.role, role));
+  }
+
+  async function saveChanges(): Promise<void> {
+    if (dirtyCount === 0 || isSaving) return;
+    setIsSaving(true);
     try {
-      await assignRole.mutateAsync({ userId: user.id, role });
-      toast.success("User role updated", {
-        description: `${displayName(user)} is now ${role}.`,
-      });
+      const results = await Promise.allSettled(dirty.map((entry) => assignRole.mutateAsync(entry)));
+      const failed = results.find((r) => r.status === "rejected");
+      const refetchResult = await users.refetch();
+      const latest = refetchResult.data ?? serverUsers;
+      setDrafts((current) => reconcileRoleDrafts(latest, current));
+
+      if (failed) {
+        const reason = failed.status === "rejected" ? failed.reason : null;
+        toast.error("Could not update user roles", {
+          description: formatError(reason, "Try again."),
+        });
+        return;
+      }
+
+      toast.success(dirtyCount === 1 ? "1 role change saved" : `${dirtyCount} role changes saved`);
     } catch (error) {
-      toast.error("Could not update user role", {
+      toast.error("Could not update user roles", {
         description: formatError(error, "Try again."),
       });
+    } finally {
+      setIsSaving(false);
     }
   }
 
   return (
     <SettingsLayout active="/settings/admin/users">
-      <div className="flex flex-col gap-1">
-        <h2 className="text-lg font-semibold tracking-tight">Admin users</h2>
-        <p className="text-sm text-muted-foreground">
-          Assign the simple Phase 1 roles used by the admin GraphQL API.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-lg font-semibold tracking-tight">Admin users</h2>
+          <p className="text-sm text-muted-foreground">
+            Assign the simple Phase 1 roles used by the admin GraphQL API.
+          </p>
+        </div>
+        <Button onClick={() => void saveChanges()} disabled={dirtyCount === 0 || isSaving}>
+          {isSaving ? (
+            <>
+              <Loader2Icon data-icon="inline-start" className="animate-spin" />
+              Saving…
+            </>
+          ) : (
+            <>
+              <SaveIcon data-icon="inline-start" />
+              Save{" "}
+              {dirtyCount > 0 ? `${dirtyCount} change${dirtyCount === 1 ? "" : "s"}` : "changes"}
+            </>
+          )}
+        </Button>
       </div>
 
       <Card>
@@ -76,7 +127,7 @@ export function AdminUsersPage() {
             Users
           </CardTitle>
           <CardDescription>
-            Role changes are saved on selection and refetched from the server.
+            Change roles below, then save. Changes are not applied until you save.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -89,7 +140,7 @@ export function AdminUsersPage() {
             <p className="py-4 text-sm text-destructive">
               {formatError(users.error, "Failed to load users")}
             </p>
-          ) : users.data?.length ? (
+          ) : serverUsers.length ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -99,44 +150,57 @@ export function AdminUsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.data.map((user) => {
-                  const rowPending = pendingUserId === user.id;
+                {serverUsers.map((user) => {
+                  const isSelf = currentUserId != null && user.id === currentUserId;
+                  const selectedRole = effectiveRole(user.id, user.role, drafts);
                   return (
-                    <TableRow key={user.id} className={cn(rowPending && "opacity-60")}>
+                    <TableRow key={user.id} className={isSaving ? "opacity-60" : undefined}>
                       <TableCell className="font-medium">{displayName(user)}</TableCell>
                       <TableCell className="text-muted-foreground">{user.email}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Select
-                            value={user.role}
-                            disabled={rowPending}
-                            onValueChange={(role) =>
-                              void changeRole(user, role as AdminUserRoleGql)
-                            }
-                          >
-                            <SelectTrigger
-                              size="sm"
-                              className="w-32"
-                              aria-label={`Role for ${displayName(user)}`}
+                          {isSelf ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="inline-flex">
+                                  <Select value={user.role} disabled>
+                                    <SelectTrigger
+                                      size="sm"
+                                      className="w-32"
+                                      aria-label={`Your role (${user.role}); cannot change your own role`}
+                                    >
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                  </Select>
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>You cannot change your own role</TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <Select
+                              value={selectedRole}
+                              disabled={isSaving}
+                              onValueChange={(role) => setDraftRole(user, role as AdminUserRoleGql)}
                             >
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectGroup>
-                                {roleOptions.map((role) => (
-                                  <SelectItem key={role} value={role}>
-                                    {role}
-                                  </SelectItem>
-                                ))}
-                              </SelectGroup>
-                            </SelectContent>
-                          </Select>
-                          {rowPending ? (
-                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Loader2Icon className="animate-spin" />
-                              Saving…
-                            </span>
-                          ) : user.role === "admin" ? (
+                              <SelectTrigger
+                                size="sm"
+                                className="w-32"
+                                aria-label={`Role for ${displayName(user)}`}
+                              >
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
+                                  {roleOptions.map((role) => (
+                                    <SelectItem key={role} value={role}>
+                                      {role}
+                                    </SelectItem>
+                                  ))}
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
+                          )}
+                          {user.role === "admin" ? (
                             <Badge variant="secondary">
                               <ShieldIcon data-icon="inline-start" />
                               Admin
