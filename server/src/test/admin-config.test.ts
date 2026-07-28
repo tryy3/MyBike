@@ -316,4 +316,42 @@ describe("app config service", () => {
     `);
     expect(auditKeys.map((row) => row.key)).toEqual(["graphql.timing", "logging.level"]);
   });
+
+  it("inherits integration clientId from oauth when inheritCredentials is true", async () => {
+    const service = createAppConfigService({ env: TEST_ENV });
+    await service.load();
+
+    await service.set("oauth.providers.strava.clientId", "login-id", ACTOR_USER_ID);
+
+    // inheritCredentials defaults true
+    expect(service.get<string>("integration.strava.clientId")).toBe("login-id");
+    expect(service.getEffectiveMeta("integration.strava.clientId").source).toBe("inherited");
+    expect(service.getEffectiveMeta("integration.strava.clientId").readOnly).toBe(true);
+  });
+
+  it("rejects writing integration clientId while inheriting", async () => {
+    const service = createAppConfigService({ env: TEST_ENV });
+    await service.load();
+
+    await expect(
+      service.set("integration.strava.clientId", "own-id", ACTOR_USER_ID),
+    ).rejects.toThrow(/inherit/i);
+  });
+
+  it("uses own clientId after inheritCredentials is false", async () => {
+    const service = createAppConfigService({ env: TEST_ENV });
+    await service.load();
+
+    await service.set("oauth.providers.strava.clientId", "login-id", ACTOR_USER_ID);
+    await service.setMany(
+      [
+        { key: "integration.strava.inheritCredentials", value: false },
+        { key: "integration.strava.clientId", value: "own-id" },
+      ],
+      ACTOR_USER_ID,
+    );
+
+    expect(service.get<string>("integration.strava.clientId")).toBe("own-id");
+    expect(service.getEffectiveMeta("integration.strava.clientId").source).toBe("database");
+  });
 });

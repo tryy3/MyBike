@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import type { AppRole } from "shared";
+import { SETTING_VALUE_SOURCES, type AppRole } from "shared";
 import type { EffectiveSetting } from "../../services/app-config.js";
 import { appConfig } from "../../services/app-config.js";
 import { assignUserRole, listAdminUsers, type AdminUserView } from "../../services/admin-users.js";
@@ -25,7 +25,7 @@ type AdminConfigAuditEntry = {
 };
 
 const AdminSettingSourceEnum = builder.enumType("AdminSettingSource", {
-  values: ["env", "database", "default"] as const,
+  values: SETTING_VALUE_SOURCES,
 });
 
 const AdminSettingEffectEnum = builder.enumType("AdminSettingEffect", {

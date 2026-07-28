@@ -33,6 +33,9 @@ export type EffectiveSetting = {
   description: string;
   group: string;
   pendingRestart: boolean;
+  readOnly: boolean;
+  inheritWhen?: string;
+  inheritFrom?: string;
 };
 
 type ChangeHandler = (value: unknown) => void;
@@ -174,12 +177,34 @@ export function createAppConfigService(options: AppConfigServiceOptions = {}): A
 
   async function computeEffective(): Promise<Map<AppSettingKey, ResolvedSetting>> {
     const rows = await loadDbRows();
-    return new Map(
+
+    // Phase 1: resolve every key on its own terms (env > DB > default).
+    const resolved = new Map<AppSettingKey, ResolvedSetting>(
       SETTINGS_DEFINITIONS.map((definition) => [
         definition.key,
         resolveSetting(definition, rows.get(definition.key)),
       ]),
     );
+
+    // Phase 2: settings that inherit from another key take that key's value
+    // (and become read-only) whenever their toggle resolves to true.
+    for (const definition of SETTINGS_DEFINITIONS) {
+      if (!definition.inheritWhen || !definition.inheritFrom) continue;
+
+      const toggle = resolved.get(definition.inheritWhen);
+      if (toggle?.value !== true) continue;
+
+      const source = resolved.get(definition.inheritFrom);
+      if (!source) continue;
+
+      resolved.set(definition.key, {
+        key: definition.key,
+        value: source.value,
+        source: "inherited",
+      });
+    }
+
+    return resolved;
   }
 
   function ensureLoaded(): void {
@@ -214,6 +239,10 @@ export function createAppConfigService(options: AppConfigServiceOptions = {}): A
     `);
   }
 
+  function isNonEmptyValue(value: unknown): boolean {
+    return value !== "" && value !== null && value !== undefined;
+  }
+
   function toEffectiveSetting(key: AppSettingKey): EffectiveSetting {
     const definition = SETTINGS_REGISTRY[key];
     const effective = storedEffective.get(key);
@@ -221,18 +250,26 @@ export function createAppConfigService(options: AppConfigServiceOptions = {}): A
       throw new Error(`App setting ${key} has not been loaded`);
     }
 
+    const isSet =
+      effective.source === "inherited"
+        ? isNonEmptyValue(effective.value)
+        : effective.source !== "default";
+
     return {
       key,
       value: displayValue(definition, effective.value),
       source: effective.source,
       effect: definition.effect,
       isSecret: definition.secret === true,
-      isSet: effective.source !== "default",
+      isSet,
       envVar: definition.envOverride?.varName,
       label: definition.label,
       description: definition.description,
       group: definition.group,
       pendingRestart: settingPendingRestart(key),
+      readOnly: effective.source === "env" || effective.source === "inherited",
+      inheritWhen: definition.inheritWhen,
+      inheritFrom: definition.inheritFrom,
     };
   }
 
@@ -251,7 +288,7 @@ export function createAppConfigService(options: AppConfigServiceOptions = {}): A
 
     // Validate and prepare every update before any writes so a late failure
     // cannot leave earlier keys partially persisted.
-    const prepared = updates.map((update) => {
+    const knownUpdates = updates.map((update) => {
       const knownKey = assertKnownKey(update.key);
       const definition = SETTINGS_REGISTRY[knownKey];
       const parsed = definition.schema.parse(update.value);
@@ -260,6 +297,31 @@ export function createAppConfigService(options: AppConfigServiceOptions = {}): A
         throw new Error(`Secret app setting ${knownKey} requires a non-empty value`);
       }
 
+      return { knownKey, definition, parsed };
+    });
+
+    const batchValues = new Map<AppSettingKey, unknown>(
+      knownUpdates.map((item) => [item.knownKey, item.parsed]),
+    );
+
+    // Block writes to inheritable leaves while their toggle resolves to
+    // true post-batch (using the new value if the same batch also flips the
+    // toggle, otherwise the pre-update effective value).
+    for (const { knownKey, definition } of knownUpdates) {
+      if (!definition.inheritWhen || !definition.inheritFrom) continue;
+
+      const postBatchInherit = batchValues.has(definition.inheritWhen)
+        ? batchValues.get(definition.inheritWhen) === true
+        : storedEffective.get(definition.inheritWhen)?.value === true;
+
+      if (postBatchInherit) {
+        throw new Error(
+          `Cannot update ${knownKey} while ${definition.inheritWhen} is enabled; disable inherit first`,
+        );
+      }
+    }
+
+    const prepared = knownUpdates.map(({ knownKey, definition, parsed }) => {
       const previous = storedEffective.get(knownKey);
       const plaintext = JSON.stringify(parsed);
       const storedValue = definition.secret
@@ -340,8 +402,11 @@ export function createAppConfigService(options: AppConfigServiceOptions = {}): A
       ensureLoaded();
       const knownKey = assertKnownKey(key);
       const definition = SETTINGS_REGISTRY[knownKey];
+      // Inheritable leaves always mirror the live effective computation
+      // (inherited or not); the restart-required freeze only applies to
+      // directly stored values.
       const source =
-        definition.effect === "restartRequired"
+        definition.effect === "restartRequired" && !definition.inheritWhen
           ? bootSnapshot.get(knownKey)
           : storedEffective.get(knownKey);
 
