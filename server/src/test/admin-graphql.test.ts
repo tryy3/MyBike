@@ -92,11 +92,11 @@ describe("GraphQL admin API", () => {
     expect(res.body.data?.adminSettings.settings).toContainEqual(
       expect.objectContaining({
         key: "logging.level",
-        value: "info",
-        source: "default",
+        value: "silent",
+        source: "database",
         effect: "hotReload",
         isSecret: false,
-        isSet: false,
+        isSet: true,
         readOnly: false,
         inheritWhen: null,
         inheritFrom: null,
@@ -204,7 +204,7 @@ describe("GraphQL admin API", () => {
     expect(audit.body.data?.adminConfigAudit).toEqual([
       {
         key: "logging.level",
-        oldValue: JSON.stringify("info"),
+        oldValue: JSON.stringify("silent"),
         newValue: JSON.stringify("debug"),
       },
     ]);

@@ -43,8 +43,6 @@ builder.objectType(AdminSettingRef, {
     readOnly: t.exposeBoolean("readOnly"),
     source: t.field({ type: AdminSettingSourceEnum, resolve: (parent) => parent.source }),
     effect: t.field({ type: AdminSettingEffectEnum, resolve: (parent) => parent.effect }),
-    // Deprecated: always null (seed-if-absent). Remove with admin envVar API cleanup.
-    envVar: t.string({ nullable: true, resolve: () => null }),
     inheritWhen: t.exposeString("inheritWhen", { nullable: true }),
     inheritFrom: t.exposeString("inheritFrom", { nullable: true }),
     label: t.exposeString("label"),
