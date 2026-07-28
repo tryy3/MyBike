@@ -302,6 +302,7 @@ export interface AdminSettingGql {
   effect: AdminSettingEffectGql;
   envVar: string | null;
   label: string;
+  description: string;
   group: string;
 }
 
@@ -339,6 +340,7 @@ export const ADMIN_SETTINGS_QUERY = /* GraphQL */ `
         effect
         envVar
         label
+        description
         group
       }
     }
@@ -358,6 +360,7 @@ export const UPDATE_ADMIN_SETTINGS_MUTATION = /* GraphQL */ `
         effect
         envVar
         label
+        description
         group
       }
     }

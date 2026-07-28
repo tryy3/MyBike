@@ -57,6 +57,7 @@ describe("settings registry", () => {
       secret: false,
       group: "Logging",
       label: "Log level",
+      description: "How much the server writes to logs.",
     });
     expect(SETTINGS_REGISTRY["strava.webhook.proxyApiKey"]).toMatchObject({
       key: "strava.webhook.proxyApiKey",
@@ -97,6 +98,7 @@ describe("app config service", () => {
       isSecret: false,
       isSet: false,
       label: "Log level",
+      description: "How much the server writes to logs.",
       group: "Logging",
       pendingRestart: false,
     });

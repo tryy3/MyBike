@@ -10,6 +10,8 @@ export type SettingDefinition<T = unknown> = {
   envOverride?: { varName: string };
   group: string;
   label: string;
+  /** Short row copy shown under the label in admin UI. */
+  description: string;
 };
 
 const loggingLevelSchema = z.enum(["trace", "debug", "info", "warn", "error", "fatal", "silent"]);
@@ -24,6 +26,7 @@ const settingDefinitions = [
     secret: false,
     group: "Logging",
     label: "Log level",
+    description: "How much the server writes to logs.",
   },
   {
     key: "graphql.timing",
@@ -33,6 +36,7 @@ const settingDefinitions = [
     secret: false,
     group: "GraphQL",
     label: "Request timing",
+    description: "Log how long GraphQL requests take.",
   },
   {
     key: "strava.webhook.pollIntervalMs",
@@ -42,6 +46,7 @@ const settingDefinitions = [
     secret: false,
     group: "Strava webhook",
     label: "Poll interval (ms)",
+    description: "How often to pull events from the proxy.",
   },
   {
     key: "strava.webhook.proxyApiKey",
@@ -51,6 +56,7 @@ const settingDefinitions = [
     secret: true,
     group: "Strava webhook",
     label: "Proxy API key",
+    description: "Secret used to authenticate with the proxy.",
   },
   {
     key: "logging.toFile",
@@ -60,6 +66,7 @@ const settingDefinitions = [
     secret: false,
     group: "Logging",
     label: "Write logs to file",
+    description: "Also write logs to a file on disk.",
   },
   {
     key: "betterAuth.baseUrl",
@@ -70,6 +77,7 @@ const settingDefinitions = [
     envOverride: { varName: "BETTER_AUTH_URL" },
     group: "Authentication",
     label: "Better Auth base URL",
+    description: "Public base URL used by Better Auth.",
   },
   {
     key: "client.url",
@@ -80,6 +88,7 @@ const settingDefinitions = [
     envOverride: { varName: "CLIENT_URL" },
     group: "Client",
     label: "Client URL",
+    description: "Browser origin allowed to talk to the API.",
   },
 ] satisfies SettingDefinition[];
 
