@@ -1,4 +1,5 @@
 export const APP_SETTING_KEYS = [
+  "server.port",
   "logging.level",
   "logging.toFile",
   "logging.filePath",
@@ -28,7 +29,7 @@ export const APP_SETTING_KEYS = [
 ] as const;
 export type AppSettingKey = (typeof APP_SETTING_KEYS)[number];
 
-export const SETTING_VALUE_SOURCES = ["env", "database", "default", "inherited"] as const;
+export const SETTING_VALUE_SOURCES = ["database", "default", "inherited"] as const;
 export type SettingValueSource = (typeof SETTING_VALUE_SOURCES)[number];
 
 export const SETTING_EFFECTS = ["hotReload", "restartRequired"] as const;

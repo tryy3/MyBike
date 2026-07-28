@@ -34,8 +34,9 @@ describe("admin permissions and app settings constants", () => {
   });
 
   it("exports the full app setting keys", () => {
-    expect(APP_SETTING_KEYS).toHaveLength(26);
+    expect(APP_SETTING_KEYS).toHaveLength(27);
     expect(APP_SETTING_KEYS).toEqual([
+      "server.port",
       "logging.level",
       "logging.toFile",
       "logging.filePath",
@@ -65,8 +66,8 @@ describe("admin permissions and app settings constants", () => {
     ]);
   });
 
-  it("includes inherited in setting value sources", () => {
-    expect(SETTING_VALUE_SOURCES).toContain("inherited");
+  it("exports setting value sources without env", () => {
+    expect(SETTING_VALUE_SOURCES).toEqual(["database", "default", "inherited"]);
   });
 });
 
