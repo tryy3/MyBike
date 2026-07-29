@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+
+  <defs>
+    <pattern id="hatch" patternUnits="userSpaceOnUse" width="4" height="4">
+      <path d="M0 4 L4 0" stroke="currentColor" stroke-width="0.7" opacity="0.35"/>
+    </pattern>
+    <pattern id="hatch2" patternUnits="userSpaceOnUse" width="3" height="3">
+      <path d="M0 3 L3 0" stroke="currentColor" stroke-width="0.6" opacity="0.25"/>
+    </pattern>
+  </defs>
+  <circle cx="32" cy="32" r="27" fill="url(#hatch)" stroke="currentColor" stroke-width="2"/>
+  <circle cx="32" cy="32" r="18" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <g stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+    <path d="M32 5 V12 M49 9 L45 15 M59 24 L52 26 M59 40 L52 38 M49 55 L45 49 M32 59 V52 M15 55 L19 49 M5 40 L12 38 M5 24 L12 26 M15 9 L19 15"/>
+  </g>
+  <path fill="url(#hatch2)" stroke="currentColor" stroke-width="1.3" d="M28 26 L32 20 L36 26 V40 H28 Z"/>
+</svg>

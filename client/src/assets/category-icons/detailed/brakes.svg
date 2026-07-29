@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Vented disc rotor + hydraulic caliper with visible pads -->
+  <circle cx="26" cy="32" r="22" />
+  <circle cx="26" cy="32" r="7" />
+  <circle cx="26" cy="32" r="2.5" fill="currentColor" stroke="none" />
+  <!-- mounting bolt circle -->
+  <circle cx="26" cy="22" r="1.5" />
+  <circle cx="26" cy="42" r="1.5" />
+  <circle cx="16" cy="32" r="1.5" />
+  <circle cx="36" cy="32" r="1.5" />
+  <!-- cooling vents -->
+  <path d="M18 24 C20 27 20 37 18 40" />
+  <path d="M34 24 C32 27 32 37 34 40" />
+  <path d="M20 18 C24 20 28 20 32 18" />
+  <path d="M20 46 C24 44 28 44 32 46" />
+  <!-- caliper straddling rotor -->
+  <path d="M40 16 H56 V48 H40" />
+  <path d="M40 16 V20" />
+  <path d="M40 48 V44" />
+  <rect x="42" y="22" width="5" height="20" rx="1" />
+  <rect x="51" y="22" width="5" height="20" rx="1" />
+  <path d="M47 28 H51" />
+  <path d="M47 36 H51" />
+  <circle cx="49" cy="32" r="2" />
+</svg>

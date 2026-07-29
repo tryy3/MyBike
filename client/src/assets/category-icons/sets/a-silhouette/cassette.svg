@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+
+  <ellipse fill="currentColor" cx="32" cy="14" rx="24" ry="6"/>
+  <path fill="currentColor" d="M8 14 V20 H56 V14 Z"/>
+  <ellipse fill="currentColor" cx="32" cy="20" rx="20" ry="5"/>
+  <path fill="currentColor" d="M12 20 V26 H52 V20 Z"/>
+  <ellipse fill="currentColor" cx="32" cy="26" rx="16" ry="4.5"/>
+  <path fill="currentColor" d="M16 26 V32 H48 V26 Z"/>
+  <ellipse fill="currentColor" cx="32" cy="32" rx="12" ry="4"/>
+  <path fill="currentColor" d="M20 32 V38 H44 V32 Z"/>
+  <ellipse fill="currentColor" cx="32" cy="38" rx="9" ry="3.5"/>
+  <path fill="currentColor" d="M23 38 V44 H41 V38 Z"/>
+  <ellipse fill="currentColor" cx="32" cy="44" rx="6" ry="3"/>
+  <rect fill="currentColor" x="26" y="44" width="12" height="12" rx="1"/>
+  <ellipse fill="currentColor" cx="32" cy="56" rx="6" ry="2.5"/>
+  <ellipse fill="#fff" cx="32" cy="14" rx="8" ry="2"/>
+  <path fill="#fff" d="M14 12 L12 8 L16 11 Z M32 8 V12 M50 12 L52 8 L48 11 Z"/>
+</svg>

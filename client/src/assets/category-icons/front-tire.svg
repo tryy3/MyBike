@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Tire tread ring with F notch -->
+  <circle cx="16" cy="16" r="11" />
+  <circle cx="16" cy="16" r="7" />
+  <path d="M16 5 V9" />
+  <path d="M11 7 L13 10" />
+  <path d="M21 7 L19 10" />
+  <path d="M5 16 H9" />
+  <path d="M23 16 H27" />
+</svg>

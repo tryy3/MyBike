@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+
+  <path fill="currentColor" d="M8 20 C22 10 40 12 50 24 C58 34 56 48 44 54 C34 58 24 54 18 48 L24 42 C28 46 34 48 40 46 C46 44 48 36 44 30 C38 22 26 20 16 26 Z"/>
+  <path fill="#fff" d="M20 22 C26 18 34 18 40 22 L38 26 C34 23 28 23 24 26 Z"/>
+  <path fill="#fff" d="M26 28 C32 24 40 26 44 32 L40 36 C38 32 32 30 28 32 Z"/>
+  <path fill="#fff" d="M30 38 C36 36 42 38 44 44 L40 46 C38 42 34 40 32 42 Z"/>
+  <circle fill="currentColor" cx="18" cy="50" r="5"/>
+  <circle fill="#fff" cx="18" cy="50" r="2"/>
+  <circle fill="currentColor" cx="54" cy="14" r="7"/>
+  <circle fill="#fff" cx="54" cy="14" r="2.5"/>
+</svg>

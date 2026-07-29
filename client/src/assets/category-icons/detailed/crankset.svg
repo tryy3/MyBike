@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Double chainrings with teeth hints, crank arm, pedal spindle -->
+  <circle cx="26" cy="34" r="18" />
+  <circle cx="26" cy="34" r="12" />
+  <circle cx="26" cy="34" r="4" />
+  <path d="M26 16 V20" />
+  <path d="M26 48 V52" />
+  <path d="M8 34 H12" />
+  <path d="M40 34 H44" />
+  <path d="M14 22 L17 25" />
+  <path d="M35 43 L38 46" />
+  <path d="M14 46 L17 43" />
+  <path d="M35 25 L38 22" />
+  <path d="M30 34 L54 18" />
+  <path d="M50 14 L58 22" />
+  <circle cx="54" cy="18" r="2" />
+</svg>

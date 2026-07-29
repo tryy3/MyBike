@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+
+  <rect fill="currentColor" x="28" y="4" width="8" height="56" rx="2"/>
+  <ellipse fill="currentColor" cx="32" cy="16" rx="16" ry="6"/>
+  <ellipse fill="currentColor" cx="32" cy="48" rx="16" ry="6"/>
+  <ellipse fill="#fff" cx="32" cy="16" rx="10" ry="3"/>
+  <ellipse fill="#fff" cx="32" cy="48" rx="10" ry="3"/>
+  <rect fill="currentColor" x="24" y="24" width="16" height="16" rx="1"/>
+  <rect fill="#fff" x="28" y="28" width="8" height="8"/>
+</svg>

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Exploded headset: top cap, spacers, upper cup, head tube, lower cup, crown race -->
+  <path d="M32 4 V60" />
+  <!-- top cap -->
+  <path d="M24 8 H40" />
+  <path d="M28 6 H36" />
+  <!-- spacers -->
+  <rect x="26" y="10" width="12" height="3" rx="0.5" />
+  <rect x="26" y="14" width="12" height="3" rx="0.5" />
+  <!-- upper cup + bearings -->
+  <ellipse cx="32" cy="22" rx="14" ry="4" />
+  <ellipse cx="32" cy="26" rx="11" ry="3" />
+  <circle cx="24" cy="22" r="1.5" fill="currentColor" stroke="none" />
+  <circle cx="32" cy="22" r="1.5" fill="currentColor" stroke="none" />
+  <circle cx="40" cy="22" r="1.5" fill="currentColor" stroke="none" />
+  <!-- head tube section -->
+  <path d="M24 30 H40" />
+  <path d="M24 38 H40" />
+  <path d="M24 30 V38" />
+  <path d="M40 30 V38" />
+  <!-- lower cup + bearings -->
+  <ellipse cx="32" cy="42" rx="11" ry="3" />
+  <ellipse cx="32" cy="48" rx="14" ry="4" />
+  <circle cx="24" cy="48" r="1.5" fill="currentColor" stroke="none" />
+  <circle cx="32" cy="48" r="1.5" fill="currentColor" stroke="none" />
+  <circle cx="40" cy="48" r="1.5" fill="currentColor" stroke="none" />
+  <!-- crown race -->
+  <path d="M26 54 H38" />
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Bar + curved brake lever -->
+  <path d="M4 9 H22" />
+  <path d="M16 9 C21 9 25 13 25 18 L23 27" />
+  <path d="M12 9 V13" />
+</svg>

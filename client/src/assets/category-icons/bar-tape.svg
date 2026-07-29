@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Wrapped bar with spiral tape -->
+  <path d="M4 16 H28" />
+  <path d="M8 12 C10 14 10 18 8 20" />
+  <path d="M14 12 C16 14 16 18 14 20" />
+  <path d="M20 12 C22 14 22 18 20 20" />
+  <path d="M26 12 C28 14 28 18 26 20" />
+</svg>

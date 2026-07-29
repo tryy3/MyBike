@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Steerer, crown, tapered blades, dropouts, axle -->
+  <path d="M32 6 V20" />
+  <path d="M28 8 H36" />
+  <path d="M24 20 H40" />
+  <path d="M26 20 C26 28 22 40 18 52" />
+  <path d="M38 20 C38 28 42 40 46 52" />
+  <path d="M14 52 H22" />
+  <path d="M42 52 H50" />
+  <path d="M18 52 H46" stroke-width="1.5" />
+  <circle cx="18" cy="52" r="2" />
+  <circle cx="46" cy="52" r="2" />
+</svg>

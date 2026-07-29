@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Alternating outer/inner plates with pins and rollers -->
+  <rect x="4" y="24" width="14" height="16" rx="3" />
+  <rect x="14" y="27" width="12" height="10" rx="2" />
+  <rect x="22" y="24" width="14" height="16" rx="3" />
+  <rect x="32" y="27" width="12" height="10" rx="2" />
+  <rect x="40" y="24" width="14" height="16" rx="3" />
+  <circle cx="11" cy="32" r="2" fill="currentColor" stroke="none" />
+  <circle cx="29" cy="32" r="2" fill="currentColor" stroke="none" />
+  <circle cx="47" cy="32" r="2" fill="currentColor" stroke="none" />
+  <path d="M18 29 V35" />
+  <path d="M36 29 V35" />
+  <path d="M54 28 V36" />
+  <path d="M56 32 H60" />
+</svg>

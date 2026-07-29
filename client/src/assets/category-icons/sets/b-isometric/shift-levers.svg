@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+
+  <path fill="currentColor" fill-opacity="0.22" stroke="currentColor" stroke-width="2" d="M16 10 L38 6 L44 16 L42 30 L20 34 L14 22 Z"/>
+  <path fill="currentColor" fill-opacity="0.15" stroke="currentColor" stroke-width="2" d="M24 32 L32 30 L34 56 L26 58 Z"/>
+  <path fill="currentColor" fill-opacity="0.2" stroke="currentColor" stroke-width="2" d="M36 28 L54 44 L48 50 L32 36 Z"/>
+  <path fill="none" stroke="currentColor" stroke-width="1.5" d="M20 14 L36 10"/>
+  <circle cx="28" cy="18" r="2" fill="currentColor"/>
+</svg>

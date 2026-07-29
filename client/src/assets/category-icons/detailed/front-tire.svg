@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Tire with tread blocks, sidewall, and F direction arrow -->
+  <circle cx="32" cy="32" r="26" />
+  <circle cx="32" cy="32" r="18" />
+  <!-- tread knobs -->
+  <path d="M32 6 V12" />
+  <path d="M32 52 V58" />
+  <path d="M6 32 H12" />
+  <path d="M52 32 H58" />
+  <path d="M14 14 L18 18" />
+  <path d="M46 46 L50 50" />
+  <path d="M50 14 L46 18" />
+  <path d="M18 46 L14 50" />
+  <path d="M22 8 L24 13" />
+  <path d="M42 8 L40 13" />
+  <path d="M22 56 L24 51" />
+  <path d="M42 56 L40 51" />
+  <!-- direction mark -->
+  <path d="M28 28 L32 24 L36 28" />
+  <path d="M32 24 V38" />
+</svg>
