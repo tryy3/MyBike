@@ -1,5 +1,8 @@
 # Admin RBAC & Runtime Config — Phase 1 Implementation Plan
 
+> **Status: COMPLETE (implemented on this branch).** Do not re-execute unchecked task boxes.
+> Precedence model in this plan (`envOverride` / env-wins) was later replaced by seed-if-absent — see `docs/superpowers/specs/2026-07-29-env-seed-if-absent-design.md` and `docs/admin-runtime-config-migration.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Ship the foundation for DB-backed runtime settings, RBAC (seeded admin/user + bootstrap admin), GraphQL admin APIs, secret encryption, hot-reload vs controlled process restart, and a small admin UI — migrating only a sample set of settings that prove every path.

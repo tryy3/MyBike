@@ -1,5 +1,7 @@
 # Admin Users Manual Save
 
+> **Status: IMPLEMENTED.**
+
 **Date:** 2026-07-28  
 **Status:** Approved  
 **Context:** Admin Configuration uses an explicit Save for dirty settings, while Admin Users applies role changes immediately on select. Accidental role changes are too easy; admin actions should require an intentional save.

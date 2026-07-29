@@ -1,5 +1,8 @@
 # Admin Roles & Runtime Configuration
 
+> **Status: IMPLEMENTED (Phases 1–3 effectively done).** Historical design — keep for architecture/RBAC context.
+> **Superseded for precedence / PORT:** live `envOverride` and bootstrap-only `PORT` were replaced by seed-if-absent + `server.port`. See `docs/superpowers/specs/2026-07-29-env-seed-if-absent-design.md` and `docs/admin-runtime-config-migration.md`.
+
 **Date:** 2026-07-27  
 **Status:** Approved  
 **Context:** After adding secondary OAuth (tsidp), we want durable admin and configuration foundations: in-app settings, hot-reload where possible, restart when not, encrypted secrets, RBAC, and audit.

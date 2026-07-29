@@ -33,10 +33,11 @@ const readOnly: ConfigDraftSetting = {
 };
 
 const inherited: ConfigDraftSetting = {
-  key: "strava.enabled",
+  key: "integration.strava.clientId",
   isSecret: false,
-  value: true,
+  value: "client-id",
   source: "inherited",
+  readOnly: true,
 };
 
 describe("initialConfigDraftValue", () => {

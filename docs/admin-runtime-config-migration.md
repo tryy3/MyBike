@@ -203,11 +203,11 @@ When introducing a new runtime knob:
 
 ### Reference files
 
-| File                                                                       | Role                                  |
-| -------------------------------------------------------------------------- | ------------------------------------- |
-| `shared/src/schemas/app-settings.ts`                                       | Key list and shared types             |
-| `server/src/lib/settings-registry.ts`                                      | Definitions, defaults, `seedFromEnv`  |
-| `server/src/services/app-config.ts`                                        | Load, seed, resolve, encrypt, inherit |
-| `client/src/features/admin/ConfigurationPage.tsx`                          | Admin UI                              |
-| `docs/superpowers/specs/2026-07-29-env-seed-if-absent-design.md`           | Seed-if-absent design spec            |
-| `docs/superpowers/specs/2026-07-28-admin-runtime-config-phase-2-design.md` | Phase 2 design spec                   |
+| File                                                                       | Role                                                                               |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `shared/src/schemas/app-settings.ts`                                       | Key list and shared types                                                          |
+| `server/src/lib/settings-registry.ts`                                      | Definitions, defaults, `seedFromEnv`                                               |
+| `server/src/services/app-config.ts`                                        | Load, seed, resolve, encrypt, inherit                                              |
+| `client/src/features/admin/ConfigurationPage.tsx`                          | Admin UI                                                                           |
+| `docs/superpowers/specs/2026-07-29-env-seed-if-absent-design.md`           | Seed-if-absent design-of-record (current precedence)                               |
+| `docs/superpowers/specs/2026-07-28-admin-runtime-config-phase-2-design.md` | Historical Phase 2 design (OAuth/inherit); precedence superseded by seed-if-absent |

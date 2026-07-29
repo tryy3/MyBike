@@ -1,5 +1,7 @@
 # Settings Sectioned Sidebar Implementation Plan
 
+> **Status: COMPLETE (implemented on this branch).** Do not re-execute unchecked task boxes.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace settings chip-row navigation with a sectioned sidebar (Account / Admin) that scales for future settings pages.

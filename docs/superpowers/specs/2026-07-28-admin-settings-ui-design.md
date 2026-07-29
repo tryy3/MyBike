@@ -1,5 +1,7 @@
 # Admin Configuration Settings UI
 
+> **Status: IMPLEMENTED.** Env-source badges / env-override read-only behavior in this doc were removed with seed-if-absent (`source` is now `database` | `default` | `inherited` only).
+
 **Date:** 2026-07-28  
 **Status:** Approved  
 **Context:** The admin configuration page uses nested cards per group and bordered boxes per setting, which wastes vertical space and will not scale as the settings registry grows.

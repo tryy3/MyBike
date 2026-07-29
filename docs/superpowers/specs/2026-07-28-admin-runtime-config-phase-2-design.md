@@ -1,5 +1,8 @@
 # Admin Runtime Config — Full Settings Migration (Phase 2)
 
+> **Status: IMPLEMENTED.** Historical Phase 2 design (OAuth/integration split, inherit) — still useful for those topics.
+> **Superseded for precedence:** `envOverride` / “no auto-import env” were replaced by seed-if-absent. See `docs/superpowers/specs/2026-07-29-env-seed-if-absent-design.md` and `docs/admin-runtime-config-migration.md`.
+
 **Date:** 2026-07-28  
 **Status:** Approved  
 **Context:** Phase 1 shipped RBAC, `app_settings`, GraphQL admin APIs, encryption, and a sample of seven runtime keys. This phase migrates the remaining MyBike-side runtime settings into the registry and admin UI, splits Strava login OAuth from `/api/strava` integration credentials, and adds a reusable explicit-inherit mechanism.  

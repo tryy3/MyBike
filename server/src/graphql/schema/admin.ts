@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { SETTING_VALUE_SOURCES, type AppRole } from "shared";
+import { SETTING_EFFECTS, SETTING_VALUE_SOURCES, type AppRole } from "shared";
 import type { EffectiveSetting } from "../../services/app-config.js";
 import { appConfig } from "../../services/app-config.js";
 import { assignUserRole, listAdminUsers, type AdminUserView } from "../../services/admin-users.js";
@@ -29,7 +29,7 @@ const AdminSettingSourceEnum = builder.enumType("AdminSettingSource", {
 });
 
 const AdminSettingEffectEnum = builder.enumType("AdminSettingEffect", {
-  values: ["hotReload", "restartRequired"] as const,
+  values: SETTING_EFFECTS,
 });
 
 const AdminSettingRef = builder.objectRef<EffectiveSetting>("AdminSetting");

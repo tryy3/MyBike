@@ -21,7 +21,7 @@ export interface GraphQLContext {
   stravaWearByBikeId?: Map<string, Promise<Map<string, WearTotals>>>;
   /** Dedupes requireBike lookups within a single GraphQL request. */
   bikeById?: Map<string, Promise<BikeRow>>;
-  /** Optional per-request resolver timings when GRAPHQL_TIMING=1. */
+  /** Optional per-request resolver timings when `graphql.timing` is enabled. */
   timing?: RequestTiming;
 }
 

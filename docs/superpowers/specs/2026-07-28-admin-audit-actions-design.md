@@ -1,5 +1,7 @@
 # Admin Audit for All Admin Actions
 
+> **Status: IMPLEMENTED.**
+
 **Date:** 2026-07-28  
 **Status:** Approved  
 **Context:** The admin audit page and `config_audit_log` currently record only runtime configuration changes. Role assignment and server restart are admin mutations but leave no audit trail.

@@ -1,5 +1,7 @@
 # Env seed-if-absent (replace live env override)
 
+> **Status: IMPLEMENTED — current precedence design-of-record.** Operator guide: `docs/admin-runtime-config-migration.md`.
+
 **Date:** 2026-07-29  
 **Status:** Approved  
 **Context:** Live `envOverride` for `BETTER_AUTH_URL` / `CLIENT_URL` locks Admin Configuration when those vars are set, which blocks the intended workflow (boot on localhost → configure real domain in UI → rename domain later). Recovery via permanent env-wins is the wrong tradeoff for MyBike.  

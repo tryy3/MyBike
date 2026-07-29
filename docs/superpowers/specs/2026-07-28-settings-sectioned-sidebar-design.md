@@ -1,5 +1,7 @@
 # Settings sectioned sidebar navigation
 
+> **Status: IMPLEMENTED.**
+
 **Date:** 2026-07-28  
 **Status:** Approved  
 **Scope:** Client settings UI navigation only (`SettingsNav` + settings pages)

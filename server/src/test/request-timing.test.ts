@@ -1,11 +1,10 @@
 import { sql } from "drizzle-orm";
-import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
+import { beforeEach, describe, expect, it } from "vite-plus/test";
 import { db } from "../db/index.js";
 import { isGraphQLTimingEnabled } from "../graphql/request-timing.js";
 import { appConfig } from "../services/app-config.js";
 
 const ACTOR_USER_ID = "request-timing-test-actor";
-let originalGraphqlTiming: string | undefined;
 
 async function resetConfigTables() {
   await db.run(sql`DELETE FROM config_audit_log`);
@@ -33,21 +32,11 @@ async function resetConfigTables() {
 }
 
 beforeEach(async () => {
-  originalGraphqlTiming = process.env.GRAPHQL_TIMING;
-  delete process.env.GRAPHQL_TIMING;
   await resetConfigTables();
 });
 
-afterEach(() => {
-  if (originalGraphqlTiming === undefined) {
-    delete process.env.GRAPHQL_TIMING;
-  } else {
-    process.env.GRAPHQL_TIMING = originalGraphqlTiming;
-  }
-});
-
 describe("GraphQL request timing config", () => {
-  it("prefers the loaded app config value over the legacy env flag", async () => {
+  it("reads graphql.timing from app config", async () => {
     await db.run(sql`
       INSERT INTO app_settings (key, value, is_secret, updated_at, updated_by)
       VALUES ('graphql.timing', 'true', 0, ${Date.now()}, ${ACTOR_USER_ID})

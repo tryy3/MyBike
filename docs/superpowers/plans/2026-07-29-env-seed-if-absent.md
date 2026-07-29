@@ -1,5 +1,8 @@
 # Env Seed-if-Absent Implementation Plan
 
+> **Status: COMPLETE (implemented on this branch).** Do not re-execute unchecked task boxes.
+> Design-of-record: `docs/superpowers/specs/2026-07-29-env-seed-if-absent-design.md`. Operator guide: `docs/admin-runtime-config-migration.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace live env override with seed-if-absent into `app_settings`, add `server.port`, warn when leftover env remains after a row exists, and remove `env` / `envVar` from the admin API and UI.

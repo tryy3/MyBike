@@ -81,7 +81,7 @@ In GitHub **Settings → Branches** for `master`, require the **CI / Check and t
 - Components live under a bike + category (`components` table). One active component per (bike, category) is enforced server-side (transaction + unique partial index); clients set it via the `activateComponent` GraphQL mutation.
 - After mutations the client invalidates the affected TanStack Query keys and refetches from the server
 - **Admin runtime config:** bootstrap-only values (DB/Turso, `BETTER_AUTH_SECRET`, `CONFIG_ENCRYPTION_KEY`, migrate/import tooling) stay in `.env`; admin-edited runtime settings live in `app_settings` (including `server.port`, auth/client URLs, logging, OAuth, Strava).
-  On boot, missing rows may be **seeded once** from legacy env (`seedFromEnv`); afterward DB > default (plus inherit). Leftover env is ignored with a warning — remove it after seed.
+  On boot, missing rows may be **seeded once** from legacy env (`seedFromEnv`); afterward **inherit → database → code default**. Leftover env is ignored with a warning — remove it after seed.
   Migrations seed `admin@example.com` / `admin123`; change its password or delete it after promoting a real admin.
   Admin APIs are GraphQL-only (`adminSettings`, `adminUsers`, `adminConfigAudit`, admin mutations); UI lives under `/settings/admin/*`.
   Operator migration guide: `docs/admin-runtime-config-migration.md` (env → registry map, deploy steps, Strava login vs sync + inherit).

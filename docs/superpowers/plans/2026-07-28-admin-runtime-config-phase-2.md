@@ -1,5 +1,8 @@
 # Admin Runtime Config — Phase 2 Full Settings Migration
 
+> **Status: COMPLETE (implemented on this branch).** Do not re-execute unchecked task boxes.
+> Live `envOverride` / `source: "env"` in this plan was later replaced by seed-if-absent — see `docs/superpowers/specs/2026-07-29-env-seed-if-absent-design.md` and `docs/admin-runtime-config-migration.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Migrate all remaining MyBike-side runtime settings into the registry and admin UI, add reusable explicit inherit for Strava integration credentials, wire consumers (logging, webhook, OAuth login, `/api/strava` sync), and document env → admin migration.

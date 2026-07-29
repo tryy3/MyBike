@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 import { db } from "../db/index.js";
 import {
-  applyLoggingLevelConfig,
+  applyProcessLoggerLevel,
   syncAuthEnvFromConfig,
   syncLoggingEnvFromConfig,
 } from "../lib/runtime-config.js";
@@ -55,7 +55,7 @@ describe("runtime config consumers", () => {
     const service = createAppConfigService({ env: TEST_ENV });
     await service.load();
 
-    const unsubscribe = applyLoggingLevelConfig(service, logger);
+    const unsubscribe = applyProcessLoggerLevel(service);
     await service.set("logging.level", "debug", ACTOR_USER_ID);
     unsubscribe();
 

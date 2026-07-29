@@ -46,6 +46,7 @@ ENV NODE_ENV=production \
   PORT=3001 \
   DB_PATH=/data/mybike.db \
   RUN_MIGRATIONS=true
+# PORT seeds server.port on first boot only; after app_settings has a row, change listen port in Admin Configuration.
 
 RUN mkdir -p /data && chown node:node /data
 

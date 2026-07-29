@@ -42,7 +42,7 @@ Base URL for all resource requests: `https://www.strava.com/api/v3`
 | Routes (connect, callback, import, sync) | `server/src/routes/strava.ts` |
 | Client API | `client/src/features/strava/api.ts` |
 | Shared schemas | `shared/src/schemas/strava.ts` |
-| Env vars | `.env.example` — `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REDIRECT_URI`, `STRAVA_SCOPES` |
+| Env vars (proxy / first-boot seeds) | Proxy host `.env` for webhook relay. MyBike Strava login/sync credentials live in Admin Configuration (`oauth.providers.strava.*`, `integration.strava.*`); legacy `STRAVA_*` env only seeds missing rows — see `docs/admin-runtime-config-migration.md` and `.env.example` |
 
 Default scopes in this project: `read,activity:read_all,profile:read_all`.
 

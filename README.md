@@ -19,21 +19,28 @@ Open <http://localhost:5173>. The Vite dev server proxies `/api` to the backend.
 
 MyBike uses [better-auth](https://www.better-auth.com) with email/password and HTTP-only session cookies. All bike data is scoped per user.
 
-Set these environment variables for the server (see `.env.example`):
+**Bootstrap** (always in `.env`):
 
-| Variable             | Purpose                                                                   |
-| -------------------- | ------------------------------------------------------------------------- |
-| `BETTER_AUTH_SECRET` | Secret for signing sessions (32+ chars; `openssl rand -base64 32`)        |
-| `BETTER_AUTH_URL`    | Public URL of the API (`http://localhost:3001` in dev)                    |
-| `CLIENT_URL`         | Frontend origin for CORS/trusted origins (`http://localhost:5173` in dev) |
+| Variable                | Purpose                                                            |
+| ----------------------- | ------------------------------------------------------------------ |
+| `BETTER_AUTH_SECRET`    | Secret for signing sessions (32+ chars; `openssl rand -base64 32`) |
+| `CONFIG_ENCRYPTION_KEY` | Encrypts DB-backed secret settings (`openssl rand -base64 32`)     |
 
-If unset in development, the server falls back to built-in defaults (not suitable for production).
+**Runtime** (Admin → Configuration after first boot): listen port, auth/client URLs, logging, OAuth providers, Strava integration, webhook client knobs. On first boot, missing `app_settings` rows may be seeded once from legacy env (`PORT`, `BETTER_AUTH_URL`, `CLIENT_URL`, …). After that, **inherit → database → code default** wins; leftover seed env is ignored with a warning — remove it from `.env`.
+
+Operator guide: **[docs/admin-runtime-config-migration.md](docs/admin-runtime-config-migration.md)**. Full env map: `.env.example`.
+
+If auth URLs are unset before any seed, the server falls back to localhost defaults (not suitable for production).
 
 ## Logging
 
 The server and Strava webhook proxy use [Pino](https://getpino.io) via the shared [`logging`](logging/) workspace package. Each service calls `createLogging({ service, defaultLogFilePath })` so they share transports, redaction, and context helpers while keeping separate log files and service names.
 
 In development you get colorized console output plus a JSON log file; in production logs go to stdout (JSON) and optionally to a file. Docker deployments should rely on stdout for log aggregation.
+
+**MyBike server:** tune `logging.level`, `logging.toFile`, `logging.filePath`, and `logging.redact` under **Settings → Admin → Configuration**. Legacy `LOG_*` env vars only seed missing rows on first boot (then remove them).
+
+**strava-webhook-proxy** still uses process env for logging (separate deploy):
 
 | Variable        | Default (dev)                | Purpose                                                                        |
 | --------------- | ---------------------------- | ------------------------------------------------------------------------------ |
@@ -42,7 +49,7 @@ In development you get colorized console output plus a JSON log file; in product
 | `LOG_TO_FILE`   | `true`                       | Set `false` to disable file output (stdout only)                               |
 | `LOG_REDACT`    | `true`                       | Set `false` to disable redaction (logs secrets in plaintext; debug only)       |
 
-Default log files when `LOG_FILE_PATH` is unset: `server/data/mybike.log` (API) and `strava-webhook-proxy/data/proxy.log` (webhook proxy).
+Default log files when path is unset: `server/data/mybike.log` (API) and `strava-webhook-proxy/data/proxy.log` (webhook proxy).
 
 **Adding logs in server or proxy code:**
 
@@ -63,11 +70,11 @@ await withLogContext({ athleteId, operation: "fetchActivities" }, async () => {
 - Use **`withLogContext()`** when context applies only to a function or async flow.
 - Inside HTTP handlers, prefer **`req.log`** (includes `requestId`; authenticated routes also get `userId`).
 
-Sensitive fields (`authorization`, `accessToken`, `refreshToken`, cookies, passwords) are redacted automatically unless `LOG_REDACT=false`. Do not log OAuth payloads, session tokens, or Strava credentials explicitly. Only disable redaction briefly for debugging — secrets will appear in stdout and log files.
+Sensitive fields (`authorization`, `accessToken`, `refreshToken`, cookies, passwords) are redacted automatically unless redaction is disabled. Do not log OAuth payloads, session tokens, or Strava credentials explicitly. Only disable redaction briefly for debugging — secrets will appear in stdout and log files.
 
 **Migrating an existing database:** migration `0003` creates auth tables and adds `user_id` to `bikes`. Any bikes created before auth had no owner, so that migration clears existing bikes and components before adding the column. Back up `server/data/mybike.db` first if you need to preserve data.
 
-Register at `/register`, then sign in at `/login`. Email/password and Strava OAuth are both supported when `STRAVA_CLIENT_ID` and `STRAVA_CLIENT_SECRET` are set (see `.env.example`). Strava login and the integrations connect flow share the same stored tokens — signing in with Strava counts as connected for sync and import.
+Register at `/register`, then sign in at `/login`. Email/password always works. Strava OAuth login and activity sync are configured under **Settings → Admin → Configuration** (`oauth.providers.strava.*` and `integration.strava.*`); enable each feature explicitly after credentials are set. See [docs/admin-runtime-config-migration.md](docs/admin-runtime-config-migration.md). Strava login and the integrations connect flow share the same stored tokens — signing in with Strava counts as connected for sync and import.
 
 ## Features
 

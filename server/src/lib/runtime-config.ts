@@ -1,22 +1,6 @@
 import type { AppConfigService } from "../services/app-config.js";
 import { appConfig } from "../services/app-config.js";
-import { logger, setLoggerLevel } from "./logging/index.js";
-
-type LevelLogger = {
-  level: string;
-};
-
-export function applyLoggingLevelConfig(
-  config: AppConfigService = appConfig,
-  targetLogger: LevelLogger = logger,
-): () => void {
-  const applyLevel = (value: unknown) => {
-    targetLogger.level = String(value);
-  };
-
-  applyLevel(config.get("logging.level"));
-  return config.onChange("logging.level", applyLevel);
-}
+import { setLoggerLevel } from "./logging/index.js";
 
 export function applyProcessLoggerLevel(config: AppConfigService = appConfig): () => void {
   setLoggerLevel(config.get<string>("logging.level"));

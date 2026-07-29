@@ -1,5 +1,7 @@
 # Admin Users Manual Save Implementation Plan
 
+> **Status: COMPLETE (implemented on this branch).** Do not re-execute unchecked task boxes.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Change Admin Users so role selects edit local drafts and a page-level Save button commits all pending role updates (matching Admin Configuration).

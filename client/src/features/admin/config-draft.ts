@@ -57,5 +57,5 @@ export function editableDirtyConfigSettings<T extends ConfigDraftSetting>(
 }
 
 export function isConfigSettingReadOnly(setting: ConfigDraftSetting): boolean {
-  return setting.readOnly || setting.source === "inherited";
+  return setting.readOnly === true;
 }
