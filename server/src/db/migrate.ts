@@ -82,4 +82,9 @@ export async function applyMigrations(): Promise<void> {
   if (syncResult.inserted > 0 || syncResult.updated > 0) {
     log.info({ syncResult }, "Synced maintenance templates");
   }
+
+  // Migrations and idempotent post-migration seeds are coupled so every path
+  // that prepares the schema also prepares required built-in app data.
+  const { ensureBootstrapAdmin } = await import("../lib/bootstrap-admin.js");
+  await ensureBootstrapAdmin();
 }

@@ -5,6 +5,7 @@ import { createClient } from "@tursodatabase/serverless/compat";
 import { drizzle as drizzleLibsql } from "drizzle-orm/libsql";
 import type { TursoDatabaseDatabase } from "drizzle-orm/tursodatabase/driver-core";
 import { relations } from "./relations.js";
+import { enumerableNamedRows } from "./result.js";
 import { child } from "../lib/logging/index.js";
 
 const log = child({ component: "db" });
@@ -20,14 +21,59 @@ export type AppDb = TursoDatabaseDatabase & { $client: unknown };
 export let db!: AppDb;
 export let dbMode: DbMode = "local";
 
+/**
+ * Turso serverless/compat rows expose column names as non-enumerable properties.
+ * drizzle-orm/libsql's normalizeRow drops those, so wrap execute/batch results.
+ */
+function wrapCompatClientForDrizzle(client: ReturnType<typeof createClient>): Client {
+  const execute = client.execute.bind(client) as (
+    stmtOrSql: Parameters<typeof client.execute>[0],
+    args?: Parameters<typeof client.execute>[1],
+  ) => ReturnType<typeof client.execute>;
+  const batch = client.batch.bind(client);
+  const migrate = client.migrate.bind(client);
+  const transaction = client.transaction.bind(client);
+
+  type ExecuteStmt = Parameters<typeof client.execute>[0];
+  type ExecuteArgs = Parameters<typeof client.execute>[1];
+
+  client.execute = ((stmtOrSql: ExecuteStmt, args?: ExecuteArgs) =>
+    execute(stmtOrSql, args).then(enumerableNamedRows)) as typeof client.execute;
+
+  client.batch = (async (stmts, mode) => {
+    const results = await batch(stmts, mode);
+    return results.map((result) => enumerableNamedRows(result));
+  }) as typeof client.batch;
+
+  client.migrate = (async (stmts) => {
+    const results = await migrate(stmts);
+    return results.map((result) => enumerableNamedRows(result));
+  }) as typeof client.migrate;
+
+  client.transaction = (async (mode) => {
+    const tx = await transaction(mode);
+    const txExecute = tx.execute.bind(tx) as typeof execute;
+    const txBatch = tx.batch.bind(tx);
+    tx.execute = ((stmtOrSql: ExecuteStmt, args?: ExecuteArgs) =>
+      txExecute(stmtOrSql, args).then(enumerableNamedRows)) as typeof tx.execute;
+    tx.batch = (async (stmts) => {
+      const results = await txBatch(stmts);
+      return results.map((result) => enumerableNamedRows(result));
+    }) as typeof tx.batch;
+    return tx;
+  }) as typeof client.transaction;
+
+  return client as unknown as Client;
+}
+
 async function createRemoteDb(url: string, authToken: string): Promise<AppDb> {
   // Official remote path: Turso serverless compat client + public drizzle-orm/libsql.
   // @libsql/client is required by drizzle-orm/libsql's module graph (even when we
   // pass our own client) — we do not call libsql's createClient.
-  const client = createClient({ url, authToken });
+  const client = wrapCompatClientForDrizzle(createClient({ url, authToken }));
   await client.execute("PRAGMA foreign_keys = ON");
   return drizzleLibsql({
-    client: client as unknown as Client,
+    client,
     relations,
   }) as unknown as AppDb;
 }

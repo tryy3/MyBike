@@ -10,9 +10,18 @@ process.env.DB_PATH = join(testDir, "test.db");
 process.env.BETTER_AUTH_SECRET = "test-better-auth-secret-long-enough-for-dev-32";
 process.env.BETTER_AUTH_URL = "http://localhost:3001";
 process.env.CLIENT_URL = "http://localhost:5173";
+if (!process.env.CONFIG_ENCRYPTION_KEY) {
+  process.env.CONFIG_ENCRYPTION_KEY = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=";
+}
 
 const migrationsFolder = join(dirname(fileURLToPath(import.meta.url)), "../../drizzle");
 process.env.DRIZZLE_MIGRATIONS_FOLDER = migrationsFolder;
+
+// Tests never load app config for logging (LOG_LEVEL=silent above makes it
+// moot), so init eagerly here — before DB init/migrations use `child()` — to
+// avoid the "must be initialized" guard the real server boot relies on.
+const { initLogging } = await import("../lib/logging/index.js");
+initLogging();
 
 const { initDatabase } = await import("../db/index.js");
 const { applyMigrations } = await import("../db/migrate.js");

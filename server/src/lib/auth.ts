@@ -9,8 +9,6 @@ import { resolveAuthMethod } from "./auth-events.js";
 import { resolveAuthConfig } from "./auth-config.js";
 import { child } from "./logging/index.js";
 import { buildConfiguredOAuthProviders } from "./oauth-providers.js";
-import { isStravaOAuthConfigured } from "./strava-oauth.js";
-import { isTsidpOAuthConfigured } from "./tsidp-oauth.js";
 
 const log = child({ component: "auth" });
 
@@ -82,8 +80,5 @@ export const auth = betterAuth({
     },
   },
 });
-
-export const stravaLoginEnabled = isStravaOAuthConfigured();
-export const tsidpLoginEnabled = isTsidpOAuthConfigured();
 
 export type SessionUser = typeof auth.$Infer.Session.user;

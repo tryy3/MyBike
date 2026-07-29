@@ -1,21 +1,38 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { account, user } from "../db/auth-schema.js";
 import { db } from "../db/index.js";
 import { refreshStravaAccessToken, STRAVA_ACCOUNT_ISSUER } from "../lib/strava-client.js";
 import { findStravaAccount, getStravaAccessToken } from "../lib/strava-token.js";
+import { appConfig } from "../services/app-config.js";
 
 const originalFetch = globalThis.fetch;
 
-beforeEach(() => {
-  process.env.STRAVA_CLIENT_ID = "test-client";
-  process.env.STRAVA_CLIENT_SECRET = "test-secret";
+// integration.strava.* settings are restart-required, so `appConfig.get()`
+// only reflects them from the boot-time snapshot; reload after writing to
+// mimic a restart picking up the new values. Credentials are left on their
+// default `inheritCredentials: true`, so setting `oauth.providers.strava.*`
+// is enough to populate `integration.strava.clientId`/`clientSecret`.
+async function enableStravaIntegration() {
+  await appConfig.setMany(
+    [
+      { key: "integration.strava.enabled", value: true },
+      { key: "oauth.providers.strava.clientId", value: "test-client" },
+      { key: "oauth.providers.strava.clientSecret", value: "test-secret" },
+    ],
+    null,
+  );
+  await appConfig.load();
+}
+
+beforeEach(async () => {
+  await db.run(sql`DELETE FROM app_settings`);
+  await appConfig.load();
+  await enableStravaIntegration();
 });
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
-  delete process.env.STRAVA_CLIENT_ID;
-  delete process.env.STRAVA_CLIENT_SECRET;
 });
 
 async function seedExpiredStravaAccount() {

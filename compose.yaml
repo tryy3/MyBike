@@ -3,9 +3,13 @@ services:
     build:
       context: .
     image: mybike:local
+    # Required so Admin → Restart server (process.exit) comes back up.
+    restart: unless-stopped
     ports:
       - "3001:3001"
     environment:
+      # First-boot seeds for app_settings (remove once Admin Configuration owns them).
+      # Leftover env after a row exists is ignored with a warning and does not change the listen port / URLs.
       PORT: "3001"
       DB_PATH: /data/mybike.db
       # Remote-only Turso Cloud (omit DB_PATH volume if using these):
@@ -13,7 +17,10 @@ services:
       # TURSO_AUTH_TOKEN: …
       BETTER_AUTH_URL: http://localhost:3001
       CLIENT_URL: http://localhost:3001
+      # Bootstrap-only (always required):
       BETTER_AUTH_SECRET: replace-this-with-a-long-random-secret
+      # Generate with: openssl rand -base64 32
+      CONFIG_ENCRYPTION_KEY: replace-this-with-openssl-rand-base64-32
     volumes:
       - mybike-data:/data
 

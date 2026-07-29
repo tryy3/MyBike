@@ -1,4 +1,6 @@
 import { bikeInsertSchema } from "./schemas/bike.js";
+import { APP_PERMISSIONS, APP_ROLES } from "./schemas/admin-permissions.js";
+import { APP_SETTING_KEYS, SETTING_VALUE_SOURCES } from "./schemas/app-settings.js";
 import {
   COMPONENT_CSV_COLUMNS,
   COMPONENT_IMPORT_MAX_BYTES,
@@ -14,6 +16,60 @@ import {
 import { stravaImportCommitSchema } from "./schemas/strava.js";
 import { CATEGORY_IDS } from "./categories.js";
 import { describe, expect, it } from "vite-plus/test";
+
+describe("admin permissions and app settings constants", () => {
+  it("exports the admin permission ids", () => {
+    expect(APP_PERMISSIONS).toEqual([
+      "config.read",
+      "config.write",
+      "server.restart",
+      "users.read",
+      "users.assign_role",
+      "audit.read",
+    ]);
+  });
+
+  it("exports the built-in app roles", () => {
+    expect(APP_ROLES).toEqual(["admin", "user"]);
+  });
+
+  it("exports the full app setting keys", () => {
+    expect(APP_SETTING_KEYS).toHaveLength(27);
+    expect(APP_SETTING_KEYS).toEqual([
+      "server.port",
+      "logging.level",
+      "logging.toFile",
+      "logging.filePath",
+      "logging.redact",
+      "graphql.timing",
+      "strava.webhook.pollIntervalMs",
+      "strava.webhook.proxyApiKey",
+      "strava.webhook.proxyUrl",
+      "strava.webhook.subscriptionId",
+      "betterAuth.baseUrl",
+      "client.url",
+      "oauth.providers.tsidp.enabled",
+      "oauth.providers.tsidp.clientId",
+      "oauth.providers.tsidp.clientSecret",
+      "oauth.providers.tsidp.issuer",
+      "oauth.providers.tsidp.scopes",
+      "oauth.providers.strava.enabled",
+      "oauth.providers.strava.clientId",
+      "oauth.providers.strava.clientSecret",
+      "oauth.providers.strava.scopes",
+      "integration.strava.enabled",
+      "integration.strava.inheritCredentials",
+      "integration.strava.clientId",
+      "integration.strava.clientSecret",
+      "integration.strava.redirectUri",
+      "integration.strava.scopes",
+    ]);
+  });
+
+  it("exports setting value sources without env", () => {
+    expect(SETTING_VALUE_SOURCES).toEqual(["database", "default", "inherited"]);
+  });
+});
 
 describe("bikeInsertSchema", () => {
   it("accepts a valid year", () => {

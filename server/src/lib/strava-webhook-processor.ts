@@ -4,20 +4,21 @@ import { disconnectStravaUser, findStravaAccountByAthleteId } from "./strava-acc
 import { syncActivitiesForUser } from "./strava-activity-sync.js";
 import { fetchStravaActivity, probeStravaAccessToken } from "./strava-client.js";
 import { getStravaAccessToken } from "./strava-token.js";
+import { getLoadedAppConfigValue } from "../services/app-config.js";
 
 const log = child({ component: "strava-webhook" });
 
 export type WebhookProcessOutcome = "imported" | "skipped" | "disconnected";
 
-function expectedSubscriptionId(): number | undefined {
-  const raw = process.env.STRAVA_SUBSCRIPTION_ID;
+export function getStravaWebhookSubscriptionId(): number | undefined {
+  const raw = getLoadedAppConfigValue<string>("strava.webhook.subscriptionId")?.trim();
   if (!raw) return undefined;
   const parsed = parseInt(raw, 10);
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function rejectUnexpectedSubscription(payload: StravaWebhookEnvelope["payload"]): boolean {
-  const expected = expectedSubscriptionId();
+  const expected = getStravaWebhookSubscriptionId();
   if (expected === undefined) return false;
   return payload.subscription_id !== expected;
 }

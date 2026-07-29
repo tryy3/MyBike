@@ -1,10 +1,11 @@
-import type { MaintenanceTaskView } from "shared";
+import type { AppPermission, MaintenanceTaskView } from "shared";
 import type { YogaInitialContext } from "graphql-yoga";
 import { auth } from "../lib/auth.js";
 import { extractApiKeyFromHeaders, verifyGraphQLApiKey } from "../lib/api-key-auth.js";
 import type { WearTotals } from "../lib/component-wear.js";
 import type { BikeRow } from "../db/schema.js";
 import { HttpError } from "../lib/errors.js";
+import { getUserPermissionSet } from "../lib/rbac.js";
 import { createRequestTiming, type RequestTiming } from "./request-timing.js";
 
 export type GraphQLAuthMethod = "session" | "apiKey";
@@ -13,13 +14,14 @@ export interface GraphQLContext {
   userId: string | null;
   authMethod: GraphQLAuthMethod | null;
   permissions: Record<string, string[]> | null;
+  appPermissions: Set<string> | null;
   /** Dedupes maintenance task enrichment within a single GraphQL request. */
   maintenanceTasksByBikeId?: Map<string, Promise<MaintenanceTaskView[]>>;
   /** Dedupes bike-wide Strava wear aggregate within a single GraphQL request. */
   stravaWearByBikeId?: Map<string, Promise<Map<string, WearTotals>>>;
   /** Dedupes requireBike lookups within a single GraphQL request. */
   bikeById?: Map<string, Promise<BikeRow>>;
-  /** Optional per-request resolver timings when GRAPHQL_TIMING=1. */
+  /** Optional per-request resolver timings when `graphql.timing` is enabled. */
   timing?: RequestTiming;
 }
 
@@ -43,23 +45,35 @@ export async function createContext(initialContext: YogaInitialContext): Promise
       userId: session.user.id,
       authMethod: "session",
       permissions: null,
+      appPermissions: await getUserPermissionSet(session.user.id),
     });
   }
 
   const apiKey = extractApiKeyFromHeaders(request.headers);
   if (!apiKey) {
-    return withRequestState({ userId: null, authMethod: null, permissions: null });
+    return withRequestState({
+      userId: null,
+      authMethod: null,
+      permissions: null,
+      appPermissions: null,
+    });
   }
 
   const verified = await verifyGraphQLApiKey(apiKey);
   if (!verified) {
-    return withRequestState({ userId: null, authMethod: null, permissions: null });
+    return withRequestState({
+      userId: null,
+      authMethod: null,
+      permissions: null,
+      appPermissions: null,
+    });
   }
 
   return withRequestState({
     userId: verified.userId,
     authMethod: "apiKey",
     permissions: verified.permissions,
+    appPermissions: null,
   });
 }
 
@@ -86,5 +100,16 @@ export function requireGraphQLPermission(
     throw new HttpError(403, "API key lacks required permission");
   }
 
+  return userId;
+}
+
+export function requireAppPermission(context: GraphQLContext, permission: AppPermission): string {
+  const userId = requireUserId(context);
+  if (context.authMethod === "apiKey") {
+    throw new HttpError(403, "Admin API requires session authentication");
+  }
+  if (!context.appPermissions?.has(permission)) {
+    throw new HttpError(403, "Forbidden");
+  }
   return userId;
 }

@@ -1,4 +1,5 @@
 import { child } from "../lib/logging/index.js";
+import { getLoadedAppConfigValue } from "../services/app-config.js";
 import type { GraphQLContext } from "./context.js";
 
 const log = child({ component: "graphql-timing" });
@@ -15,8 +16,7 @@ export interface RequestTiming {
 }
 
 export function isGraphQLTimingEnabled(): boolean {
-  const flag = process.env.GRAPHQL_TIMING?.trim().toLowerCase();
-  return flag === "1" || flag === "true" || flag === "yes";
+  return getLoadedAppConfigValue<boolean>("graphql.timing") ?? false;
 }
 
 export function createRequestTiming(enabled = isGraphQLTimingEnabled()): RequestTiming {

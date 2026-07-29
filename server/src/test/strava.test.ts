@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { account, user } from "../db/auth-schema.js";
 import { db } from "../db/index.js";
 import { components, stravaSyncState } from "../db/schema.js";
 import { createApp } from "../app.js";
 import { STRAVA_ACCOUNT_ISSUER } from "../lib/strava-client.js";
+import { appConfig } from "../services/app-config.js";
 import { createAuthenticatedAgent } from "./auth-helper.js";
 import {
   createBikeViaGraphql,
@@ -88,7 +89,16 @@ function stravaFetchMock(input: RequestInfo | URL): Response | Promise<Response>
   throw new Error(`Unexpected Strava request: ${url.toString()}`);
 }
 
-beforeEach(() => {
+// integration.strava.enabled is restart-required, so `appConfig.get()` only
+// reflects it from the boot-time snapshot; reload after writing to mimic a
+// restart picking up the change. These tests connect Strava accounts
+// directly in the DB (bypassing OAuth), so no client id/secret is needed.
+beforeEach(async () => {
+  await db.run(sql`DELETE FROM app_settings`);
+  await appConfig.load();
+  await appConfig.setMany([{ key: "integration.strava.enabled", value: true }], null);
+  await appConfig.load();
+
   mockActivities = [];
   mockAthleteBikes = [];
   mockGearNames = new Map();
@@ -455,6 +465,43 @@ describe("Strava backfill", () => {
 
     stats = await getBikeViaGraphql(agent, bike.id);
     expect(stats.components[0]?.wear.distanceMeters).toBe(3000);
+  });
+});
+
+describe("Strava integration disabled", () => {
+  async function disableStravaIntegration() {
+    await appConfig.setMany([{ key: "integration.strava.enabled", value: false }], null);
+    await appConfig.load();
+  }
+
+  it("returns 503 for sync routes once the integration is disabled", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    await connectStravaAccount(testUser.email);
+    await disableStravaIntegration();
+
+    await agent.post("/api/strava/sync").expect(503);
+    await agent.get("/api/strava/import/preview").expect(503);
+    await agent.post("/api/strava/backfill-components").expect(503);
+  });
+
+  it("still returns connection status when the integration is disabled", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    await connectStravaAccount(testUser.email);
+    await disableStravaIntegration();
+
+    const res = await agent.get("/api/strava/status").expect(200);
+    expect(res.body).toMatchObject({ connected: true, needsReconnect: false });
+  });
+
+  it("still allows disconnect when the integration is disabled", async () => {
+    const { agent, user: testUser } = await createAuthenticatedAgent(app);
+    await connectStravaAccount(testUser.email);
+    await disableStravaIntegration();
+
+    await agent.post("/api/strava/disconnect").expect(200);
+
+    const res = await agent.get("/api/strava/status").expect(200);
+    expect(res.body).toMatchObject({ connected: false });
   });
 });
 

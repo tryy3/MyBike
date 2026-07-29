@@ -73,16 +73,21 @@ In GitHub **Settings → Branches** for `master`, require the **CI / Check and t
 
 - TypeScript strict mode throughout
 - ESM modules everywhere
-- Server listens on `PORT` env var (default 3001)
+- Server listens on `server.port` from app config (default 3001; first-boot seed from `PORT`)
 - Database: local Turso Database file at `DB_PATH` (default `server/data/mybike.db`). Set both `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` for remote-only Turso Cloud. Existing SQLite files open as-is.
 - Client dev server proxies `/api` and `/graphql` to `http://localhost:3001`
 - Validation schemas live in `shared/` and are reused by both server and client (zod); client forms use react-hook-form + `@hookform/resolvers/zod`
 - Component categories are a fixed, hardcoded set in `shared/src/categories.ts` (`CATEGORIES` — frame, fork, crankset, … plus an `other` catchall). They are always visible and cannot be created/deleted/edited.
 - Components live under a bike + category (`components` table). One active component per (bike, category) is enforced server-side (transaction + unique partial index); clients set it via the `activateComponent` GraphQL mutation.
 - After mutations the client invalidates the affected TanStack Query keys and refetches from the server
+- **Admin runtime config:** bootstrap-only values (DB/Turso, `BETTER_AUTH_SECRET`, `CONFIG_ENCRYPTION_KEY`, migrate/import tooling) stay in `.env`; admin-edited runtime settings live in `app_settings` (including `server.port`, auth/client URLs, logging, OAuth, Strava).
+  On boot, missing rows may be **seeded once** from legacy env (`seedFromEnv`); afterward **inherit → database → code default**. Leftover env is ignored with a warning — remove it after seed.
+  Migrations seed `admin@example.com` / `admin123`; change its password or delete it after promoting a real admin.
+  Admin APIs are GraphQL-only (`adminSettings`, `adminUsers`, `adminConfigAudit`, admin mutations); UI lives under `/settings/admin/*`.
+  Operator migration guide: `docs/admin-runtime-config-migration.md` (env → registry map, deploy steps, Strava login vs sync + inherit).
 - **Icon accessibility:** prefer **icon + visible text** so the action is obvious without hover. When space is tight (menus, toolbars, quick-access / icon-sm row actions), use **icon + tooltip** (shadcn `Tooltip` + `aria-label`). Never ship an icon-only control with no visible or tooltip label — even for “obvious” icons (edit, delete, archive, etc.). Screen readers still need a clear `aria-label`; tooltips cover sighted users who don’t recognize the glyph.
 - **Mutation pending feedback:** for list/row actions that hit the API (archive, unarchive, activate, …), prefer **button spinner + row pending** through mutation _and_ query refetch — not optimistic UI. Scope busy to the acting row; keep toast for success/error after settle. Latency should stay visible so slow GraphQL/Turso paths are obvious while dogfooding.
-- **Strava webhooks (private hosting):** deploy `strava-webhook-proxy` on a public URL; MyBike pulls events via `STRAVA_WEBHOOK_PROXY_URL` + API key. One-time: set `STRAVA_WEBHOOK_CALLBACK_URL`, `STRAVA_VERIFY_TOKEN`, run `subscribe`. Main server polls on an interval and on manual sync.
+- **Strava webhooks (private hosting):** deploy `strava-webhook-proxy` on a public URL. Configure MyBike's pull URL, API key, and polling settings in **Admin Configuration** under `strava.webhook.*`; keep `STRAVA_WEBHOOK_CALLBACK_URL` and `STRAVA_VERIFY_TOKEN` on the proxy host, then run `subscribe` there. The main server polls on an interval and on manual sync.
 
 ## API layers (GraphQL vs REST)
 

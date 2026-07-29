@@ -1,0 +1,452 @@
+import { sql } from "drizzle-orm";
+import { APP_SETTING_KEYS } from "shared";
+import { beforeEach, describe, expect, it } from "vite-plus/test";
+import { db } from "../db/index.js";
+import { decryptSecret, requireConfigEncryptionKey } from "../lib/config-crypto.js";
+import { SETTINGS_REGISTRY } from "../lib/settings-registry.js";
+import { createAppConfigService } from "../services/app-config.js";
+
+const ACTOR_USER_ID = "admin-config-test-actor";
+const TEST_ENV = {
+  CONFIG_ENCRYPTION_KEY: process.env.CONFIG_ENCRYPTION_KEY,
+} satisfies NodeJS.ProcessEnv;
+
+async function resetConfigTables() {
+  await db.run(sql`DELETE FROM config_audit_log`);
+  await db.run(sql`DELETE FROM app_runtime_state`);
+  await db.run(sql`DELETE FROM app_settings`);
+  const now = Date.now();
+  await db.run(sql`
+    INSERT OR IGNORE INTO "user" (
+      id,
+      name,
+      email,
+      email_verified,
+      created_at,
+      updated_at
+    )
+    VALUES (
+      ${ACTOR_USER_ID},
+      'Admin Config Test Actor',
+      'admin-config-test@example.com',
+      1,
+      ${now},
+      ${now}
+    )
+  `);
+}
+
+async function insertSetting(key: string, value: unknown, isSecret = false) {
+  await db.run(sql`
+    INSERT INTO app_settings (key, value, is_secret, updated_at, updated_by)
+    VALUES (${key}, ${JSON.stringify(value)}, ${isSecret ? 1 : 0}, ${Date.now()}, ${ACTOR_USER_ID})
+  `);
+}
+
+beforeEach(async () => {
+  await resetConfigTables();
+});
+
+describe("settings registry", () => {
+  it("contains the exact Phase 2 setting definitions", () => {
+    expect(Object.keys(SETTINGS_REGISTRY)).toEqual([...APP_SETTING_KEYS]);
+    expect(Object.keys(SETTINGS_REGISTRY)).toHaveLength(27);
+    expect(SETTINGS_REGISTRY["logging.level"]).toMatchObject({
+      key: "logging.level",
+      defaultValue: "info",
+      effect: "hotReload",
+      secret: false,
+      group: "Logging",
+      label: "Log level",
+      description: "How much the server writes to logs.",
+    });
+    expect(SETTINGS_REGISTRY["strava.webhook.proxyApiKey"]).toMatchObject({
+      key: "strava.webhook.proxyApiKey",
+      defaultValue: "",
+      effect: "hotReload",
+      secret: true,
+    });
+    expect(SETTINGS_REGISTRY["betterAuth.baseUrl"].seedFromEnv).toEqual({
+      varName: "BETTER_AUTH_URL",
+    });
+    expect(SETTINGS_REGISTRY["client.url"].seedFromEnv).toEqual({
+      varName: "CLIENT_URL",
+    });
+    expect(SETTINGS_REGISTRY["server.port"]).toMatchObject({
+      key: "server.port",
+      defaultValue: 3001,
+      effect: "restartRequired",
+      group: "Server",
+    });
+    expect(SETTINGS_REGISTRY["server.port"].seedFromEnv?.varName).toBe("PORT");
+  });
+
+  it("declares Strava integration credential inheritance metadata", () => {
+    expect(SETTINGS_REGISTRY["integration.strava.clientId"]).toMatchObject({
+      inheritWhen: "integration.strava.inheritCredentials",
+      inheritFrom: "oauth.providers.strava.clientId",
+    });
+    expect(SETTINGS_REGISTRY["integration.strava.clientSecret"]).toMatchObject({
+      inheritWhen: "integration.strava.inheritCredentials",
+      inheritFrom: "oauth.providers.strava.clientSecret",
+    });
+  });
+});
+
+describe("app config service", () => {
+  it("reports whether the service has loaded effective settings", async () => {
+    const service = createAppConfigService({ env: TEST_ENV });
+
+    expect(service.isLoaded()).toBe(false);
+
+    await service.load();
+
+    expect(service.isLoaded()).toBe(true);
+  });
+
+  it("uses default source when neither DB nor env seed applies", async () => {
+    const service = createAppConfigService({ env: TEST_ENV });
+    await service.load();
+
+    expect(service.get<string>("logging.level")).toBe("info");
+    expect(service.getEffectiveMeta("logging.level")).toMatchObject({
+      key: "logging.level",
+      value: "info",
+      source: "default",
+      effect: "hotReload",
+      isSecret: false,
+      isSet: false,
+      label: "Log level",
+      description: "How much the server writes to logs.",
+      group: "Logging",
+      pendingRestart: false,
+    });
+  });
+
+  it("uses DB overrides ahead of defaults", async () => {
+    await insertSetting("logging.level", "debug");
+
+    const service = createAppConfigService({ env: TEST_ENV });
+    await service.load();
+
+    expect(service.get<string>("logging.level")).toBe("debug");
+    expect(service.getEffectiveMeta("logging.level")).toMatchObject({
+      value: "debug",
+      source: "database",
+      isSet: true,
+    });
+  });
+
+  it("seeds client.url from CLIENT_URL when no row exists", async () => {
+    const service = createAppConfigService({
+      env: { ...TEST_ENV, CLIENT_URL: "https://app.example.test" },
+    });
+    await service.load();
+
+    expect(service.get<string>("client.url")).toBe("https://app.example.test");
+    expect(service.getEffectiveMeta("client.url").source).toBe("database");
+
+    const rows = await db.all<{ value: string }>(sql`
+      SELECT value FROM app_settings WHERE key = 'client.url'
+    `);
+    expect(rows).toEqual([{ value: JSON.stringify("https://app.example.test") }]);
+
+    const auditRows = await db.all<{ actorUserId: string | null; key: string }>(sql`
+      SELECT actor_user_id AS actorUserId, key FROM config_audit_log WHERE key = 'client.url'
+    `);
+    expect(auditRows).toEqual([{ actorUserId: null, key: "client.url" }]);
+  });
+
+  it("ignores CLIENT_URL when row exists and warns", async () => {
+    const warns: string[] = [];
+    const original = console.warn;
+    console.warn = (msg?: unknown) => {
+      warns.push(String(msg));
+    };
+    try {
+      await insertSetting("client.url", "https://db.example.test");
+      const service = createAppConfigService({
+        env: { ...TEST_ENV, CLIENT_URL: "https://env.example.test" },
+      });
+      await service.load();
+
+      expect(service.get<string>("client.url")).toBe("https://db.example.test");
+      expect(warns.some((w) => w.includes("CLIENT_URL") && w.includes("client.url"))).toBe(true);
+    } finally {
+      console.warn = original;
+    }
+  });
+
+  it("does not use env as live override for betterAuth.baseUrl", async () => {
+    await insertSetting("betterAuth.baseUrl", "https://db.example.test");
+
+    const service = createAppConfigService({
+      env: {
+        ...TEST_ENV,
+        BETTER_AUTH_URL: "https://env.example.test",
+      },
+    });
+    await service.load();
+
+    expect(service.getEffectiveMeta("betterAuth.baseUrl").source).toBe("database");
+    expect(service.get<string>("betterAuth.baseUrl")).toBe("https://db.example.test");
+  });
+
+  it("skips seeding and warns when an env value fails schema validation", async () => {
+    const warns: string[] = [];
+    const original = console.warn;
+    console.warn = (msg?: unknown) => {
+      warns.push(String(msg));
+    };
+    try {
+      const service = createAppConfigService({
+        env: { ...TEST_ENV, PORT: "not-a-number" },
+      });
+      await service.load();
+
+      expect(service.get<number>("server.port")).toBe(3001);
+      expect(service.getEffectiveMeta("server.port").source).toBe("default");
+      expect(warns.some((w) => w.includes("server.port"))).toBe(true);
+    } finally {
+      console.warn = original;
+    }
+  });
+
+  it("seeds server.port from PORT when no row exists", async () => {
+    const service = createAppConfigService({
+      env: { ...TEST_ENV, PORT: "4000" },
+    });
+    await service.load();
+
+    expect(service.get<number>("server.port")).toBe(4000);
+    expect(service.getEffectiveMeta("server.port").source).toBe("database");
+  });
+
+  it("seeds a secret setting from env encrypted at rest", async () => {
+    const service = createAppConfigService({
+      env: { ...TEST_ENV, STRAVA_WEBHOOK_PROXY_API_KEY: "seeded-secret" },
+    });
+    await service.load();
+
+    expect(service.get<string>("strava.webhook.proxyApiKey")).toBe("seeded-secret");
+    expect(service.getEffectiveMeta("strava.webhook.proxyApiKey").isSet).toBe(true);
+    expect(service.getEffectiveMeta("strava.webhook.proxyApiKey").value).toBeNull();
+
+    const rows = await db.all<{ value: string; isSecret: number }>(sql`
+      SELECT value, is_secret AS isSecret
+      FROM app_settings
+      WHERE key = 'strava.webhook.proxyApiKey'
+    `);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.isSecret).toBe(1);
+    expect(rows[0]?.value).not.toContain("seeded-secret");
+    expect(decryptSecret(rows[0]!.value, requireConfigEncryptionKey(TEST_ENV))).toBe(
+      JSON.stringify("seeded-secret"),
+    );
+  });
+
+  it("encrypts secret settings in DB and masks them in listEffective", async () => {
+    const service = createAppConfigService({ env: TEST_ENV });
+    await service.load();
+
+    await service.set("strava.webhook.proxyApiKey", "secret-token", ACTOR_USER_ID);
+
+    const rows = await db.all<{ value: string; isSecret: number }>(sql`
+      SELECT value, is_secret AS isSecret
+      FROM app_settings
+      WHERE key = 'strava.webhook.proxyApiKey'
+    `);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.isSecret).toBe(1);
+    expect(rows[0]?.value).not.toContain("secret-token");
+    expect(decryptSecret(rows[0]!.value, requireConfigEncryptionKey(TEST_ENV))).toBe(
+      JSON.stringify("secret-token"),
+    );
+
+    const meta = service.getEffectiveMeta("strava.webhook.proxyApiKey");
+    expect(meta.value).toBeNull();
+    expect(meta.isSecret).toBe(true);
+    expect(meta.isSet).toBe(true);
+
+    const listed = service
+      .listEffective()
+      .find((setting) => setting.key === "strava.webhook.proxyApiKey");
+    expect(listed).toMatchObject({
+      value: null,
+      isSecret: true,
+      isSet: true,
+      pendingRestart: false,
+    });
+  });
+
+  it("hot-reloads settings and notifies subscribers on set", async () => {
+    const service = createAppConfigService({ env: TEST_ENV });
+    await service.load();
+    const seen: unknown[] = [];
+
+    const unsubscribe = service.onChange("logging.level", (value) => {
+      seen.push(value);
+    });
+    const result = await service.set("logging.level", "debug", ACTOR_USER_ID);
+    unsubscribe();
+
+    expect(result).toEqual({ pendingRestart: false });
+    expect(service.get<string>("logging.level")).toBe("debug");
+    expect(seen).toEqual(["debug"]);
+    expect(service.isRestartPending()).toBe(false);
+  });
+
+  it("keeps restart-required runtime reads on the boot value while exposing pending stored value", async () => {
+    const service = createAppConfigService({ env: TEST_ENV });
+    await service.load();
+
+    const result = await service.set("logging.toFile", false, ACTOR_USER_ID);
+
+    expect(result).toEqual({ pendingRestart: true });
+    expect(service.get<boolean>("logging.toFile")).toBe(true);
+    expect(service.isRestartPending()).toBe(true);
+    expect(service.getEffectiveMeta("logging.toFile")).toMatchObject({
+      value: false,
+      source: "database",
+      pendingRestart: true,
+    });
+    expect(
+      service.listEffective().find((setting) => setting.key === "logging.toFile"),
+    ).toMatchObject({
+      value: false,
+      pendingRestart: true,
+    });
+
+    const pendingRows = await db.all<{ value: string }>(sql`
+      SELECT value
+      FROM app_runtime_state
+      WHERE key = 'pending_restart'
+    `);
+    expect(pendingRows).toEqual([{ value: "1" }]);
+  });
+
+  it("writes an audit row for setting changes", async () => {
+    const service = createAppConfigService({ env: TEST_ENV });
+    await service.load();
+
+    await service.set("logging.level", "debug", ACTOR_USER_ID);
+
+    const auditRows = await db.all<{
+      actorUserId: string | null;
+      key: string;
+      oldValue: string | null;
+      newValue: string | null;
+    }>(sql`
+      SELECT
+        actor_user_id AS actorUserId,
+        key,
+        old_value AS oldValue,
+        new_value AS newValue
+      FROM config_audit_log
+      WHERE key = 'logging.level'
+    `);
+
+    expect(auditRows).toEqual([
+      {
+        actorUserId: ACTOR_USER_ID,
+        key: "logging.level",
+        oldValue: JSON.stringify("info"),
+        newValue: JSON.stringify("debug"),
+      },
+    ]);
+  });
+
+  it("applies setMany atomically and rolls back when a later value is invalid", async () => {
+    const service = createAppConfigService({ env: TEST_ENV });
+    await service.load();
+
+    await expect(
+      service.setMany(
+        [
+          { key: "logging.level", value: "debug" },
+          { key: "graphql.timing", value: "not-a-boolean" },
+        ],
+        ACTOR_USER_ID,
+      ),
+    ).rejects.toThrow();
+
+    expect(service.get<string>("logging.level")).toBe("info");
+    expect(service.getEffectiveMeta("logging.level").source).toBe("default");
+
+    const settingRows = await db.all<{ key: string }>(sql`
+      SELECT key FROM app_settings WHERE key IN ('logging.level', 'graphql.timing')
+    `);
+    expect(settingRows).toEqual([]);
+
+    const auditRows = await db.all<{ key: string }>(sql`
+      SELECT key FROM config_audit_log
+    `);
+    expect(auditRows).toEqual([]);
+  });
+
+  it("persists multiple setMany updates in one batch", async () => {
+    const service = createAppConfigService({ env: TEST_ENV });
+    await service.load();
+    const seen: unknown[] = [];
+    const unsubscribe = service.onChange("logging.level", (value) => {
+      seen.push(value);
+    });
+
+    const result = await service.setMany(
+      [
+        { key: "logging.level", value: "warn" },
+        { key: "graphql.timing", value: true },
+      ],
+      ACTOR_USER_ID,
+    );
+    unsubscribe();
+
+    expect(result).toEqual({ pendingRestart: false });
+    expect(service.get<string>("logging.level")).toBe("warn");
+    expect(service.get<boolean>("graphql.timing")).toBe(true);
+    expect(seen).toEqual(["warn"]);
+
+    const auditKeys = await db.all<{ key: string }>(sql`
+      SELECT key FROM config_audit_log ORDER BY key
+    `);
+    expect(auditKeys.map((row) => row.key)).toEqual(["graphql.timing", "logging.level"]);
+  });
+
+  it("inherits integration clientId from oauth when inheritCredentials is true", async () => {
+    const service = createAppConfigService({ env: TEST_ENV });
+    await service.load();
+
+    await service.set("oauth.providers.strava.clientId", "login-id", ACTOR_USER_ID);
+
+    // inheritCredentials defaults true
+    expect(service.get<string>("integration.strava.clientId")).toBe("login-id");
+    expect(service.getEffectiveMeta("integration.strava.clientId").source).toBe("inherited");
+    expect(service.getEffectiveMeta("integration.strava.clientId").readOnly).toBe(true);
+  });
+
+  it("rejects writing integration clientId while inheriting", async () => {
+    const service = createAppConfigService({ env: TEST_ENV });
+    await service.load();
+
+    await expect(
+      service.set("integration.strava.clientId", "own-id", ACTOR_USER_ID),
+    ).rejects.toThrow(/inherit/i);
+  });
+
+  it("uses own clientId after inheritCredentials is false", async () => {
+    const service = createAppConfigService({ env: TEST_ENV });
+    await service.load();
+
+    await service.set("oauth.providers.strava.clientId", "login-id", ACTOR_USER_ID);
+    await service.setMany(
+      [
+        { key: "integration.strava.inheritCredentials", value: false },
+        { key: "integration.strava.clientId", value: "own-id" },
+      ],
+      ACTOR_USER_ID,
+    );
+
+    expect(service.get<string>("integration.strava.clientId")).toBe("own-id");
+    expect(service.getEffectiveMeta("integration.strava.clientId").source).toBe("database");
+  });
+});
