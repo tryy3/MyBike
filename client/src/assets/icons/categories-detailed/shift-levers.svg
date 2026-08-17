@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <title>Shift levers icon</title>
+  <path d="M14,12 C12,8 10,6 6,5" stroke-width="2" />
+  <rect x="12.00" y="12.00" width="10.00" height="8.00" rx="2.00" />
+  <circle cx="17.00" cy="16.00" r="1.00" fill="currentColor" stroke="none" />
+  <path d="M22,20 C32,19 40,24 38,34 C36,44 28,50 20,52" stroke-width="3" />
+  <circle cx="22.00" cy="20.00" r="1.60" fill="currentColor" stroke="none" />
+  <rect x="25.58" y="20.30" width="9.85" height="3.40" rx="1.70" transform="rotate(-23.96 30.50 22.00)" />
+  <circle cx="26.00" cy="24.00" r="1.00" fill="currentColor" stroke="none" />
+</svg>

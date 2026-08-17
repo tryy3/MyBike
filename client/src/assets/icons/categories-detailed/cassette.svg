@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <title>Cassette icon</title>
+  <circle cx="15.00" cy="15.00" r="5.00" />
+  <polygon points="19.99,14.77 19.99,15.23 22.00,15.00" fill="currentColor" stroke="none" />
+  <polygon points="18.69,18.37 18.37,18.69 19.95,19.95" fill="currentColor" stroke="none" />
+  <polygon points="15.23,19.99 14.77,19.99 15.00,22.00" fill="currentColor" stroke="none" />
+  <polygon points="11.63,18.69 11.31,18.37 10.05,19.95" fill="currentColor" stroke="none" />
+  <polygon points="10.01,15.23 10.01,14.77 8.00,15.00" fill="currentColor" stroke="none" />
+  <polygon points="11.31,11.63 11.63,11.31 10.05,10.05" fill="currentColor" stroke="none" />
+  <polygon points="14.77,10.01 15.23,10.01 15.00,8.00" fill="currentColor" stroke="none" />
+  <polygon points="18.37,11.31 18.69,11.63 19.95,10.05" fill="currentColor" stroke="none" />
+  <circle cx="20.00" cy="20.00" r="7.00" />
+  <polygon points="26.99,19.66 26.99,20.34 29.00,20.00" fill="currentColor" stroke="none" />
+  <polygon points="25.86,23.83 25.46,24.39 27.28,25.29" fill="currentColor" stroke="none" />
+  <polygon points="22.49,26.54 21.84,26.76 22.78,28.56" fill="currentColor" stroke="none" />
+  <polygon points="18.16,26.76 17.51,26.54 17.22,28.56" fill="currentColor" stroke="none" />
+  <polygon points="14.54,24.39 14.14,23.83 12.72,25.29" fill="currentColor" stroke="none" />
+  <polygon points="13.01,20.34 13.01,19.66 11.00,20.00" fill="currentColor" stroke="none" />
+  <polygon points="14.14,16.17 14.54,15.61 12.72,14.71" fill="currentColor" stroke="none" />
+  <polygon points="17.51,13.46 18.16,13.24 17.22,11.44" fill="currentColor" stroke="none" />
+  <polygon points="21.84,13.24 22.49,13.46 22.78,11.44" fill="currentColor" stroke="none" />
+  <polygon points="25.46,15.61 25.86,16.17 27.28,14.71" fill="currentColor" stroke="none" />
+  <circle cx="26.00" cy="26.00" r="9.50" />
+  <polygon points="35.49,25.50 35.49,26.50 37.50,26.00" fill="currentColor" stroke="none" />
+  <polygon points="34.46,30.31 33.97,31.17 35.96,31.75" fill="currentColor" stroke="none" />
+  <polygon points="31.17,33.97 30.31,34.46 31.75,35.96" fill="currentColor" stroke="none" />
+  <polygon points="26.50,35.49 25.50,35.49 26.00,37.50" fill="currentColor" stroke="none" />
+  <polygon points="21.69,34.46 20.83,33.97 20.25,35.96" fill="currentColor" stroke="none" />
+  <polygon points="18.03,31.17 17.54,30.31 16.04,31.75" fill="currentColor" stroke="none" />
+  <polygon points="16.51,26.50 16.51,25.50 14.50,26.00" fill="currentColor" stroke="none" />
+  <polygon points="17.54,21.69 18.03,20.83 16.04,20.25" fill="currentColor" stroke="none" />
+  <polygon points="20.83,18.03 21.69,17.54 20.25,16.04" fill="currentColor" stroke="none" />
+  <polygon points="25.50,16.51 26.50,16.51 26.00,14.50" fill="currentColor" stroke="none" />
+  <polygon points="30.31,17.54 31.17,18.03 31.75,16.04" fill="currentColor" stroke="none" />
+  <polygon points="33.97,20.83 34.46,21.69 35.96,20.25" fill="currentColor" stroke="none" />
+  <circle cx="33.00" cy="33.00" r="12.50" />
+  <polygon points="45.48,32.30 45.48,33.70 47.50,33.00" fill="currentColor" stroke="none" />
+  <polygon points="44.55,37.79 43.94,39.04 46.06,39.29" fill="currentColor" stroke="none" />
+  <polygon points="41.33,42.32 40.24,43.19 42.04,44.34" fill="currentColor" stroke="none" />
+  <polygon points="36.46,45.01 35.10,45.32 36.23,47.14" fill="currentColor" stroke="none" />
+  <polygon points="30.90,45.32 29.54,45.01 29.77,47.14" fill="currentColor" stroke="none" />
+  <polygon points="25.76,43.19 24.67,42.32 23.96,44.34" fill="currentColor" stroke="none" />
+  <polygon points="22.06,39.04 21.45,37.79 19.94,39.29" fill="currentColor" stroke="none" />
+  <polygon points="20.52,33.70 20.52,32.30 18.50,33.00" fill="currentColor" stroke="none" />
+  <polygon points="21.45,28.21 22.06,26.96 19.94,26.71" fill="currentColor" stroke="none" />
+  <polygon points="24.67,23.68 25.76,22.81 23.96,21.66" fill="currentColor" stroke="none" />
+  <polygon points="29.54,20.99 30.90,20.68 29.77,18.86" fill="currentColor" stroke="none" />
+  <polygon points="35.10,20.68 36.46,20.99 36.23,18.86" fill="currentColor" stroke="none" />
+  <polygon points="40.24,22.81 41.33,23.68 42.04,21.66" fill="currentColor" stroke="none" />
+  <polygon points="43.94,26.96 44.55,28.21 46.06,26.71" fill="currentColor" stroke="none" />
+  <circle cx="41.00" cy="41.00" r="16.00" />
+  <polygon points="56.97,40.05 56.97,41.95 59.00,41.00" fill="currentColor" stroke="none" />
+  <polygon points="56.12,46.24 55.39,47.99 57.63,47.89" fill="currentColor" stroke="none" />
+  <polygon points="52.96,51.62 51.62,52.96 53.73,53.73" fill="currentColor" stroke="none" />
+  <polygon points="47.99,55.39 46.24,56.12 47.89,57.63" fill="currentColor" stroke="none" />
+  <polygon points="41.95,56.97 40.05,56.97 41.00,59.00" fill="currentColor" stroke="none" />
+  <polygon points="35.76,56.12 34.01,55.39 34.11,57.63" fill="currentColor" stroke="none" />
+  <polygon points="30.38,52.96 29.04,51.62 28.27,53.73" fill="currentColor" stroke="none" />
+  <polygon points="26.61,47.99 25.88,46.24 24.37,47.89" fill="currentColor" stroke="none" />
+  <polygon points="25.03,41.95 25.03,40.05 23.00,41.00" fill="currentColor" stroke="none" />
+  <polygon points="25.88,35.76 26.61,34.01 24.37,34.11" fill="currentColor" stroke="none" />
+  <polygon points="29.04,30.38 30.38,29.04 28.27,28.27" fill="currentColor" stroke="none" />
+  <polygon points="34.01,26.61 35.76,25.88 34.11,24.37" fill="currentColor" stroke="none" />
+  <polygon points="40.05,25.03 41.95,25.03 41.00,23.00" fill="currentColor" stroke="none" />
+  <polygon points="46.24,25.88 47.99,26.61 47.89,24.37" fill="currentColor" stroke="none" />
+  <polygon points="51.62,29.04 52.96,30.38 53.73,28.27" fill="currentColor" stroke="none" />
+  <polygon points="55.39,34.01 56.12,35.76 57.63,34.11" fill="currentColor" stroke="none" />
+  <circle cx="15.00" cy="15.00" r="1.40" fill="currentColor" stroke="none" />
+  <circle cx="41.00" cy="41.00" r="1.60" fill="currentColor" stroke="none" />
+</svg>

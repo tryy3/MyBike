@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <title>Spokes icon</title>
+  <circle cx="32.00" cy="32.00" r="22.00" stroke-width="1.4" />
+  <circle cx="32.00" cy="32.00" r="4.00" />
+  <circle cx="32.00" cy="32.00" r="1.40" fill="currentColor" stroke="none" />
+  <line x1="36.00" y1="32.00" x2="53.92" y2="33.92" stroke-width="1.1" />
+  <line x1="35.86" y1="33.04" x2="52.67" y2="39.52" stroke-width="1.1" />
+  <line x1="35.46" y1="34.00" x2="50.02" y2="44.62" stroke-width="1.1" />
+  <line x1="34.83" y1="34.83" x2="46.14" y2="48.85" stroke-width="1.1" />
+  <line x1="34.00" y1="35.46" x2="41.30" y2="51.94" stroke-width="1.1" />
+  <line x1="33.04" y1="35.86" x2="35.82" y2="53.67" stroke-width="1.1" />
+  <line x1="32.00" y1="36.00" x2="30.08" y2="53.92" stroke-width="1.1" />
+  <line x1="30.96" y1="35.86" x2="24.48" y2="52.67" stroke-width="1.1" />
+  <line x1="30.00" y1="35.46" x2="19.38" y2="50.02" stroke-width="1.1" />
+  <line x1="29.17" y1="34.83" x2="15.15" y2="46.14" stroke-width="1.1" />
+  <line x1="28.54" y1="34.00" x2="12.06" y2="41.30" stroke-width="1.1" />
+  <line x1="28.14" y1="33.04" x2="10.33" y2="35.82" stroke-width="1.1" />
+  <line x1="28.00" y1="32.00" x2="10.08" y2="30.08" stroke-width="1.1" />
+  <line x1="28.14" y1="30.96" x2="11.33" y2="24.48" stroke-width="1.1" />
+  <line x1="28.54" y1="30.00" x2="13.98" y2="19.38" stroke-width="1.1" />
+  <line x1="29.17" y1="29.17" x2="17.86" y2="15.15" stroke-width="1.1" />
+  <line x1="30.00" y1="28.54" x2="22.70" y2="12.06" stroke-width="1.1" />
+  <line x1="30.96" y1="28.14" x2="28.18" y2="10.33" stroke-width="1.1" />
+  <line x1="32.00" y1="28.00" x2="33.92" y2="10.08" stroke-width="1.1" />
+  <line x1="33.04" y1="28.14" x2="39.52" y2="11.33" stroke-width="1.1" />
+  <line x1="34.00" y1="28.54" x2="44.62" y2="13.98" stroke-width="1.1" />
+  <line x1="34.83" y1="29.17" x2="48.85" y2="17.86" stroke-width="1.1" />
+  <line x1="35.46" y1="30.00" x2="51.94" y2="22.70" stroke-width="1.1" />
+  <line x1="35.86" y1="30.96" x2="53.67" y2="28.18" stroke-width="1.1" />
+  <circle cx="54.00" cy="32.00" r="0.60" fill="currentColor" stroke="none" />
+  <circle cx="53.25" cy="37.69" r="0.60" fill="currentColor" stroke="none" />
+  <circle cx="51.05" cy="43.00" r="0.60" fill="currentColor" stroke="none" />
+  <circle cx="47.56" cy="47.56" r="0.60" fill="currentColor" stroke="none" />
+  <circle cx="43.00" cy="51.05" r="0.60" fill="currentColor" stroke="none" />
+  <circle cx="37.69" cy="53.25" r="0.60" fill="currentColor" stroke="none" />
+  <circle cx="32.00" cy="54.00" r="0.60" fill="currentColor" stroke="none" />
+  <circle cx="26.31" cy="53.25" r="0.60" fill="currentColor" stroke="none" />
+  <circle cx="21.00" cy="51.05" r="0.60" fill="currentColor" stroke="none" />
+  <circle cx="16.44" cy="47.56" r="0.60" fill="currentColor" stroke="none" />
+  <circle cx="12.95" cy="43.00" r="0.60" fill="currentColor" stroke="none" />
+  <circle cx="10.75" cy="37.69" r="0.60" fill="currentColor" stroke="none" />
+  <circle cx="10.00" cy="32.00" r="0.60" fill="currentColor" stroke="none" />
+  <circle cx="10.75" cy="26.31" r="0.60" fill="currentColor" stroke="none" />
+  <circle cx="12.95" cy="21.00" r="0.60" fill="currentColor" stroke="none" />
+  <circle cx="16.44" cy="16.44" r="0.60" fill="currentColor" stroke="none" />
+  <circle cx="21.00" cy="12.95" r="0.60" fill="currentColor" stroke="none" />
+  <circle cx="26.31" cy="10.75" r="0.60" fill="currentColor" stroke="none" />
+  <circle cx="32.00" cy="10.00" r="0.60" fill="currentColor" stroke="none" />
+  <circle cx="37.69" cy="10.75" r="0.60" fill="currentColor" stroke="none" />
+  <circle cx="43.00" cy="12.95" r="0.60" fill="currentColor" stroke="none" />
+  <circle cx="47.56" cy="16.44" r="0.60" fill="currentColor" stroke="none" />
+  <circle cx="51.05" cy="21.00" r="0.60" fill="currentColor" stroke="none" />
+  <circle cx="53.25" cy="26.31" r="0.60" fill="currentColor" stroke="none" />
+</svg>

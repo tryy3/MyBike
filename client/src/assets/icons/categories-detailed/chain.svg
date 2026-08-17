@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <title>Chain icon</title>
+  <rect x="6.60" y="29.50" width="12.81" height="9.00" rx="4.50" transform="rotate(-38.66 13.00 34.00)" />
+  <rect x="17.61" y="25.00" width="10.77" height="6.00" rx="3.00" transform="rotate(-21.80 23.00 28.00)" />
+  <rect x="28.00" y="21.50" width="10.00" height="9.00" rx="4.50" transform="rotate(0.00 33.00 26.00)" />
+  <rect x="37.61" y="25.00" width="10.77" height="6.00" rx="3.00" transform="rotate(21.80 43.00 28.00)" />
+  <rect x="46.60" y="29.50" width="12.81" height="9.00" rx="4.50" transform="rotate(38.66 53.00 34.00)" />
+  <circle cx="8.00" cy="38.00" r="1.30" fill="currentColor" stroke="none" />
+  <circle cx="18.00" cy="30.00" r="1.30" fill="currentColor" stroke="none" />
+  <circle cx="28.00" cy="26.00" r="1.30" fill="currentColor" stroke="none" />
+  <circle cx="38.00" cy="26.00" r="1.30" fill="currentColor" stroke="none" />
+  <circle cx="48.00" cy="30.00" r="1.30" fill="currentColor" stroke="none" />
+  <circle cx="58.00" cy="38.00" r="1.30" fill="currentColor" stroke="none" />
+</svg>

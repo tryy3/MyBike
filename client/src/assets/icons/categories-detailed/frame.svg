@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <title>Frame icon</title>
+  <rect x="8.72" y="27.00" width="32.56" height="6.00" rx="3.00" transform="rotate(79.38 25.00 30.00)" />
+  <rect x="21.68" y="14.25" width="28.64" height="5.50" rx="2.75" transform="rotate(12.09 36.00 17.00)" />
+  <rect x="27.06" y="39.25" width="17.89" height="5.50" rx="2.75" transform="rotate(153.43 36.00 42.00)" />
+  <rect x="37.51" y="26.75" width="18.97" height="4.50" rx="2.25" transform="rotate(108.43 47.00 29.00)" />
+  <line x1="22.00" y1="14.00" x2="10.00" y2="50.00" stroke-width="2" />
+  <line x1="28.00" y1="46.00" x2="10.00" y2="50.00" stroke-width="2" />
+  <circle cx="28.00" cy="46.00" r="5.00" />
+  <circle cx="50.00" cy="20.00" r="3.00" fill="none" />
+  <circle cx="44.00" cy="38.00" r="3.00" fill="none" />
+  <circle cx="10.00" cy="50.00" r="2.40" />
+  <line x1="7.00" y1="48.00" x2="7.00" y2="52.00" />
+  <ellipse cx="22.00" cy="13.00" rx="3.20" ry="1.40" />
+  <circle cx="25.30" cy="31.60" r="1.40" fill="currentColor" stroke="none" />
+  <circle cx="36.00" cy="42.00" r="1.40" fill="currentColor" stroke="none" />
+</svg>
