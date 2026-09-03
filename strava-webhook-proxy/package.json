@@ -13,11 +13,11 @@
     "db:migrate": "tsx scripts/migrate.ts"
   },
   "dependencies": {
-    "@libsql/client": "^0.17.0",
+    "@libsql/client": "^0.18.0",
     "@tursodatabase/database": "^0.7.0",
     "@tursodatabase/serverless": "^1.2.3",
     "dotenv": "^17.4.2",
-    "drizzle-orm": "1.0.0-rc.4-de6c356",
+    "drizzle-orm": "1.0.0-rc.5-ab785fc",
     "express": "^5.2.1",
     "logging": "^0.0.1",
     "shared": "^0.0.1",
@@ -27,10 +27,10 @@
     "@types/express": "^5.0.6",
     "@types/node": "^26.0.1",
     "@types/supertest": "^7.0.0",
-    "drizzle-kit": "1.0.0-rc.4-ca0f029",
+    "drizzle-kit": "1.0.0-rc.5-ab785fc",
     "supertest": "^7.1.4",
     "tsx": "^4.22.4",
     "typescript": "^7.0.0",
-    "vite-plus": "0.2.6"
+    "vite-plus": "0.3.0"
   }
 }

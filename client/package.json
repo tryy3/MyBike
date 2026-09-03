@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
-    "@better-auth/api-key": "1.7.0-rc.2",
+    "@better-auth/api-key": "1.7.2",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
@@ -20,7 +20,7 @@
     "@tanstack/react-query": "^5.101.2",
     "@tanstack/react-query-devtools": "^5.101.2",
     "@tanstack/react-router": "^1.170.16",
-    "better-auth": "1.7.0-rc.2",
+    "better-auth": "1.7.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "graphql": "^17.0.0",
@@ -45,8 +45,8 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
     "typescript": "^7.0.0",
-    "vite": "npm:@voidzero-dev/vite-plus-core@0.2.6",
-    "vite-plus": "0.2.6"
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.3.0",
+    "vite-plus": "0.3.0"
   },
   "optionalDependencies": {
     "@tailwindcss/oxide-linux-arm64-gnu": "4.3.3",
